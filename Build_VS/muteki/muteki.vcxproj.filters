@@ -2,5 +2,69 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="..\..\Source\Main.cpp" />
+    <ClCompile Include="..\..\Source\GPU_DX12.cpp">
+      <Filter>GPU\DX12</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="imgui">
+      <UniqueIdentifier>{a2695f27-2b7c-4aac-a0f7-4ebdd64fa611}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="mu-core">
+      <UniqueIdentifier>{cc02ab2f-9831-4b61-ab0f-d529c685415c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GPU">
+      <UniqueIdentifier>{15dd3108-11f7-4a5d-b77c-7e04b47ac0fc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GPU\DX12">
+      <UniqueIdentifier>{cfce8443-b6b9-4807-8c5d-cc57897c1a9c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\mu-core\Include\mu-core\Algorithms.h">
+      <Filter>mu-core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\mu-core\Include\mu-core\Array.h">
+      <Filter>mu-core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\mu-core\Include\mu-core\Debug.h">
+      <Filter>mu-core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\mu-core\Include\mu-core\FileReader.h">
+      <Filter>mu-core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\mu-core\Include\mu-core\Functors.h">
+      <Filter>mu-core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\mu-core\Include\mu-core\Math.h">
+      <Filter>mu-core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\mu-core\Include\mu-core\Metaprogramming.h">
+      <Filter>mu-core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\mu-core\Include\mu-core\mu-core.h">
+      <Filter>mu-core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\mu-core\Include\mu-core\Ranges.h">
+      <Filter>mu-core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\mu-core\Include\mu-core\Scope.h">
+      <Filter>mu-core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\mu-core\Include\mu-core\String.h">
+      <Filter>mu-core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\mu-core\Include\mu-core\StringFormat.h">
+      <Filter>mu-core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\mu-core\Include\mu-core\Utils.h">
+      <Filter>mu-core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\mu-core\Include\mu-core\RefCountPtr.h">
+      <Filter>mu-core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\GPU_DX12.h">
+      <Filter>GPU\DX12</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
