@@ -5,6 +5,7 @@
 
 struct GPU_DX12 {
 	static void Init();
+	static void Shutdown();
 	static void RecreateSwapChain(HWND hwnd, uint32_t width, uint32_t height);
 
 	static void BeginFrame();

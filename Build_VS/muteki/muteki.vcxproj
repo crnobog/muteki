@@ -176,6 +176,7 @@
     <ClInclude Include="..\..\mu-core\Include\mu-core\String.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\StringFormat.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\Utils.h" />
+    <ClInclude Include="..\..\mu-core\Include\mu-core\Vectors.h" />
     <ClInclude Include="..\..\Source\GPU_DX12.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

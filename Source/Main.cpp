@@ -34,6 +34,8 @@ int main(int, char**)
 		GPU::EndFrame();
 	}
 
+	GPU::Shutdown();
+
 	return 0;
 }
 

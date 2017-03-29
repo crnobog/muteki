@@ -66,5 +66,8 @@
     <ClInclude Include="..\..\Source\GPU_DX12.h">
       <Filter>GPU\DX12</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\mu-core\Include\mu-core\Vectors.h">
+      <Filter>mu-core</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
