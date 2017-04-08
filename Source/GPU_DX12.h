@@ -1,15 +1,27 @@
 #pragma once
 
-#include <d3d12.h>
-#include <cstdint>
+#include "GPU_Common.h"
 
-struct GPU_DX12 {
-	static void Init();
-	static void Shutdown();
-	static void RecreateSwapChain(HWND hwnd, uint32_t width, uint32_t height);
+namespace GPU_DX12 {
 
-	static void BeginFrame();
-	static void EndFrame();
+	void Init();
+	void Shutdown();
+	void RecreateSwapChain(void* hwnd, u32 width, u32 height);
+
+	void BeginFrame();
+	void RenderTestFrame();
+	void EndFrame();
+
+	void SubmitPass(const RenderPass& pass);
+
+	StreamFormatID RegisterStreamFormat(const StreamFormat& format);
+
+	ShaderID CompileShader();
+	ProgramID LinkProgram();
+
+	ConstantBufferID CreateConstantBuffer();
+	VertexBufferID CreateVertexBuffer();
+	IndexBufferID CreateIndexBuffer();
 };
 
-typedef GPU_DX12 GPU;
+namespace GPU = GPU_DX12;

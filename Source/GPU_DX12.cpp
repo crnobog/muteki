@@ -3,6 +3,7 @@
 
 #include "mu-core/RefCountPtr.h"
 #include "mu-core/Vectors.h"
+#include "mu-core/Utils.h"
 
 #include <d3d12.h>
 #include <d3d12sdklayers.h>
@@ -16,9 +17,15 @@
 #define EnsureHR(expr) \
 	ENSURE(SUCCEEDED((expr)))
 
-namespace {
-	template<typename T, size_t N> constexpr size_t ArraySize(const T(&)[N]) { return N; }
+// Maximums
+namespace GPU_DX12 {
+	constexpr i32 MaxStreamFormats = 1;
+	constexpr i32 MaxConstantBuffers = 1;
+	constexpr i32 MaxVertexBuffers = 1;
+	constexpr i32 MaxIndexBuffers = 1;
+}
 
+namespace GPU_DX12 {
 	template<typename OBJECT>
 	struct COMRefCount {
 		static void IncRef(OBJECT* o) {
@@ -26,13 +33,13 @@ namespace {
 		}
 		static void DecRef(OBJECT* o) {
 			o->Release();
-		}
+		} 
 	};
 
 	template<typename COMObject>
 	using COMPtr = RefCountPtr<COMObject, COMRefCount>;
 
-	enum class ResourceState : int32_t {
+	enum class ResourceState : i32 {
 		Present = D3D12_RESOURCE_STATE_PRESENT,
 		RenderTarget = D3D12_RESOURCE_STATE_RENDER_TARGET,
 	};
@@ -49,7 +56,7 @@ namespace {
 	};
 
 	struct BufferDesc : D3D12_RESOURCE_DESC {
-		BufferDesc(uint32_t width) {
+		BufferDesc(u32 width) {
 			Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
 			Alignment = 0;
 			Width = width;
@@ -200,7 +207,7 @@ namespace {
 			Base::RTVFormats[0] = format;
 			return *this;
 		}
-		GraphicsPipelineStateDesc& InputLayout(D3D12_INPUT_ELEMENT_DESC* elements, uint32_t num_elements) {
+		GraphicsPipelineStateDesc& InputLayout(D3D12_INPUT_ELEMENT_DESC* elements, u32 num_elements) {
 			Base::InputLayout.NumElements = num_elements;
 			Base::InputLayout.pInputElementDescs = elements;
 			return *this;
@@ -208,18 +215,18 @@ namespace {
 	};
 
 	struct Fence {
-		COMPtr<ID3D12Fence>				fence;
-		uint64_t						last_value = 0;
+		COMPtr<ID3D12Fence>		fence;
+		u64						last_value = 0;
 
-		uint64_t SubmitFence(ID3D12CommandQueue* command_queue) {
+		u64 SubmitFence(ID3D12CommandQueue* command_queue) {
 			++last_value;
 			EnsureHR(command_queue->Signal(fence.Get(), last_value));
 			return last_value;
 		}
-		bool IsFenceComplete(uint64_t value) {
+		bool IsFenceComplete(u64 value) {
 			return fence->GetCompletedValue() >= value;
 		}
-		void WaitForFence(uint64_t value, HANDLE event) {
+		void WaitForFence(u64 value, HANDLE event) {
 			if (!IsFenceComplete(value)) {
 				EnsureHR(fence->SetEventOnCompletion(value, event));
 				WaitForSingleObjectEx(event, INFINITE, false);
@@ -227,7 +234,7 @@ namespace {
 		}
 	};
 
-	const uint32_t frame_count = 2;
+	const u32 frame_count = 2;
 	const D3D12_HEAP_PROPERTIES upload_heap_properties{ D3D12_HEAP_TYPE_UPLOAD, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 };
 
 	COMPtr<IDXGIFactory4>				dxgi_factory;
@@ -248,13 +255,13 @@ namespace {
 
 	UINT rtv_descriptor_size = 0;
 
-	uint32_t frame_index = 0;
+	u32 frame_index = 0;
 
 	struct {
 		COMPtr<ID3D12Resource>			render_target;
 		D3D12_CPU_DESCRIPTOR_HANDLE		render_target_view;
 		COMPtr<ID3D12CommandAllocator>	command_allocator;
-		uint64_t						fence_value;
+		u64						fence_value;
 	} frame_data[frame_count];
 
 	Fence	frame_fence;
@@ -292,7 +299,7 @@ void GPU_DX12::Init() {
 
 	EnsureHR(device->CreateCommandQueue(&queue_desc, IID_PPV_ARGS(command_queue.Replace())));
 
-	for (uint32_t i = 0; i < frame_count; ++i) {
+	for (u32 i = 0; i < frame_count; ++i) {
 		EnsureHR(device->CreateCommandAllocator(queue_desc.Type, IID_PPV_ARGS(frame_data[i].command_allocator.Replace())));
 	}
 
@@ -328,7 +335,7 @@ void GPU_DX12::Init() {
 		Vertex triangle_vertices[] = {
 			{ 0.0f, 0.5f, 0.0f }, { 0.5f, -0.5f, 0.0f }, { -0.5f, -0.5f, 0.0f }
 		};
-		const uint32_t vbuffer_size = sizeof(triangle_vertices);
+		const u32 vbuffer_size = sizeof(triangle_vertices);
 		auto vbuffer_desc = BufferDesc{ vbuffer_size };
 		EnsureHR(device->CreateCommittedResource(
 			&upload_heap_properties,
@@ -402,20 +409,20 @@ void GPU_DX12::Init() {
 			.DepthEnable(false)
 			.PrimType(PrimType::Triangle)
 			.RenderTargets(DXGI_FORMAT_R8G8B8A8_UNORM)
-			.InputLayout(input_layout, (uint32_t)ArraySize(input_layout));
+			.InputLayout(input_layout, (u32)ArraySize(input_layout));
 		EnsureHR(device->CreateGraphicsPipelineState(&pipeline_desc, IID_PPV_ARGS(pipeline_state.Replace())));
 	}
 }
 
 void GPU_DX12::Shutdown() {
-	for (int32_t i = 0; i < frame_count; ++i) {
+	for (i32 i = 0; i < frame_count; ++i) {
 		auto& frame = frame_data[i];
 
 		frame_fence.WaitForFence(frame.fence_value, frame_fence_event);
 	}
 }
 
-void GPU_DX12::RecreateSwapChain(HWND hwnd, uint32_t width, uint32_t height) {
+void GPU_DX12::RecreateSwapChain(void* hwnd, u32 width, u32 height) {
 	viewport = D3D12_VIEWPORT{ 0.0f, 0.0f, (float)width, (float)height, 0.0f, 1.0f };
 	scissor_rect = D3D12_RECT{ 0, 0, (LONG)width, (LONG)height };
 
@@ -432,19 +439,19 @@ void GPU_DX12::RecreateSwapChain(HWND hwnd, uint32_t width, uint32_t height) {
 		COMPtr<IDXGISwapChain1> swap_chain_tmp;
 		EnsureHR(dxgi_factory->CreateSwapChainForHwnd(
 			command_queue.Get(),
-			hwnd,
+			(HWND)hwnd,
 			&swap_chain_desc,
 			nullptr, // fullscreen desc
 			nullptr, // restrict output
 			swap_chain_tmp.Replace()));
-		EnsureHR(dxgi_factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER));
+		EnsureHR(dxgi_factory->MakeWindowAssociation((HWND)hwnd, DXGI_MWA_NO_ALT_ENTER));
 
 		EnsureHR(swap_chain_tmp->QueryInterface(swap_chain.Replace()));
 	}
 	frame_index = swap_chain->GetCurrentBackBufferIndex();
 
 	D3D12_CPU_DESCRIPTOR_HANDLE rtv_handle = rtv_heap->GetCPUDescriptorHandleForHeapStart();
-	for (uint32_t n = 0; n < frame_count; ++n) {
+	for (u32 n = 0; n < frame_count; ++n) {
 		EnsureHR(swap_chain->GetBuffer(n, IID_PPV_ARGS(frame_data[n].render_target.Replace())));
 		device->CreateRenderTargetView(frame_data[n].render_target.Get(), nullptr, rtv_handle);
 		frame_data[n].render_target_view = rtv_handle;
@@ -461,7 +468,6 @@ void GPU_DX12::BeginFrame() {
 
 	EnsureHR(command_list->Reset(frame.command_allocator.Get(), pipeline_state.Get()));
 
-	command_list->SetGraphicsRootSignature(root_signature.Get());
 	command_list->RSSetViewports(1, &viewport);
 	command_list->RSSetScissorRects(1, &scissor_rect);
 
@@ -472,12 +478,24 @@ void GPU_DX12::BeginFrame() {
 	float clear_color[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
 	command_list->ClearRenderTargetView(frame.render_target_view, clear_color, 0, nullptr);
 
+	EnsureHR(command_list->Close());
+
+	ID3D12CommandList* command_lists[] = { command_list.Get() };
+	command_queue->ExecuteCommandLists(1, command_lists);
+}
+
+void GPU_DX12::RenderTestFrame() {
+	auto& frame = frame_data[frame_index];
+	EnsureHR(command_list->Reset(frame.command_allocator.Get(), pipeline_state.Get()));
+
+	command_list->RSSetViewports(1, &viewport);
+	command_list->RSSetScissorRects(1, &scissor_rect);
+	command_list->OMSetRenderTargets(1, &frame.render_target_view, false, nullptr);
+
+	command_list->SetGraphicsRootSignature(root_signature.Get());
 	command_list->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	command_list->IASetVertexBuffers(0, 1, &vertex_buffer_view);
 	command_list->DrawInstanced(3, 1, 0, 0);
-
-	auto rt_to_present = ResourceBarrier{ frame.render_target.Get(), ResourceState::RenderTarget, ResourceState::Present };
-	command_list->ResourceBarrier(1, &rt_to_present);
 
 	EnsureHR(command_list->Close());
 
@@ -487,10 +505,30 @@ void GPU_DX12::BeginFrame() {
 
 void GPU_DX12::EndFrame() {
 	auto& frame = frame_data[frame_index];
+	EnsureHR(command_list->Reset(frame.command_allocator.Get(), pipeline_state.Get()));
+
+	auto rt_to_present = ResourceBarrier{ frame.render_target.Get(), ResourceState::RenderTarget, ResourceState::Present };
+	command_list->ResourceBarrier(1, &rt_to_present);
+
+	EnsureHR(command_list->Close());
+
+	ID3D12CommandList* command_lists[] = { command_list.Get() };
+	command_queue->ExecuteCommandLists(1, command_lists);
 
 	EnsureHR(swap_chain->Present(1, 0));
 
 	// Update fence value
 	frame.fence_value = frame_fence.SubmitFence(command_queue.Get());
 	frame_index = swap_chain->GetCurrentBackBufferIndex();
+}
+
+
+
+StreamFormatID GPU_DX12::RegisterStreamFormat(const StreamFormat&) { 
+	return StreamFormatID{ }; 
+}
+
+void GPU_DX12::SubmitPass(const RenderPass& ) {
+	//auto& frame = frame_data[frame_index];
+	//EnsureHR(command_list->Reset(frame.command_allocator.Get(), pipeline_state.Get()));
 }

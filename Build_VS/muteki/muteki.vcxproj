@@ -78,7 +78,7 @@
     <IntDir>$(SolutionDir)..\Intermediate\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <TargetName>$(ProjectName)-$(Platform)-$(Configuration)</TargetName>
     <LibraryPath>$(SolutionDir)..\glfw\build\src\Debug;$(LibraryPath)</LibraryPath>
-    <IncludePath>$(SolutionDir)..\mu-core\Include;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)..\imgui\;$(SolutionDir)..\mu-core\Include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -89,7 +89,7 @@
     <IntDir>$(SolutionDir)..\Intermediate\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <TargetName>$(ProjectName)-$(Platform)-$(Configuration)</TargetName>
     <LibraryPath>$(SolutionDir)..\glfw\build\src\RelWithDebInfo;$(LibraryPath)</LibraryPath>
-    <IncludePath>$(SolutionDir)..\mu-core\Include;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)..\imgui\;$(SolutionDir)..\mu-core\Include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -158,10 +158,20 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\imgui\imgui.cpp" />
+    <ClCompile Include="..\..\imgui\imgui_demo.cpp" />
+    <ClCompile Include="..\..\imgui\imgui_draw.cpp" />
+    <ClCompile Include="..\..\mu-core\Source\mu-core.cpp" />
     <ClCompile Include="..\..\Source\GPU_DX12.cpp" />
     <ClCompile Include="..\..\Source\Main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\imgui\imconfig.h" />
+    <ClInclude Include="..\..\imgui\imgui.h" />
+    <ClInclude Include="..\..\imgui\imgui_internal.h" />
+    <ClInclude Include="..\..\imgui\stb_rect_pack.h" />
+    <ClInclude Include="..\..\imgui\stb_textedit.h" />
+    <ClInclude Include="..\..\imgui\stb_truetype.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\Algorithms.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\Array.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\Debug.h" />
@@ -170,6 +180,7 @@
     <ClInclude Include="..\..\mu-core\Include\mu-core\Math.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\Metaprogramming.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\mu-core.h" />
+    <ClInclude Include="..\..\mu-core\Include\mu-core\PrimitiveTypes.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\Ranges.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\RefCountPtr.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\Scope.h" />
@@ -177,6 +188,7 @@
     <ClInclude Include="..\..\mu-core\Include\mu-core\StringFormat.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\Utils.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\Vectors.h" />
+    <ClInclude Include="..\..\Source\GPU_Common.h" />
     <ClInclude Include="..\..\Source\GPU_DX12.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
