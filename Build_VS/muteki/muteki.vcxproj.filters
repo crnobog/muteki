@@ -17,6 +17,9 @@
     <ClCompile Include="..\..\mu-core\Source\mu-core.cpp">
       <Filter>mu-core</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Source\GPUCommon.cpp">
+      <Filter>GPU</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="imgui">
@@ -30,6 +33,9 @@
     </Filter>
     <Filter Include="GPU\DX12">
       <UniqueIdentifier>{cfce8443-b6b9-4807-8c5d-cc57897c1a9c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders_DX12">
+      <UniqueIdentifier>{608186c7-272f-45df-8c05-7a8363bd5d69}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -105,5 +111,8 @@
     <ClInclude Include="..\..\mu-core\Include\mu-core\PrimitiveTypes.h">
       <Filter>mu-core</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\Shaders\basic_shader.hlsl" />
   </ItemGroup>
 </Project>

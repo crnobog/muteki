@@ -113,6 +113,8 @@
       <PreprocessorDefinitions>STRICT;NOMINMAX;WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;_DEBUG;_WINDOWS;%(PreprocessorDefinitions);_GLFW_WIN32;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <TreatWarningAsError>true</TreatWarningAsError>
       <AdditionalIncludeDirectories>$(SolutionDir)..\glfw\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MinimalRebuild>false</MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -148,6 +150,7 @@
       <PreprocessorDefinitions>STRICT;NOMINMAX;WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;NDEBUG;_WINDOWS;%(PreprocessorDefinitions);_GLFW_WIN32;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <TreatWarningAsError>true</TreatWarningAsError>
       <AdditionalIncludeDirectories>$(SolutionDir)..\glfw\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -162,6 +165,7 @@
     <ClCompile Include="..\..\imgui\imgui_demo.cpp" />
     <ClCompile Include="..\..\imgui\imgui_draw.cpp" />
     <ClCompile Include="..\..\mu-core\Source\mu-core.cpp" />
+    <ClCompile Include="..\..\Source\GPUCommon.cpp" />
     <ClCompile Include="..\..\Source\GPU_DX12.cpp" />
     <ClCompile Include="..\..\Source\Main.cpp" />
   </ItemGroup>
@@ -190,6 +194,15 @@
     <ClInclude Include="..\..\mu-core\Include\mu-core\Vectors.h" />
     <ClInclude Include="..\..\Source\GPU_Common.h" />
     <ClInclude Include="..\..\Source\GPU_DX12.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\Shaders\basic_shader.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <FileType>Document</FileType>
+    </None>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

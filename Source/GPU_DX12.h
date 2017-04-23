@@ -2,7 +2,20 @@
 
 #include "GPU_Common.h"
 
+namespace mu {
+	template<typename T> class PointerRange;
+}
+
 namespace GPU_DX12 {
+	using GPUCommon::StreamFormatID;
+	using GPUCommon::VertexBufferID;
+	using GPUCommon::IndexBufferID;
+	using GPUCommon::InputAssemblerConfigID;
+	using GPUCommon::VertexShaderID;
+	using GPUCommon::PixelShaderID;
+	using GPUCommon::ProgramID;
+	using GPUCommon::ConstantBufferID;
+
 
 	void Init();
 	void Shutdown();
@@ -12,15 +25,17 @@ namespace GPU_DX12 {
 	void RenderTestFrame();
 	void EndFrame();
 
-	void SubmitPass(const RenderPass& pass);
+	void SubmitPass(const GPUCommon::RenderPass& pass);
 
-	StreamFormatID RegisterStreamFormat(const StreamFormat& format);
+	StreamFormatID RegisterStreamFormat(const GPUCommon::StreamFormatDesc& format);
+	InputAssemblerConfigID RegisterInputAssemblyConfig(GPUCommon::StreamFormatID format, const mu::PointerRange<const VertexBufferID>& vertex_buffers, IndexBufferID index_buffer);
 
-	ShaderID CompileShader();
-	ProgramID LinkProgram();
+	VertexShaderID CompileVertexShaderHLSL(const char* entry_point, const mu::PointerRange<const u8>& code);
+	PixelShaderID CompilePixelShaderHLSL(const char* entry_point, const mu::PointerRange<const u8>& code);
+	ProgramID LinkProgram(GPUCommon::VertexShaderID vertex_shader, GPUCommon::PixelShaderID pixel_shader);
 
 	ConstantBufferID CreateConstantBuffer();
-	VertexBufferID CreateVertexBuffer();
+	VertexBufferID CreateVertexBuffer(const mu::PointerRange<u8>& data);
 	IndexBufferID CreateIndexBuffer();
 };
 

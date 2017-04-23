@@ -1,6 +1,8 @@
 #include "mu-core/Debug.h"
 #include "GPU_DX12.h"
 
+#include "mu-core/Array.h"
+#include "mu-core/Ranges.h"
 #include "mu-core/RefCountPtr.h"
 #include "mu-core/Vectors.h"
 #include "mu-core/Utils.h"
@@ -14,18 +16,37 @@
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3dcompiler.lib")
 
+using GPUCommon::StreamFormatID;
+using GPUCommon::VertexBufferID;
+using GPUCommon::IndexBufferID;
+using GPUCommon::InputAssemblerConfigID;
+using GPUCommon::VertexShaderID;
+using GPUCommon::PixelShaderID;
+using GPUCommon::ProgramID;
+using GPUCommon::ConstantBufferID;
+using GPUCommon::RenderTargetID;
+
 #define EnsureHR(expr) \
-	ENSURE(SUCCEEDED((expr)))
+	do { \
+		HRESULT hr =(expr); if(SUCCEEDED(hr)) {break;} \
+		CHECKF(SUCCEEDED(hr), #expr, "failed with error code ", hr); \
+	} while(false);
 
 // Maximums
 namespace GPU_DX12 {
+	constexpr i32 max_shaders = 2;
+	constexpr i32 max_programs = 1;
+	constexpr i32 max_vertex_buffers = 1;
+	constexpr i32 max_ia_configs = 1;
 	constexpr i32 MaxStreamFormats = 1;
-	constexpr i32 MaxConstantBuffers = 1;
-	constexpr i32 MaxVertexBuffers = 1;
-	constexpr i32 MaxIndexBuffers = 1;
 }
 
+using std::tuple;
+using std::get;
+using namespace mu;
+
 namespace GPU_DX12 {
+
 	template<typename OBJECT>
 	struct COMRefCount {
 		static void IncRef(OBJECT* o) {
@@ -257,7 +278,7 @@ namespace GPU_DX12 {
 
 	u32 frame_index = 0;
 
-	struct {
+	struct FrameData {
 		COMPtr<ID3D12Resource>			render_target;
 		D3D12_CPU_DESCRIPTOR_HANDLE		render_target_view;
 		COMPtr<ID3D12CommandAllocator>	command_allocator;
@@ -493,7 +514,7 @@ void GPU_DX12::RenderTestFrame() {
 	command_list->OMSetRenderTargets(1, &frame.render_target_view, false, nullptr);
 
 	command_list->SetGraphicsRootSignature(root_signature.Get());
-	command_list->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	command_list->IASetVertexBuffers(0, 1, &vertex_buffer_view);
 	command_list->DrawInstanced(3, 1, 0, 0);
 
@@ -522,13 +543,334 @@ void GPU_DX12::EndFrame() {
 	frame_index = swap_chain->GetCurrentBackBufferIndex();
 }
 
-
-
-StreamFormatID GPU_DX12::RegisterStreamFormat(const StreamFormat&) { 
-	return StreamFormatID{ }; 
+namespace GPU_DX12 {
+	struct StreamFormat {
+		u32 Strides[GPUCommon::MaxStreamSlots];
+		GPUCommon::StreamFormatDesc Desc;
+	};
+	StreamFormat stream_formats[MaxStreamFormats];
+	StreamFormatID next_stream_format_id{ 0 };
 }
 
-void GPU_DX12::SubmitPass(const RenderPass& ) {
-	//auto& frame = frame_data[frame_index];
-	//EnsureHR(command_list->Reset(frame.command_allocator.Get(), pipeline_state.Get()));
+
+StreamFormatID GPU_DX12::RegisterStreamFormat(const GPUCommon::StreamFormatDesc& format) { 
+	StreamFormatID id{ next_stream_format_id.Index++ };
+	StreamFormat& compiled_format = stream_formats[id.Index];
+	compiled_format.Desc = format;
+	for (tuple<const GPUCommon::StreamSlotDesc&, u32&> it : Zip(format.Slots, compiled_format.Strides)) {
+		u32& stride = get<1>(it);
+		stride = 0;
+		const GPUCommon::StreamSlotDesc& slot = get<0>(it);
+		for (u8 element = 0; element < slot.NumElements; ++element) { // TODO: Use range - FixedArray/InlineArray?
+			stride += GPUCommon::GetStreamElementSize(slot.Elements[element]);
+		}
+	}
+
+	return id;
 }
+
+
+struct LinkedProgram {
+	VertexShaderID VertexShader;
+	PixelShaderID PixelShader;
+};
+
+struct VertexShaderInputElement {
+	GPUCommon::ScalarType Type : 2;
+	u8 CountMinusOne : 2;
+	GPUCommon::InputSemantic Semantic : 6;
+	u8 SemanticIndex : 6;
+};
+struct VertexShaderInputs {
+	static constexpr i32 MaxInputs = 8;
+	VertexShaderInputElement Inputs[MaxInputs];
+};
+
+struct InputAssemblerConfig {
+	StreamFormatID StreamFormat;
+	VertexBufferID Slots[GPUCommon::MaxStreamSlots];
+	IndexBufferID IndexBuffer;
+};
+
+struct VertexBuffer { 
+	GPU_DX12::COMPtr<ID3D12Resource> Resource;
+	u32 Size;
+};
+
+namespace GPU_DX12 {
+	COMPtr<ID3DBlob> registered_vertex_shaders[max_shaders];
+	VertexShaderInputs vertex_shader_inputs[max_shaders];
+	VertexShaderID next_vertex_shader_id{ 0 };
+
+	COMPtr<ID3DBlob> registered_pixel_shaders[max_shaders];
+	PixelShaderID next_pixel_shader_id{ 0 };
+
+	LinkedProgram linked_programs[max_programs];
+	ProgramID next_program_id{ 0 };
+
+	VertexBuffer vertex_buffers[max_vertex_buffers];
+	VertexBufferID next_vertex_buffer_id{ 0 };
+
+	InputAssemblerConfig ia_configs[max_ia_configs];
+	InputAssemblerConfigID next_ia_config_id{ 0 };
+}
+
+namespace GPU_DX12 {
+	void CompileShaderHLSL(ID3DBlob** compiled_shader, const char* shader_model, const char* entry_point, const PointerRange<const u8>& code) {
+		COMPtr<ID3DBlob> errors;
+
+		if (!SUCCEEDED(D3DCompile(
+			&code.Front(),
+			code.Size(),
+			nullptr,
+			nullptr,
+			nullptr,
+			entry_point,
+			shader_model,
+			0,
+			0,
+			compiled_shader,
+			errors.Replace()))) {
+			const char* error_msg = (const char*)errors->GetBufferPointer();
+			CHECKF(false, "Compile failed with error: ", error_msg);
+		}
+	}
+}
+
+VertexShaderInputElement ParseInputParameter(D3D12_SIGNATURE_PARAMETER_DESC& input_param) {
+	tuple<GPUCommon::InputSemantic, const char*> table[] = {
+		{ GPUCommon::InputSemantic::Position, "POSITION" },
+	};
+	auto found = Find(Range(table), [&](const tuple<GPUCommon::InputSemantic, const char*>& sem) {
+		return strcmp(get<1>(sem), input_param.SemanticName) == 0;
+	});
+	CHECK(!found.IsEmpty());
+	VertexShaderInputElement out_elem;
+	out_elem.Semantic = std::get<0>(found.Front());
+	out_elem.SemanticIndex = input_param.SemanticIndex;
+	out_elem.Type = GPUCommon::ScalarType::Float;
+	out_elem.CountMinusOne = 3;
+	return out_elem;
+}
+
+VertexShaderID GPU_DX12::CompileVertexShaderHLSL(const char* entry_point, const PointerRange<const u8>& code) {
+	VertexShaderID id{ next_vertex_shader_id.Index++ };
+	COMPtr<ID3DBlob>& compiled_shader = registered_vertex_shaders[id.Index];
+	CompileShaderHLSL(compiled_shader.Replace(), "vs_5_0", entry_point, code);
+	CHECK(compiled_shader.Get());
+
+	VertexShaderInputs& inputs = vertex_shader_inputs[id.Index];
+
+	COMPtr<ID3D12ShaderReflection> reflector;
+	EnsureHR(D3DReflect(
+		compiled_shader->GetBufferPointer(),
+		compiled_shader->GetBufferSize(),
+		IID_PPV_ARGS(reflector.Replace())
+	));
+	D3D12_SHADER_DESC desc;
+	EnsureHR(reflector->GetDesc(&desc));
+	Array<D3D12_SIGNATURE_PARAMETER_DESC> input_params;
+	CHECK(desc.InputParameters < VertexShaderInputs::MaxInputs);
+	input_params.AddZeroed(desc.InputParameters);
+	for (tuple<u32, VertexShaderInputElement&>  it : Zip(Iota<u32>(), inputs.Inputs)) {
+		D3D12_SIGNATURE_PARAMETER_DESC input_param;
+		reflector->GetInputParameterDesc(get<0>(it), &input_param);
+
+		get<1>(it) = ParseInputParameter(input_param);
+	}
+
+	return id;
+}
+PixelShaderID GPU_DX12::CompilePixelShaderHLSL(const char* entry_point, const PointerRange<const u8>& code) {
+	PixelShaderID id{ next_pixel_shader_id.Index++ };
+	ID3DBlob** compiled_shader = registered_pixel_shaders[id.Index].Replace();
+	CompileShaderHLSL(compiled_shader, "ps_5_0", entry_point, code);
+	CHECK(*compiled_shader);
+	return id;
+}
+
+ProgramID GPU_DX12::LinkProgram(VertexShaderID vertex_shader, PixelShaderID pixel_shader) {
+	CHECK(next_program_id.Index < max_programs);
+	ProgramID id{ next_program_id.Index++ };
+	linked_programs[id.Index] = { vertex_shader, pixel_shader };
+	return id;
+}
+
+
+VertexBufferID GPU_DX12::CreateVertexBuffer(const PointerRange<u8>& data) {
+	CHECK(next_vertex_buffer_id.Index < max_vertex_buffers);
+
+	VertexBufferID id { next_vertex_buffer_id.Index++ };
+	CHECK(vertex_buffers[id.Index].Resource.Get() == nullptr);
+	vertex_buffers[id.Index].Size = (u32)data.Size();
+
+	auto vbuffer_desc = BufferDesc{ (u32)data.Size() };
+	EnsureHR(device->CreateCommittedResource(
+		&upload_heap_properties, // TODO: Upload & copy properly
+		D3D12_HEAP_FLAG_NONE,
+		&vbuffer_desc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(vertex_buffers[id.Index].Resource.Replace()))
+	);
+
+	D3D12_RANGE read_range{ 0, 0 };
+	void* mapped = nullptr;
+	EnsureHR(vertex_buffers[id.Index].Resource->Map(0, &read_range, &(void*)mapped));
+	memcpy(mapped, &data.Front(), data.Size());
+	vertex_buffers[id.Index].Resource->Unmap(0, nullptr);
+
+	return id;
+}
+
+InputAssemblerConfigID GPU_DX12::RegisterInputAssemblyConfig(StreamFormatID stream_id, const PointerRange<const VertexBufferID>& vbuffers, IndexBufferID ibuffer) {
+	CHECK(vbuffers.Size() <= GPUCommon::MaxStreamSlots);
+	CHECK(next_ia_config_id.Index < max_ia_configs);
+
+	InputAssemblerConfigID id{ next_ia_config_id.Index++ };
+	InputAssemblerConfig& config = ia_configs[id.Index];
+	Copy(Range(config.Slots), vbuffers);
+	config.IndexBuffer = ibuffer;
+	config.StreamFormat = stream_id;
+
+	return id;
+}
+
+// TODO: don't-care states?
+bool operator==(const GPUCommon::DrawPipelineSetup& a, const GPUCommon::DrawPipelineSetup& b) {
+	return a.BlendState.Index == b.BlendState.Index
+		&& a.DepthStencilState.Index == b.DepthStencilState.Index
+		&& a.InputAssemblerConfig.Index == b.InputAssemblerConfig.Index
+		&& a.Program.Index == b.Program.Index
+		&& a.RasterState.Index == b.RasterState.Index;
+}
+
+namespace GPU_DX12 {
+	Array<tuple<GPUCommon::DrawPipelineSetup, COMPtr<ID3D12PipelineState>>> cached_psos;
+	ID3D12PipelineState* CachePSO(const GPUCommon::DrawPipelineSetup& pipeline_setup) {
+		auto found = Find(cached_psos, [&](tuple<GPUCommon::DrawPipelineSetup, COMPtr<ID3D12PipelineState>>& pair) {
+			if (get<0>(pair) == pipeline_setup) {
+				return true;
+			}
+			return false;
+		});
+		if (!found.IsEmpty()) {
+			return get<1>(found.Front());
+		}
+		
+		size_t index = cached_psos.Add({ pipeline_setup, COMPtr<ID3D12PipelineState>{} });
+		COMPtr<ID3D12PipelineState>& new_pipeline_state = std::get<1>(cached_psos[index]);
+		LinkedProgram program = linked_programs[pipeline_setup.Program.Index];
+
+		// TODO
+		D3D12_INPUT_ELEMENT_DESC input_layout[] = {
+			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		};
+
+		auto pipeline_desc = GraphicsPipelineStateDesc{ root_signature.Get() }
+			.VS(registered_vertex_shaders[program.VertexShader.Index])
+			.PS(registered_pixel_shaders[program.PixelShader.Index])
+			.DepthEnable(true)
+			.PrimType(PrimType::Triangle)
+			.RenderTargets(DXGI_FORMAT_R8G8B8A8_UNORM)
+			.InputLayout(input_layout, (u32)ArraySize(input_layout));
+		EnsureHR(device->CreateGraphicsPipelineState(&pipeline_desc, IID_PPV_ARGS(new_pipeline_state.Replace())));
+
+		return new_pipeline_state.Get();
+	}
+
+	D3D12_PRIMITIVE_TOPOLOGY CommonToDX12(GPUCommon::PrimitiveTopology	pt) {
+		static D3D12_PRIMITIVE_TOPOLOGY list[] = {
+			D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
+			D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
+		};
+		return list[(i32)pt];
+	}
+
+	D3D12_CPU_DESCRIPTOR_HANDLE GetRenderTargetView(D3D12_CPU_DESCRIPTOR_HANDLE backbuffer, RenderTargetID id) {
+		CHECK(id.Index == u32_max);
+		return backbuffer; // TODO
+	}
+
+#if 1
+	D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView(VertexBufferID id, u32 stride) {
+		auto& vb = vertex_buffers[id.Index];
+		return { vb.Resource->GetGPUVirtualAddress(), vb.Size, stride };
+	}
+#else
+	D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView(VertexBufferID , u32 ) {
+		return vertex_buffer_view;
+	}
+#endif
+
+	D3D12_INDEX_BUFFER_VIEW GetIndexBufferView(IndexBufferID) {
+		return {};
+	}
+}
+
+void GPU_DX12::SubmitPass(const GPUCommon::RenderPass& pass) {
+	// Create required PSOs for all draw items
+	Array<ID3D12PipelineState*> item_psos;
+	item_psos.Reserve(pass.DrawItems.Size());
+
+	for (const GPUCommon::DrawItem& item : pass.DrawItems) {
+		ID3D12PipelineState* pso = CachePSO(item.PipelineSetup);
+		CHECK(pso);
+		item_psos.Add(pso);
+	}
+
+	auto& frame = frame_data[frame_index];
+	EnsureHR(command_list->Reset(frame.command_allocator.Get(), pipeline_state.Get()));
+	command_list->SetGraphicsRootSignature(root_signature.Get());
+
+	// Bind RTs for pass
+	CHECK(pass.RenderTargets.Size() <= GPUCommon::MaxRenderTargets);
+	D3D12_CPU_DESCRIPTOR_HANDLE rtvs[GPUCommon::MaxRenderTargets];
+	for (tuple<D3D12_CPU_DESCRIPTOR_HANDLE&, RenderTargetID> it : Zip(rtvs, pass.RenderTargets)) {
+		get<0>(it) = GetRenderTargetView(frame.render_target_view, get<1>(it));
+	}
+	command_list->OMSetRenderTargets((u32)pass.RenderTargets.Size(), rtvs, false, nullptr);
+
+	// TODO: Make part of render pass
+	command_list->RSSetViewports(1, &viewport);
+	command_list->RSSetScissorRects(1, &scissor_rect);
+
+	// Translate draw commands into CommandList calls
+	for (tuple<ID3D12PipelineState*, GPUCommon::DrawItem> draw_it : Zip(item_psos, pass.DrawItems)) {
+		ID3D12PipelineState* pso = get<0>(draw_it);
+		const GPUCommon::DrawItem& item = get<1>(draw_it);
+
+		command_list->SetPipelineState(pso);
+		command_list->IASetPrimitiveTopology(CommonToDX12(item.Command.PrimTopology));
+
+		D3D12_VERTEX_BUFFER_VIEW vbs[GPUCommon::MaxStreamSlots];
+		//D3D12_INDEX_BUFFER_VIEW ib;
+		const InputAssemblerConfig& ia_config = ia_configs[item.PipelineSetup.InputAssemblerConfig.Index];
+		const StreamFormat& stream_format = stream_formats[ia_config.StreamFormat.Index];
+		for (tuple<D3D12_VERTEX_BUFFER_VIEW&, VertexBufferID, u32> vb_it : Zip(vbs, ia_config.Slots, stream_format.Strides)) {
+			D3D12_VERTEX_BUFFER_VIEW& view = get<0>(vb_it);
+			VertexBufferID vb_id = get<1>(vb_it);
+			if (vb_id.Index == u32_max) {
+				view = { 0, 0, 0 };
+			}
+			else {
+
+				u32 stride = get<2>(vb_it);
+				view = GetVertexBufferView(vb_id, stride);
+			}
+		}
+
+		command_list->IASetVertexBuffers(0, (u32)ArraySize(vbs), vbs);
+		//if (ia_config.IndexBuffer.Index != u32_max) {
+		//	ib = GetIndexBufferView(ia_config.IndexBuffer);
+		//	command_list->IASetIndexBuffer(&ib);
+		//}
+		command_list->DrawInstanced(item.Command.VertexOrIndexCount, 1, 0, 0);
+	}
+
+	EnsureHR(command_list->Close());
+
+	ID3D12CommandList* command_lists[] = { command_list.Get() };
+	command_queue->ExecuteCommandLists(1, command_lists);
+}
+
