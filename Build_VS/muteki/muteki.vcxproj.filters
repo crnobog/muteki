@@ -111,6 +111,9 @@
     <ClInclude Include="..\..\mu-core\Include\mu-core\PrimitiveTypes.h">
       <Filter>mu-core</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\mu-core\Include\mu-core\FixedArray.h">
+      <Filter>mu-core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Shaders\basic_shader.hlsl" />

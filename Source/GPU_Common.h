@@ -2,6 +2,7 @@
 
 #include "mu-core/PrimitiveTypes.h"
 #include "mu-core/Ranges.h"
+#include "mu-core/FixedArray.h"
 
 namespace GPUCommon {
 // Handles to GPU objects
@@ -83,26 +84,21 @@ namespace GPUCommon {
 	u32 GetStreamElementSize(const StreamElementDesc& element);
 
 	struct StreamSlotDesc {
-		u8 NumElements : 4;
-		StreamElementDesc Elements[MaxStreamElements];
-
-		StreamElementDesc& Element(u8 index) {
-			if (index >= NumElements) {
-				NumElements = index = 1;
-			}
-			return Elements[index];
-		}
-
+		mu::FixedArray<StreamElementDesc, MaxStreamElements> Elements;
+		
 		void Set(StreamElementDesc elem) {
-			NumElements = 1;
-			Elements[0] = elem;
+			Elements.Empty();
+			Elements.Add(elem);
 		}
 	};
 
 	struct StreamFormatDesc {
-		StreamSlotDesc Slots[MaxStreamSlots];
+		mu::FixedArray<StreamSlotDesc, MaxStreamSlots> Slots;
 
-		StreamSlotDesc& Slot(u32 index) { return Slots[index]; }
+		StreamSlotDesc& AddSlot() {
+			Slots.Add({});
+			return Slots[Slots.Num() - 1];
+		}
 	};
 
 	// Draw commands
@@ -126,7 +122,7 @@ namespace GPUCommon {
 	constexpr RenderTargetID BackBufferID = { u32_max };
 	constexpr u8 MaxRenderTargets = 16;
 	struct RenderPass {
+		mu::FixedArray<RenderTargetID, MaxRenderTargets> RenderTargets;
 		mu::PointerRange<const DrawItem> DrawItems;
-		mu::PointerRange<const RenderTargetID> RenderTargets;
 	};
 }

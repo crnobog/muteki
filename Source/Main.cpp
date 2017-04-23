@@ -69,7 +69,7 @@ int main(int, char**) {
 	ProgramID program_id = GPU::LinkProgram(vshader_id, pshader_id);
 
 	GPUCommon::StreamFormatDesc stream_format{};
-	stream_format.Slot(0).Set({ ScalarType::Float, 3, InputSemantic::Position, 0 });
+	stream_format.AddSlot().Set({ ScalarType::Float, 3, InputSemantic::Position, 0 });
 
 	StreamFormatID stream_format_id = GPU::RegisterStreamFormat(stream_format);
 	// {
@@ -110,7 +110,7 @@ int main(int, char**) {
 		draw_item.Command.PrimTopology = PrimitiveTopology::TriangleList;
 
 		RenderPass pass;
-		pass.RenderTargets = mu::Range(&BackBufferID, &BackBufferID+1);
+		pass.RenderTargets.Add(BackBufferID);
 		pass.DrawItems = mu::Range(&draw_item, &draw_item+1);
 		GPU::SubmitPass(pass);
 #endif

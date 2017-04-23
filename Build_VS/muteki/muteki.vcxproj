@@ -182,6 +182,7 @@
     <ClInclude Include="..\..\mu-core\Include\mu-core\Array.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\Debug.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\FileReader.h" />
+    <ClInclude Include="..\..\mu-core\Include\mu-core\FixedArray.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\Functors.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\Math.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\Metaprogramming.h" />

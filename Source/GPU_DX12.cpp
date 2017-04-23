@@ -561,8 +561,8 @@ StreamFormatID GPU_DX12::RegisterStreamFormat(const GPUCommon::StreamFormatDesc&
 		u32& stride = get<1>(it);
 		stride = 0;
 		const GPUCommon::StreamSlotDesc& slot = get<0>(it);
-		for (u8 element = 0; element < slot.NumElements; ++element) { // TODO: Use range - FixedArray/InlineArray?
-			stride += GPUCommon::GetStreamElementSize(slot.Elements[element]);
+		for (GPUCommon::StreamElementDesc& elem : slot.Elements) {
+			stride += GPUCommon::GetStreamElementSize(elem);
 		}
 	}
 
@@ -824,12 +824,12 @@ void GPU_DX12::SubmitPass(const GPUCommon::RenderPass& pass) {
 	command_list->SetGraphicsRootSignature(root_signature.Get());
 
 	// Bind RTs for pass
-	CHECK(pass.RenderTargets.Size() <= GPUCommon::MaxRenderTargets);
+	CHECK(pass.RenderTargets.Num() <= GPUCommon::MaxRenderTargets);
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvs[GPUCommon::MaxRenderTargets];
 	for (tuple<D3D12_CPU_DESCRIPTOR_HANDLE&, RenderTargetID> it : Zip(rtvs, pass.RenderTargets)) {
 		get<0>(it) = GetRenderTargetView(frame.render_target_view, get<1>(it));
 	}
-	command_list->OMSetRenderTargets((u32)pass.RenderTargets.Size(), rtvs, false, nullptr);
+	command_list->OMSetRenderTargets((u32)pass.RenderTargets.Num(), rtvs, false, nullptr);
 
 	// TODO: Make part of render pass
 	command_list->RSSetViewports(1, &viewport);
