@@ -1,11 +1,12 @@
 #pragma once
 
 #include "mu-core/PrimitiveTypes.h"
-#include "mu-core/Ranges.h"
+#include "mu-core/PointerRange.h"
 #include "mu-core/FixedArray.h"
 
 namespace GPUCommon {
-// Handles to GPU objects
+	// Handles to GPU objects
+	// TODO: Reduces sizes - u16 most places?
 	struct ConstantBufferID {
 		u32 Index = u32_max;
 	};
@@ -113,8 +114,14 @@ namespace GPUCommon {
 		ProgramID				Program;
 		InputAssemblerConfigID	InputAssemblerConfig;
 	};
+
+	constexpr size_t MaxBoundConstantBuffers = 4;
+	struct DrawBoundResources {
+		mu::FixedArray<ConstantBufferID, MaxBoundConstantBuffers> ConstantBuffers;
+	};
 	struct DrawItem {
 		DrawPipelineSetup	PipelineSetup;
+		DrawBoundResources	BoundResources;
 		DrawCommand			Command;
 	};
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "GPU_Common.h"
+#include "mu-core/PointerRange.h"
 
 namespace mu {
 	template<typename T> class PointerRange;
@@ -28,14 +29,14 @@ namespace GPU_DX12 {
 	void SubmitPass(const GPUCommon::RenderPass& pass);
 
 	StreamFormatID RegisterStreamFormat(const GPUCommon::StreamFormatDesc& format);
-	InputAssemblerConfigID RegisterInputAssemblyConfig(GPUCommon::StreamFormatID format, const mu::PointerRange<const VertexBufferID>& vertex_buffers, IndexBufferID index_buffer);
+	InputAssemblerConfigID RegisterInputAssemblyConfig(GPUCommon::StreamFormatID format, mu::PointerRange<const VertexBufferID> vertex_buffers, IndexBufferID index_buffer);
 
-	VertexShaderID CompileVertexShaderHLSL(const char* entry_point, const mu::PointerRange<const u8>& code);
-	PixelShaderID CompilePixelShaderHLSL(const char* entry_point, const mu::PointerRange<const u8>& code);
+	VertexShaderID CompileVertexShaderHLSL(const char* entry_point, mu::PointerRange<const u8> code);
+	PixelShaderID CompilePixelShaderHLSL(const char* entry_point, mu::PointerRange<const u8> code);
 	ProgramID LinkProgram(GPUCommon::VertexShaderID vertex_shader, GPUCommon::PixelShaderID pixel_shader);
 
-	ConstantBufferID CreateConstantBuffer();
-	VertexBufferID CreateVertexBuffer(const mu::PointerRange<u8>& data);
+	ConstantBufferID CreateConstantBuffer(mu::PointerRange<const u8> data);
+	VertexBufferID CreateVertexBuffer(mu::PointerRange<const u8> data);
 	IndexBufferID CreateIndexBuffer();
 };
 

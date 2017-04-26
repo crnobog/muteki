@@ -72,16 +72,6 @@ int main(int, char**) {
 	stream_format.AddSlot().Set({ ScalarType::Float, 3, InputSemantic::Position, 0 });
 
 	StreamFormatID stream_format_id = GPU::RegisterStreamFormat(stream_format);
-	// {
-	//	1, // Num slots
-	//	{
-	//		0, // Slot index
-	//		1, // Num elements
-	//		{
-	//			{ ScalarType::Float, 3, InputSemantic::Position, 0 },
-	//		},
-	//	},
-	//});
 
 	struct Vertex {
 		Vec3 position;
@@ -91,6 +81,12 @@ int main(int, char**) {
 	};
 	VertexBufferID vbuffer_id = GPU::CreateVertexBuffer(Range((u8*)triangle_vertices, sizeof(triangle_vertices)));
 	InputAssemblerConfigID ia_id = GPU::RegisterInputAssemblyConfig(stream_format_id, Range(&vbuffer_id, &vbuffer_id+1), IndexBufferID{});
+
+	struct CBuffer_Color {
+		Vec4 color;
+	};
+	CBuffer_Color cbuffer = { { 0.0f, 1.0f, 0.0f, 1.0f } };
+	ConstantBufferID cbuffer_id = GPU::CreateConstantBuffer(Range((u8*)&cbuffer, sizeof(cbuffer)));
 
 	//bool show_test_window = true;
 	while (glfwWindowShouldClose(win) == false) {
@@ -106,6 +102,7 @@ int main(int, char**) {
 		// default raster state, blend state, depth stenci state
 		draw_item.PipelineSetup.InputAssemblerConfig = ia_id;
 		draw_item.PipelineSetup.Program = program_id;
+		draw_item.BoundResources.ConstantBuffers.Add(cbuffer_id);
 		draw_item.Command.VertexOrIndexCount = 3;
 		draw_item.Command.PrimTopology = PrimitiveTopology::TriangleList;
 

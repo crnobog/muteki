@@ -184,17 +184,23 @@
     <ClInclude Include="..\..\mu-core\Include\mu-core\FileReader.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\FixedArray.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\Functors.h" />
+    <ClInclude Include="..\..\mu-core\Include\mu-core\IotaRange.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\Math.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\Metaprogramming.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\mu-core.h" />
+    <ClInclude Include="..\..\mu-core\Include\mu-core\PointerRange.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\PrimitiveTypes.h" />
+    <ClInclude Include="..\..\mu-core\Include\mu-core\RangeIteration.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\Ranges.h" />
+    <ClInclude Include="..\..\mu-core\Include\mu-core\RangeWrappers.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\RefCountPtr.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\Scope.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\String.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\StringFormat.h" />
+    <ClInclude Include="..\..\mu-core\Include\mu-core\TransformRange.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\Utils.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\Vectors.h" />
+    <ClInclude Include="..\..\mu-core\Include\mu-core\ZipRange.h" />
     <ClInclude Include="..\..\Source\GPU_Common.h" />
     <ClInclude Include="..\..\Source\GPU_DX12.h" />
   </ItemGroup>

@@ -1,3 +1,5 @@
+// TOOD: unify case for var names by context
+
 #include "mu-core/Debug.h"
 #include "GPU_DX12.h"
 
@@ -39,6 +41,7 @@ namespace GPU_DX12 {
 	constexpr i32 max_vertex_buffers = 1;
 	constexpr i32 max_ia_configs = 1;
 	constexpr i32 MaxStreamFormats = 1;
+	constexpr i32 MaxConstantBuffers = 1;
 }
 
 using std::tuple;
@@ -77,10 +80,10 @@ namespace GPU_DX12 {
 	};
 
 	struct BufferDesc : D3D12_RESOURCE_DESC {
-		BufferDesc(u32 width) {
+		BufferDesc(size_t width) {
 			Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
 			Alignment = 0;
-			Width = width;
+			Width = (u32)width;
 			Height = 1;
 			DepthOrArraySize = 1;
 			MipLevels = 1;
@@ -341,7 +344,16 @@ void GPU_DX12::Init() {
 
 	// Empty root signature
 	{
-		D3D12_ROOT_SIGNATURE_DESC root_signature_desc = { 0, nullptr, 0, nullptr,
+		Array<D3D12_ROOT_PARAMETER> root_parameters;
+		root_parameters.AddZeroed(1);
+		root_parameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+		root_parameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+		root_parameters[0].Descriptor.ShaderRegister = 0;
+		root_parameters[0].Descriptor.RegisterSpace = 0;
+		Array<D3D12_STATIC_SAMPLER_DESC> static_samplers;
+		D3D12_ROOT_SIGNATURE_DESC root_signature_desc = { 
+			(u32)root_parameters.Num(), root_parameters.Data(),
+			(u32)static_samplers.Num(), static_samplers.Data(),
 			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT };
 		COMPtr<ID3DBlob> signature_blob, error_blob;
 		EnsureHR(D3D12SerializeRootSignature(&root_signature_desc, D3D_ROOT_SIGNATURE_VERSION_1, signature_blob.Replace(), error_blob.Replace()));
@@ -613,6 +625,9 @@ namespace GPU_DX12 {
 
 	InputAssemblerConfig ia_configs[max_ia_configs];
 	InputAssemblerConfigID next_ia_config_id{ 0 };
+
+	COMPtr<ID3D12Resource> constant_buffers[MaxConstantBuffers];
+	ConstantBufferID next_constant_buffer_id{ 0 };
 }
 
 namespace GPU_DX12 {
@@ -653,7 +668,7 @@ VertexShaderInputElement ParseInputParameter(D3D12_SIGNATURE_PARAMETER_DESC& inp
 	return out_elem;
 }
 
-VertexShaderID GPU_DX12::CompileVertexShaderHLSL(const char* entry_point, const PointerRange<const u8>& code) {
+VertexShaderID GPU_DX12::CompileVertexShaderHLSL(const char* entry_point, PointerRange<const u8> code) {
 	VertexShaderID id{ next_vertex_shader_id.Index++ };
 	COMPtr<ID3DBlob>& compiled_shader = registered_vertex_shaders[id.Index];
 	CompileShaderHLSL(compiled_shader.Replace(), "vs_5_0", entry_point, code);
@@ -681,7 +696,7 @@ VertexShaderID GPU_DX12::CompileVertexShaderHLSL(const char* entry_point, const 
 
 	return id;
 }
-PixelShaderID GPU_DX12::CompilePixelShaderHLSL(const char* entry_point, const PointerRange<const u8>& code) {
+PixelShaderID GPU_DX12::CompilePixelShaderHLSL(const char* entry_point, PointerRange<const u8> code) {
 	PixelShaderID id{ next_pixel_shader_id.Index++ };
 	ID3DBlob** compiled_shader = registered_pixel_shaders[id.Index].Replace();
 	CompileShaderHLSL(compiled_shader, "ps_5_0", entry_point, code);
@@ -696,8 +711,29 @@ ProgramID GPU_DX12::LinkProgram(VertexShaderID vertex_shader, PixelShaderID pixe
 	return id;
 }
 
+ConstantBufferID GPU_DX12::CreateConstantBuffer(PointerRange<const u8> data) {
+	CHECK(next_constant_buffer_id.Index < MaxConstantBuffers);
+	ConstantBufferID id{ next_constant_buffer_id.Index++ };
 
-VertexBufferID GPU_DX12::CreateVertexBuffer(const PointerRange<u8>& data) {
+	auto cbuffer_desc = BufferDesc{ data.Size() };
+	EnsureHR(device->CreateCommittedResource(
+		&upload_heap_properties,
+		D3D12_HEAP_FLAG_NONE,
+		&cbuffer_desc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(constant_buffers[id.Index].Replace())
+	));
+	void* mapped = nullptr;
+	D3D12_RANGE read_range{ 0, 0 };
+	EnsureHR(constant_buffers[id.Index]->Map(0, &read_range, &mapped));
+	memcpy(mapped, &data.Front(), data.Size());
+	constant_buffers[id.Index]->Unmap(0, nullptr);
+	
+	return id;
+}
+
+VertexBufferID GPU_DX12::CreateVertexBuffer(PointerRange<const u8> data) {
 	CHECK(next_vertex_buffer_id.Index < max_vertex_buffers);
 
 	VertexBufferID id { next_vertex_buffer_id.Index++ };
@@ -723,7 +759,7 @@ VertexBufferID GPU_DX12::CreateVertexBuffer(const PointerRange<u8>& data) {
 	return id;
 }
 
-InputAssemblerConfigID GPU_DX12::RegisterInputAssemblyConfig(StreamFormatID stream_id, const PointerRange<const VertexBufferID>& vbuffers, IndexBufferID ibuffer) {
+InputAssemblerConfigID GPU_DX12::RegisterInputAssemblyConfig(StreamFormatID stream_id, PointerRange<const VertexBufferID> vbuffers, IndexBufferID ibuffer) {
 	CHECK(vbuffers.Size() <= GPUCommon::MaxStreamSlots);
 	CHECK(next_ia_config_id.Index < max_ia_configs);
 
@@ -842,6 +878,11 @@ void GPU_DX12::SubmitPass(const GPUCommon::RenderPass& pass) {
 
 		command_list->SetPipelineState(pso);
 		command_list->IASetPrimitiveTopology(CommonToDX12(item.Command.PrimTopology));
+
+		CHECK(item.BoundResources.ConstantBuffers.Num() <= 1);
+		if (item.BoundResources.ConstantBuffers.Num() > 0 && item.BoundResources.ConstantBuffers[0].Index != u32_max) {
+			command_list->SetGraphicsRootConstantBufferView(0, constant_buffers[item.BoundResources.ConstantBuffers[0].Index]->GetGPUVirtualAddress());
+		}
 
 		D3D12_VERTEX_BUFFER_VIEW vbs[GPUCommon::MaxStreamSlots];
 		//D3D12_INDEX_BUFFER_VIEW ib;

@@ -114,6 +114,24 @@
     <ClInclude Include="..\..\mu-core\Include\mu-core\FixedArray.h">
       <Filter>mu-core</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\mu-core\Include\mu-core\PointerRange.h">
+      <Filter>mu-core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\mu-core\Include\mu-core\IotaRange.h">
+      <Filter>mu-core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\mu-core\Include\mu-core\RangeIteration.h">
+      <Filter>mu-core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\mu-core\Include\mu-core\ZipRange.h">
+      <Filter>mu-core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\mu-core\Include\mu-core\TransformRange.h">
+      <Filter>mu-core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\mu-core\Include\mu-core\RangeWrappers.h">
+      <Filter>mu-core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Shaders\basic_shader.hlsl" />
