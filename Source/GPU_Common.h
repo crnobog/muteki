@@ -132,4 +132,7 @@ namespace GPUCommon {
 		mu::FixedArray<RenderTargetID, MaxRenderTargets> RenderTargets;
 		mu::PointerRange<const DrawItem> DrawItems;
 	};
+
+	static_assert(std::is_trivially_destructible_v<DrawItem>, "RenderPass should be trivially destructible");
+	static_assert(std::is_trivially_destructible_v<RenderPass>, "RenderPass should be trivially destructible");
 }
