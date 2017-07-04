@@ -2,8 +2,7 @@
 
 #include "GPU_DX12/Utils.h"
 
-namespace GPU_DX12 {
-
+namespace DX12Util {
 	struct Fence {
 		COMPtr<ID3D12Fence>		fence;
 		u64						last_value = 0;

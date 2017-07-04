@@ -3,10 +3,12 @@
 #include "mu-core/Debug.h"
 #include "mu-core/PrimitiveTypes.h"
 #include "mu-core/RefCountPtr.h"
+#include "mu-core/PointerRange.h"
 
-#include "../GPU_Common.h"
+#include "../GPUInterface.h"
 
 #include <d3d12.h>
+#include <d3d12shader.h>
 
 #define EnsureHR(expr) \
 	do { \
@@ -14,7 +16,7 @@
 		CHECKF(SUCCEEDED(hr), #expr, "failed with error code ", hr); \
 	} while(false);
 
-namespace GPU_DX12 {
+namespace DX12Util {
 	template<typename OBJECT>
 	struct COMRefCount {
 		static void IncRef(OBJECT* o) {
@@ -87,7 +89,7 @@ namespace GPU_DX12 {
 	};
 
 
-	inline D3D12_PRIMITIVE_TOPOLOGY CommonToDX12(GPUCommon::PrimitiveTopology pt) {
+	inline D3D12_PRIMITIVE_TOPOLOGY CommonToDX12(GPUInterface::PrimitiveTopology pt) {
 		static D3D12_PRIMITIVE_TOPOLOGY list[] = {
 			D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
 			D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
@@ -95,9 +97,9 @@ namespace GPU_DX12 {
 		return list[(i32)pt];
 	}
 
-	inline DXGI_FORMAT CommonToDX12(GPUCommon::TextureFormat format) {
+	inline DXGI_FORMAT CommonToDX12(GPUInterface::TextureFormat format) {
 		switch (format) {
-		case GPUCommon::TextureFormat::RGBA8:
+		case GPUInterface::TextureFormat::RGBA8:
 			return DXGI_FORMAT_R8G8B8A8_UNORM;
 		}
 		CHECK(false);
@@ -121,12 +123,22 @@ namespace GPU_DX12 {
 		}
 	}
 
-	inline u32 CalcRowPitch(GPUCommon::TextureFormat format, u32 width) {
+	inline u32 CalcRowPitch(GPUInterface::TextureFormat format, u32 width) {
 		switch (format) {
-		case GPUCommon::TextureFormat::RGBA8:
+		case GPUInterface::TextureFormat::RGBA8:
 			return 4 * width;
 		}		
 		CHECK(false);
 		return 0;
 	}
+
+	void CompileShaderHLSL(ID3DBlob** compiled_shader, const char* shader_model, const char* entry_point, const mu::PointerRange<const u8>& code);
+
+	struct VertexShaderInputElement {
+		GPUInterface::ScalarType Type : 2;
+		u8 CountMinusOne : 2;
+		GPUInterface::InputSemantic Semantic : 6;
+		u8 SemanticIndex : 6;
+	};
+	VertexShaderInputElement ParseInputParameter(D3D12_SIGNATURE_PARAMETER_DESC& input_param);
 }

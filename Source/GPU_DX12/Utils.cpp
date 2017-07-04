@@ -1,6 +1,9 @@
 #include "Utils.h"
 
-namespace GPU_DX12 {
+#include <d3dcompiler.h>
+#pragma comment(lib, "d3dcompiler.lib")
+
+namespace DX12Util {
 	ResourceBarrier::ResourceBarrier(ID3D12Resource* resource, ResourceState before, ResourceState after) {
 		Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 		Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
@@ -83,7 +86,7 @@ namespace GPU_DX12 {
 		Base::DepthStencilState.DepthEnable = enable;
 		return *this;
 	}
-	GraphicsPipelineStateDesc& GraphicsPipelineStateDesc::PrimType(GPU_DX12::PrimType type) {
+	GraphicsPipelineStateDesc& GraphicsPipelineStateDesc::PrimType(DX12Util::PrimType type) {
 		Base::PrimitiveTopologyType = (D3D12_PRIMITIVE_TOPOLOGY_TYPE)type;
 		return *this;
 	}
@@ -184,4 +187,40 @@ namespace GPU_DX12 {
 		{ D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS },
 		{ D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS }
 	};
+
+	void CompileShaderHLSL(ID3DBlob** compiled_shader, const char* shader_model, const char* entry_point, const mu::PointerRange<const u8>& code) {
+		COMPtr<ID3DBlob> errors;
+
+		if (!SUCCEEDED(D3DCompile(
+			&code.Front(),
+			code.Size(),
+			nullptr,
+			nullptr,
+			nullptr,
+			entry_point,
+			shader_model,
+			0,
+			0,
+			compiled_shader,
+			errors.Replace()))) {
+			const char* error_msg = (const char*)errors->GetBufferPointer();
+			CHECKF(false, "Compile failed with error: ", error_msg);
+		}
+	}
+
+	VertexShaderInputElement ParseInputParameter(D3D12_SIGNATURE_PARAMETER_DESC& input_param) {
+		std::tuple<GPUInterface::InputSemantic, const char*> table[] = {
+			{ GPUInterface::InputSemantic::Position, "POSITION" },
+		};
+		auto found = mu::Find(mu::Range(table), [&](const std::tuple<GPUInterface::InputSemantic, const char*>& sem) {
+			return strcmp(std::get<1>(sem), input_param.SemanticName) == 0;
+		});
+		CHECK(!found.IsEmpty());
+		VertexShaderInputElement out_elem;
+		out_elem.Semantic = std::get<0>(found.Front());
+		out_elem.SemanticIndex = input_param.SemanticIndex;
+		out_elem.Type = GPUInterface::ScalarType::Float;
+		out_elem.CountMinusOne = 3;
+		return out_elem;
+	}
 }
