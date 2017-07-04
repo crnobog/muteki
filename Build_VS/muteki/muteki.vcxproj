@@ -169,6 +169,7 @@
     <ClCompile Include="..\..\mu-core\Source\mu-core.cpp" />
     <ClCompile Include="..\..\Source\GPUCommon.cpp" />
     <ClCompile Include="..\..\Source\GPU_DX12.cpp" />
+    <ClCompile Include="..\..\Source\GPU_DX12\Utils.cpp" />
     <ClCompile Include="..\..\Source\Main.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -189,6 +190,7 @@
     <ClInclude Include="..\..\mu-core\Include\mu-core\Metaprogramming.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\mu-core.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\PointerRange.h" />
+    <ClInclude Include="..\..\mu-core\Include\mu-core\Pool.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\PrimitiveTypes.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\RangeIteration.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\Ranges.h" />
@@ -203,6 +205,8 @@
     <ClInclude Include="..\..\mu-core\Include\mu-core\ZipRange.h" />
     <ClInclude Include="..\..\Source\GPU_Common.h" />
     <ClInclude Include="..\..\Source\GPU_DX12.h" />
+    <ClInclude Include="..\..\Source\GPU_DX12\Fence.h" />
+    <ClInclude Include="..\..\Source\GPU_DX12\Utils.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Shaders\basic_shader.hlsl">

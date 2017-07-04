@@ -42,6 +42,10 @@ void ImGui_Impl_BeginFrame() {
 }
 void ImGui_Impl_DrawFrame() {}
 
+struct Color4 {
+	u8 R, G, B, A;
+};
+
 int main(int, char**) {
 	using namespace GPUCommon;
 
@@ -85,8 +89,18 @@ int main(int, char**) {
 	struct CBuffer_Color {
 		Vec4 color;
 	};
-	CBuffer_Color cbuffer = { { 0.0f, 1.0f, 0.0f, 1.0f } };
+	CBuffer_Color cbuffer = { { 1.0f, 1.0f, 0.0f, 1.0f } };
 	ConstantBufferID cbuffer_id = GPU::CreateConstantBuffer(Range((u8*)&cbuffer, sizeof(cbuffer)));
+
+	Color4 pixels[] = {
+		{ 255, 0, 0, 255 }, { 0, 255, 0, 255 },
+		{ 0, 255, 0, 255 }, { 255, 0, 0, 255 },
+	};
+	TextureID texture_id = GPU::CreateTexture2D(2, 2, GPUCommon::TextureFormat::RGBA8, Range((u8*)pixels, sizeof(pixels)));
+	ShaderResourceListDesc resource_list_desc = {};
+	resource_list_desc.StartSlot = 0;
+	resource_list_desc.Textures.Add(texture_id);
+	ShaderResourceListID resource_list_id = GPU::CreateShaderResourceList(resource_list_desc);
 
 	//bool show_test_window = true;
 	while (glfwWindowShouldClose(win) == false) {
@@ -95,14 +109,12 @@ int main(int, char**) {
 		GPU::BeginFrame();
 		//ImGui_Impl_BeginFrame();
 
-#if 0
-		GPU::RenderTestFrame();
-#else
 		DrawItem draw_item = {};
 		// default raster state, blend state, depth stenci state
 		draw_item.PipelineSetup.InputAssemblerConfig = ia_id;
 		draw_item.PipelineSetup.Program = program_id;
 		draw_item.BoundResources.ConstantBuffers.Add(cbuffer_id);
+		draw_item.BoundResources.ResourceLists.Add(resource_list_id);
 		draw_item.Command.VertexOrIndexCount = 3;
 		draw_item.Command.PrimTopology = PrimitiveTopology::TriangleList;
 
@@ -110,7 +122,7 @@ int main(int, char**) {
 		pass.RenderTargets.Add(BackBufferID);
 		pass.DrawItems = mu::Range(&draw_item, &draw_item+1);
 		GPU::SubmitPass(pass);
-#endif
+
 		//ImGui::ShowTestWindow(&show_test_window);
 		//ImGui::Render();
 

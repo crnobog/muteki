@@ -4,10 +4,14 @@
 #include "GPU_DX12.h"
 
 #include "mu-core/Array.h"
+#include "mu-core/FixedArray.h"
+#include "mu-core/Pool.h"
 #include "mu-core/Ranges.h"
-#include "mu-core/RefCountPtr.h"
 #include "mu-core/Vectors.h"
 #include "mu-core/Utils.h"
+
+#include "GPU_DX12/Fence.h"
+#include "GPU_DX12/Utils.h"
 
 #include <d3d12.h>
 #include <d3d12sdklayers.h>
@@ -18,248 +22,82 @@
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3dcompiler.lib")
 
-using GPUCommon::StreamFormatID;
-using GPUCommon::VertexBufferID;
-using GPUCommon::IndexBufferID;
-using GPUCommon::InputAssemblerConfigID;
-using GPUCommon::VertexShaderID;
-using GPUCommon::PixelShaderID;
-using GPUCommon::ProgramID;
-using GPUCommon::ConstantBufferID;
-using GPUCommon::RenderTargetID;
+using mu::FixedArray;
 
-#define EnsureHR(expr) \
-	do { \
-		HRESULT hr =(expr); if(SUCCEEDED(hr)) {break;} \
-		CHECKF(SUCCEEDED(hr), #expr, "failed with error code ", hr); \
-	} while(false);
-
-// Maximums
+// Internal types
 namespace GPU_DX12 {
-	constexpr i32 max_shaders = 2;
-	constexpr i32 max_programs = 1;
-	constexpr i32 max_vertex_buffers = 1;
-	constexpr i32 max_ia_configs = 1;
-	constexpr i32 MaxStreamFormats = 1;
-	constexpr i32 MaxConstantBuffers = 1;
+
+	struct StreamFormat {
+		u32 Strides[GPUCommon::MaxStreamSlots];
+		GPUCommon::StreamFormatDesc Desc;
+	};
+
+	struct LinkedProgram {
+		VertexShaderID VertexShader;
+		PixelShaderID PixelShader;
+	};
+
+	struct VertexShaderInputElement {
+		GPUCommon::ScalarType Type : 2;
+		u8 CountMinusOne : 2;
+		GPUCommon::InputSemantic Semantic : 6;
+		u8 SemanticIndex : 6;
+	};
+	struct VertexShaderInputs {
+		static constexpr i32 MaxInputElements = 8;
+		FixedArray<VertexShaderInputElement, MaxInputElements> InputElements;
+	};
+	struct VertexShader {
+		COMPtr<ID3DBlob> CompiledShader;
+		VertexShaderInputs Inputs;
+	};
+
+	struct InputAssemblerConfig {
+		StreamFormatID StreamFormat;
+		VertexBufferID Slots[GPUCommon::MaxStreamSlots];
+		IndexBufferID IndexBuffer;
+	};
+
+	struct VertexBuffer {
+		COMPtr<ID3D12Resource> Resource;
+		u32 Size;
+	};
+
+	struct CachedPSO {
+		GPUCommon::DrawPipelineSetup Setup;
+		COMPtr<ID3D12PipelineState> PSO;
+	};
+
+	struct Texture {
+		COMPtr<ID3D12Resource> Resource;
+		COMPtr<ID3D12Resource> UploadResource;
+		D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc;
+	};
+
+	struct ShaderResourceList {
+		GPUCommon::ShaderResourceListDesc desc;
+	};
 }
 
-using std::tuple;
-using std::get;
-using namespace mu;
-
 namespace GPU_DX12 {
+	using std::tuple;
+	using std::get;
+	using namespace mu;
 
-	template<typename OBJECT>
-	struct COMRefCount {
-		static void IncRef(OBJECT* o) {
-			o->AddRef();
-		}
-		static void DecRef(OBJECT* o) {
-			o->Release();
-		} 
-	};
-
-	template<typename COMObject>
-	using COMPtr = RefCountPtr<COMObject, COMRefCount>;
-
-	enum class ResourceState : i32 {
-		Present = D3D12_RESOURCE_STATE_PRESENT,
-		RenderTarget = D3D12_RESOURCE_STATE_RENDER_TARGET,
-	};
-
-	struct ResourceBarrier : D3D12_RESOURCE_BARRIER {
-		ResourceBarrier(ID3D12Resource* resource, ResourceState before, ResourceState after) {
-			Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-			Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-			Transition.pResource = resource;
-			Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-			Transition.StateBefore = (D3D12_RESOURCE_STATES)before;
-			Transition.StateAfter = (D3D12_RESOURCE_STATES)after;
-		}
-	};
-
-	struct BufferDesc : D3D12_RESOURCE_DESC {
-		BufferDesc(size_t width) {
-			Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-			Alignment = 0;
-			Width = (u32)width;
-			Height = 1;
-			DepthOrArraySize = 1;
-			MipLevels = 1;
-			Format = DXGI_FORMAT_UNKNOWN;
-			SampleDesc = { 1, 0 };
-			Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-			Flags = D3D12_RESOURCE_FLAG_NONE;
-		}
-	};
-
-	enum class PrimType { 
-		Triangle = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, 
-	};
-
-	static_assert(D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT == 8, "D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT != 8");
-	const D3D12_BLEND_DESC DefaultBlendDesc = { false, false, {
-		{
-			FALSE,FALSE,
-			D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-			D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-			D3D12_LOGIC_OP_NOOP,
-			D3D12_COLOR_WRITE_ENABLE_ALL,
-		},
-		{
-			FALSE,FALSE,
-			D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-			D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-			D3D12_LOGIC_OP_NOOP,
-			D3D12_COLOR_WRITE_ENABLE_ALL,
-		},
-		{
-			FALSE,FALSE,
-			D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-			D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-			D3D12_LOGIC_OP_NOOP,
-			D3D12_COLOR_WRITE_ENABLE_ALL,
-		},
-		{
-			FALSE,FALSE,
-			D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-			D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-			D3D12_LOGIC_OP_NOOP,
-			D3D12_COLOR_WRITE_ENABLE_ALL,
-		},
-		{
-			FALSE,FALSE,
-			D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-			D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-			D3D12_LOGIC_OP_NOOP,
-			D3D12_COLOR_WRITE_ENABLE_ALL,
-		},
-		{
-			FALSE,FALSE,
-			D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-			D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-			D3D12_LOGIC_OP_NOOP,
-			D3D12_COLOR_WRITE_ENABLE_ALL,
-		},
-		{
-			FALSE,FALSE,
-			D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-			D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-			D3D12_LOGIC_OP_NOOP,
-			D3D12_COLOR_WRITE_ENABLE_ALL,
-		},
-		{
-			FALSE,FALSE,
-			D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-			D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-			D3D12_LOGIC_OP_NOOP,
-			D3D12_COLOR_WRITE_ENABLE_ALL,
-		},
-	} };
-
-	const D3D12_RASTERIZER_DESC DefaultRasterizerState = {
-		D3D12_FILL_MODE_SOLID,
-		D3D12_CULL_MODE_BACK,
-		false,
-		D3D12_DEFAULT_DEPTH_BIAS,
-		D3D12_DEFAULT_DEPTH_BIAS_CLAMP,
-		D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS,
-		true,
-		false,
-		false,
-		0,
-		D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
-	};
-	const D3D12_DEPTH_STENCIL_DESC DefaultDepthStencilState = {
-		true,
-		D3D12_DEPTH_WRITE_MASK_ALL,
-		D3D12_COMPARISON_FUNC_LESS,
-		false,
-		D3D12_DEFAULT_STENCIL_READ_MASK,
-		D3D12_DEFAULT_STENCIL_WRITE_MASK,
-		{ D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS },
-		{ D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS }
-	};
-
-	struct GraphicsPipelineStateDesc : D3D12_GRAPHICS_PIPELINE_STATE_DESC {
-		typedef D3D12_GRAPHICS_PIPELINE_STATE_DESC Base;
-		GraphicsPipelineStateDesc(ID3D12RootSignature* root_signature) {
-			Base::pRootSignature = root_signature;
-			Base::VS = { 0, 0 };
-			Base::PS = { 0, 0 };
-			Base::DS = { 0, 0 };
-			Base::HS = { 0, 0 };
-			Base::GS = { 0, 0 };
-			Base::StreamOutput = { nullptr, 0, nullptr, 0, 0 };
-			Base::BlendState = DefaultBlendDesc;
-			for (UINT i = 0; i < D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT; ++i) {
-				Base::RTVFormats[i] = DXGI_FORMAT_UNKNOWN;
-			}
-			Base::SampleMask = UINT_MAX;
-			Base::RasterizerState = DefaultRasterizerState;
-			Base::DepthStencilState = DefaultDepthStencilState;
-			Base::InputLayout = { nullptr, 0 };
-			Base::IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
-			Base::PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
-			Base::NumRenderTargets = 0;
-			Base::DSVFormat = DXGI_FORMAT_UNKNOWN;
-			Base::SampleDesc = { 1, 0 };
-			Base::NodeMask = 0;
-			Base::CachedPSO = { nullptr, 0 };
-			Base::Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-		}
-
-		GraphicsPipelineStateDesc& VS(ID3DBlob* blob) {
-			Base::VS = { blob->GetBufferPointer(), blob->GetBufferSize() };
-			return *this;
-		}
-		GraphicsPipelineStateDesc& PS(ID3DBlob* blob) {
-			Base::PS = { blob->GetBufferPointer(), blob->GetBufferSize() };
-			return *this;
-		}
-		GraphicsPipelineStateDesc& DepthEnable(bool enable) {
-			Base::DepthStencilState.DepthEnable = enable;
-			return *this;
-		}
-		GraphicsPipelineStateDesc& PrimType(PrimType type) {
-			Base::PrimitiveTopologyType = (D3D12_PRIMITIVE_TOPOLOGY_TYPE)type;
-			return *this;
-		}
-		GraphicsPipelineStateDesc& RenderTargets(DXGI_FORMAT format) {
-			Base::NumRenderTargets = 1;
-			Base::RTVFormats[0] = format;
-			return *this;
-		}
-		GraphicsPipelineStateDesc& InputLayout(D3D12_INPUT_ELEMENT_DESC* elements, u32 num_elements) {
-			Base::InputLayout.NumElements = num_elements;
-			Base::InputLayout.pInputElementDescs = elements;
-			return *this;
-		}
-	};
-
-	struct Fence {
-		COMPtr<ID3D12Fence>		fence;
-		u64						last_value = 0;
-
-		u64 SubmitFence(ID3D12CommandQueue* command_queue) {
-			++last_value;
-			EnsureHR(command_queue->Signal(fence.Get(), last_value));
-			return last_value;
-		}
-		bool IsFenceComplete(u64 value) {
-			return fence->GetCompletedValue() >= value;
-		}
-		void WaitForFence(u64 value, HANDLE event) {
-			if (!IsFenceComplete(value)) {
-				EnsureHR(fence->SetEventOnCompletion(value, event));
-				WaitForSingleObjectEx(event, INFINITE, false);
-			}
-		}
-	};
+	using GPUCommon::StreamFormatID;
+	using GPUCommon::VertexBufferID;
+	using GPUCommon::IndexBufferID;
+	using GPUCommon::InputAssemblerConfigID;
+	using GPUCommon::VertexShaderID;
+	using GPUCommon::PixelShaderID;
+	using GPUCommon::ProgramID;
+	using GPUCommon::ConstantBufferID;
+	using GPUCommon::RenderTargetID;
 
 	const u32 frame_count = 2;
+	const u32 max_descriptors_per_frame = 128; // TODO: Use a pool of descriptor heaps?
 	const D3D12_HEAP_PROPERTIES upload_heap_properties{ D3D12_HEAP_TYPE_UPLOAD, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 };
+	const D3D12_HEAP_PROPERTIES default_heap_properties{ D3D12_HEAP_TYPE_DEFAULT, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 };
 
 	COMPtr<IDXGIFactory4>				dxgi_factory;
 	COMPtr<ID3D12Device>				device;
@@ -272,365 +110,254 @@ namespace GPU_DX12 {
 	D3D12_VIEWPORT						viewport = {};
 	D3D12_RECT							scissor_rect = {};
 
-	COMPtr<ID3D12Resource>				vertex_buffer;
-	D3D12_VERTEX_BUFFER_VIEW			vertex_buffer_view = {};
+	Array<CachedPSO> cached_psos;
 
-	COMPtr<ID3D12PipelineState>			pipeline_state;
+	COMPtr<ID3D12CommandQueue>			copy_command_queue;
+	COMPtr<ID3D12GraphicsCommandList>	copy_command_list;
+	COMPtr<ID3D12CommandAllocator>		copy_command_allocator;
+	Fence	copy_fence;
+	HANDLE	copy_fence_event;
 
-	UINT rtv_descriptor_size = 0;
-
+	u32 rtv_descriptor_size = 0;
+	u32 srv_descriptor_size = 0;
+	
 	u32 frame_index = 0;
 
 	struct FrameData {
 		COMPtr<ID3D12Resource>			render_target;
 		D3D12_CPU_DESCRIPTOR_HANDLE		render_target_view;
 		COMPtr<ID3D12CommandAllocator>	command_allocator;
+		COMPtr<ID3D12DescriptorHeap>	shader_resource_heap; // srv, cbv, uav
 		u64						fence_value;
 	} frame_data[frame_count];
 
 	Fence	frame_fence;
 	HANDLE	frame_fence_event;
-}
 
-namespace {
-	void WaitForFence(ID3D12Fence* fence, HANDLE event, UINT64 value) {
-		if (ENSURE(fence != nullptr)
-			&& ENSURE(event != nullptr)
-			&& fence->GetCompletedValue() < value) {
-			EnsureHR(fence->SetEventOnCompletion(value, event));
-			WaitForSingleObjectEx(event, INFINITE, false);
+	Pool<StreamFormat> stream_formats{ 128 };
+	Pool<VertexShader> registered_vertex_shaders{ 128 };
+	Pool<COMPtr<ID3DBlob>> registered_pixel_shaders{ 128 };
+	Pool<LinkedProgram> linked_programs{ 128 };
+	Pool<VertexBuffer> vertex_buffers{ 128 };
+	Pool<InputAssemblerConfig> ia_configs{ 128 };
+	Pool<COMPtr<ID3D12Resource>> constant_buffers{ 128 };
+	Pool<Texture> textures{ 128 };
+	Pool<ShaderResourceList> shader_resource_lists{ 128 };
+	
+	void Init() {
+		UINT dxgiFactoryFlags = 0;
+
+		{
+			COMPtr<ID3D12Debug> debug_interface;
+			if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(debug_interface.Replace())))) {
+				debug_interface->EnableDebugLayer();
+			}
+			dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
+		}
+
+		EnsureHR(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(dxgi_factory.Replace())));
+		EnsureHR(D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(device.Replace())));
+
+		{
+			D3D12_COMMAND_QUEUE_DESC queue_desc = {};
+			queue_desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+			queue_desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+
+			D3D12_DESCRIPTOR_HEAP_DESC heap_desc = {};
+			heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+			heap_desc.NumDescriptors = max_descriptors_per_frame;
+			heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+
+			EnsureHR(device->CreateCommandQueue(&queue_desc, IID_PPV_ARGS(command_queue.Replace())));
+			for (u32 i = 0; i < frame_count; ++i) {
+				EnsureHR(device->CreateCommandAllocator(queue_desc.Type, IID_PPV_ARGS(frame_data[i].command_allocator.Replace())));
+				EnsureHR(device->CreateDescriptorHeap(&heap_desc, IID_PPV_ARGS(frame_data[i].shader_resource_heap.Replace())));
+			}
+		}
+
+		EnsureHR(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(frame_fence.fence.Replace())));
+		EnsureHR(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(copy_fence.fence.Replace())));
+
+		EnsureHR(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frame_data[0].command_allocator.Get(), nullptr, IID_PPV_ARGS(command_list.Replace())));
+		command_list->Close(); // Force closed so it doesn't hold on to command allocator 0
+
+		D3D12_DESCRIPTOR_HEAP_DESC rtv_heap_desc = {};
+		rtv_heap_desc.NumDescriptors = frame_count;
+		rtv_heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+		rtv_heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+		EnsureHR(device->CreateDescriptorHeap(&rtv_heap_desc, IID_PPV_ARGS(rtv_heap.Replace())));
+
+		rtv_descriptor_size = device->GetDescriptorHandleIncrementSize(rtv_heap_desc.Type);
+		srv_descriptor_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+		frame_fence_event = CreateEvent(nullptr, false, false, L"Frame Fence Event");
+		copy_fence_event = CreateEvent(nullptr, false, false, L"Upload Fence Event");
+
+		{
+			D3D12_COMMAND_QUEUE_DESC queue_desc = {};
+			queue_desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+			queue_desc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
+
+			EnsureHR(device->CreateCommandQueue(&queue_desc, IID_PPV_ARGS(copy_command_queue.Replace())));
+		}
+		EnsureHR(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(copy_command_allocator.Replace())));
+		EnsureHR(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, copy_command_allocator.Get(), nullptr, IID_PPV_ARGS(copy_command_list.Replace())));
+
+		EnsureHR(copy_command_list->Close());
+
+		// Empty root signature
+		{
+			Array<D3D12_ROOT_PARAMETER> root_parameters;
+			
+			{
+				auto r = root_parameters.AddZeroed(2);
+				D3D12_ROOT_PARAMETER* param = &r.Front();
+				param->ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+				param->ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+				param->Descriptor.ShaderRegister = 0;
+				param->Descriptor.RegisterSpace = 0;
+
+				r.Advance(); param = &r.Front();
+				static const D3D12_DESCRIPTOR_RANGE table = { D3D12_DESCRIPTOR_RANGE_TYPE_SRV, GPUCommon::MaxBoundShaderResources, 0, 0, 0 }; // Make sure pointer is valid outside this block
+				param->ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+				param->ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+				param->DescriptorTable.NumDescriptorRanges = 1;
+				param->DescriptorTable.pDescriptorRanges = &table;
+			}
+			Array<D3D12_STATIC_SAMPLER_DESC> static_samplers;
+			static_samplers.Add({
+				D3D12_FILTER_MIN_MAG_MIP_POINT,
+				D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+				D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+				D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+				0,
+				0, 
+				D3D12_COMPARISON_FUNC_NEVER,
+				D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK,
+				0.0f,
+				D3D12_FLOAT32_MAX,
+				0,
+				0,
+				D3D12_SHADER_VISIBILITY_ALL,
+			});
+			D3D12_ROOT_SIGNATURE_DESC root_signature_desc = {
+				(u32)root_parameters.Num(), root_parameters.Data(),
+				(u32)static_samplers.Num(), static_samplers.Data(),
+				D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT };
+			COMPtr<ID3DBlob> signature_blob, error_blob;
+			EnsureHR(D3D12SerializeRootSignature(&root_signature_desc, D3D_ROOT_SIGNATURE_VERSION_1, signature_blob.Replace(), error_blob.Replace()));
+			EnsureHR(device->CreateRootSignature(0, signature_blob->GetBufferPointer(), signature_blob->GetBufferSize(), IID_PPV_ARGS(root_signature.Replace())));
 		}
 	}
-}
 
-void GPU_DX12::Init() {
-	UINT dxgiFactoryFlags = 0;
+	void Shutdown() {
+		for (i32 i = 0; i < frame_count; ++i) {
+			auto& frame = frame_data[i];
 
-	{
-		COMPtr<ID3D12Debug> debug_interface;
-		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(debug_interface.Replace())))) {
-			debug_interface->EnableDebugLayer();
+			frame_fence.WaitForFence(frame.fence_value, frame_fence_event);
 		}
-		dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
+
+		stream_formats.Empty();
+		registered_vertex_shaders.Empty();
 	}
 
-	EnsureHR(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(dxgi_factory.Replace())));
-	EnsureHR(D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(device.Replace())));
+	void RecreateSwapChain(void* hwnd, u32 width, u32 height) {
+		viewport = D3D12_VIEWPORT{ 0.0f, 0.0f, (float)width, (float)height, 0.0f, 1.0f };
+		scissor_rect = D3D12_RECT{ 0, 0, (LONG)width, (LONG)height };
 
-	D3D12_COMMAND_QUEUE_DESC queue_desc = {};
-	queue_desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-	queue_desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+		DXGI_SWAP_CHAIN_DESC1 swap_chain_desc = {};
+		swap_chain_desc.BufferCount = frame_count;
+		swap_chain_desc.Width = width;
+		swap_chain_desc.Height = height;
+		swap_chain_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		swap_chain_desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+		swap_chain_desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+		swap_chain_desc.SampleDesc.Count = 1;
 
-	EnsureHR(device->CreateCommandQueue(&queue_desc, IID_PPV_ARGS(command_queue.Replace())));
+		{
+			COMPtr<IDXGISwapChain1> swap_chain_tmp;
+			EnsureHR(dxgi_factory->CreateSwapChainForHwnd(
+				command_queue.Get(),
+				(HWND)hwnd,
+				&swap_chain_desc,
+				nullptr, // fullscreen desc
+				nullptr, // restrict output
+				swap_chain_tmp.Replace()));
+			EnsureHR(dxgi_factory->MakeWindowAssociation((HWND)hwnd, DXGI_MWA_NO_ALT_ENTER));
 
-	for (u32 i = 0; i < frame_count; ++i) {
-		EnsureHR(device->CreateCommandAllocator(queue_desc.Type, IID_PPV_ARGS(frame_data[i].command_allocator.Replace())));
+			EnsureHR(swap_chain_tmp->QueryInterface(swap_chain.Replace()));
+		}
+		frame_index = swap_chain->GetCurrentBackBufferIndex();
+
+		D3D12_CPU_DESCRIPTOR_HANDLE rtv_handle = rtv_heap->GetCPUDescriptorHandleForHeapStart();
+		for (u32 n = 0; n < frame_count; ++n) {
+			EnsureHR(swap_chain->GetBuffer(n, IID_PPV_ARGS(frame_data[n].render_target.Replace())));
+			device->CreateRenderTargetView(frame_data[n].render_target.Get(), nullptr, rtv_handle);
+			frame_data[n].render_target_view = rtv_handle;
+			rtv_handle.ptr += rtv_descriptor_size;
+		}
 	}
 
-	EnsureHR(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(frame_fence.fence.Replace())));
-
-	EnsureHR(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frame_data[0].command_allocator.Get(), nullptr, IID_PPV_ARGS(command_list.Replace())));
-	command_list->Close(); // Force closed so it doesn't hold on to command allocator 0
-
-	D3D12_DESCRIPTOR_HEAP_DESC rtv_heap_desc = {};
-	rtv_heap_desc.NumDescriptors = frame_count;
-	rtv_heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-	rtv_heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-	EnsureHR(device->CreateDescriptorHeap(&rtv_heap_desc, IID_PPV_ARGS(rtv_heap.Replace())));
-
-	rtv_descriptor_size = device->GetDescriptorHandleIncrementSize(rtv_heap_desc.Type);
-
-	frame_fence_event = CreateEvent(nullptr, false, false, L"Frame Fence Event");
-
-	// Empty root signature
-	{
-		Array<D3D12_ROOT_PARAMETER> root_parameters;
-		root_parameters.AddZeroed(1);
-		root_parameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-		root_parameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-		root_parameters[0].Descriptor.ShaderRegister = 0;
-		root_parameters[0].Descriptor.RegisterSpace = 0;
-		Array<D3D12_STATIC_SAMPLER_DESC> static_samplers;
-		D3D12_ROOT_SIGNATURE_DESC root_signature_desc = { 
-			(u32)root_parameters.Num(), root_parameters.Data(),
-			(u32)static_samplers.Num(), static_samplers.Data(),
-			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT };
-		COMPtr<ID3DBlob> signature_blob, error_blob;
-		EnsureHR(D3D12SerializeRootSignature(&root_signature_desc, D3D_ROOT_SIGNATURE_VERSION_1, signature_blob.Replace(), error_blob.Replace()));
-		EnsureHR(device->CreateRootSignature(0, signature_blob->GetBufferPointer(), signature_blob->GetBufferSize(), IID_PPV_ARGS(root_signature.Replace())));
-	}
-
-	// Vertex buffer
-	{
-		struct Vertex {
-			Vec3 position;
-		};
-		Vertex triangle_vertices[] = {
-			{ 0.0f, 0.5f, 0.0f }, { 0.5f, -0.5f, 0.0f }, { -0.5f, -0.5f, 0.0f }
-		};
-		const u32 vbuffer_size = sizeof(triangle_vertices);
-		auto vbuffer_desc = BufferDesc{ vbuffer_size };
-		EnsureHR(device->CreateCommittedResource(
-			&upload_heap_properties,
-			D3D12_HEAP_FLAG_NONE,
-			&vbuffer_desc,
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(vertex_buffer.Replace()))
-		);
-
-
-		D3D12_RANGE read_range{ 0, 0 };
-		Vertex* mapped = nullptr;
-		EnsureHR(vertex_buffer->Map(0, &read_range, &(void*)mapped));
-		memcpy(mapped, &triangle_vertices, vbuffer_size);
-		vertex_buffer->Unmap(0, nullptr);
-
-		vertex_buffer_view = { vertex_buffer->GetGPUVirtualAddress(), vbuffer_size, sizeof(Vertex) };
-	}
-
-	// Shaders and pipeline state
-	{
-		COMPtr<ID3DBlob> vertex_shader, pixel_shader, vshader_errors, pshader_errors;
-
-		const char shader_code[] =
-			"float4 vs_main(float4 in_pos : POSITION) : SV_POSITION\n"
-			"{\n"
-			"    return in_pos;\n"
-			"}\n"
-			"\n"
-			"float4 ps_main(float4 in_pos : SV_POSITION) : SV_TARGET\n"
-			"{\n"
-			"    return float4(1.0f, 0.0f, 0.0f, 1.0f);\n"
-			"}\n"
-			"\n";
-		size_t shader_code_size = sizeof(shader_code);
-
-		EnsureHR(D3DCompile(
-			shader_code, 
-			shader_code_size, 
-			nullptr, 
-			nullptr, 
-			nullptr, 
-			"vs_main", 
-			"vs_5_0", 
-			0, 
-			0, 
-			vertex_shader.Replace(), 
-			vshader_errors.Replace()));
-		
-		EnsureHR(D3DCompile(
-			shader_code, 
-			shader_code_size, 
-			nullptr, 
-			nullptr, 
-			nullptr, 
-			"ps_main", 
-			"ps_5_0", 
-			0, 
-			0, 
-			pixel_shader.Replace(), 
-			pshader_errors.Replace()));
-
-		// TODO: Make builder?
-		D3D12_INPUT_ELEMENT_DESC input_layout[] = {
-			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		};
-		auto pipeline_desc = GraphicsPipelineStateDesc{ root_signature.Get() }
-			.VS(vertex_shader)
-			.PS(pixel_shader)
-			.DepthEnable(false)
-			.PrimType(PrimType::Triangle)
-			.RenderTargets(DXGI_FORMAT_R8G8B8A8_UNORM)
-			.InputLayout(input_layout, (u32)ArraySize(input_layout));
-		EnsureHR(device->CreateGraphicsPipelineState(&pipeline_desc, IID_PPV_ARGS(pipeline_state.Replace())));
-	}
-}
-
-void GPU_DX12::Shutdown() {
-	for (i32 i = 0; i < frame_count; ++i) {
-		auto& frame = frame_data[i];
+	void BeginFrame() {
+		auto& frame = frame_data[frame_index];
 
 		frame_fence.WaitForFence(frame.fence_value, frame_fence_event);
+
+		EnsureHR(frame.command_allocator->Reset());
+
+		EnsureHR(command_list->Reset(frame.command_allocator.Get(), nullptr));
+
+		command_list->RSSetViewports(1, &viewport);
+		command_list->RSSetScissorRects(1, &scissor_rect);
+
+		auto present_to_rt = ResourceBarrier{ frame.render_target.Get(), ResourceState::Present, ResourceState::RenderTarget };
+		command_list->ResourceBarrier(1, &present_to_rt);
+
+		command_list->OMSetRenderTargets(1, &frame.render_target_view, false, nullptr);
+		float clear_color[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
+		command_list->ClearRenderTargetView(frame.render_target_view, clear_color, 0, nullptr);
+
+		EnsureHR(command_list->Close());
+
+		ID3D12CommandList* command_lists[] = { command_list.Get() };
+		command_queue->ExecuteCommandLists(1, command_lists);
 	}
-}
+	
+	void EndFrame() {
+		auto& frame = frame_data[frame_index];
+		EnsureHR(command_list->Reset(frame.command_allocator.Get(), nullptr));
 
-void GPU_DX12::RecreateSwapChain(void* hwnd, u32 width, u32 height) {
-	viewport = D3D12_VIEWPORT{ 0.0f, 0.0f, (float)width, (float)height, 0.0f, 1.0f };
-	scissor_rect = D3D12_RECT{ 0, 0, (LONG)width, (LONG)height };
+		auto rt_to_present = ResourceBarrier{ frame.render_target.Get(), ResourceState::RenderTarget, ResourceState::Present };
+		command_list->ResourceBarrier(1, &rt_to_present);
 
-	DXGI_SWAP_CHAIN_DESC1 swap_chain_desc = {};
-	swap_chain_desc.BufferCount = frame_count;
-	swap_chain_desc.Width = width;
-	swap_chain_desc.Height = height;
-	swap_chain_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	swap_chain_desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	swap_chain_desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-	swap_chain_desc.SampleDesc.Count = 1;
+		EnsureHR(command_list->Close());
 
-	{
-		COMPtr<IDXGISwapChain1> swap_chain_tmp;
-		EnsureHR(dxgi_factory->CreateSwapChainForHwnd(
-			command_queue.Get(),
-			(HWND)hwnd,
-			&swap_chain_desc,
-			nullptr, // fullscreen desc
-			nullptr, // restrict output
-			swap_chain_tmp.Replace()));
-		EnsureHR(dxgi_factory->MakeWindowAssociation((HWND)hwnd, DXGI_MWA_NO_ALT_ENTER));
+		ID3D12CommandList* command_lists[] = { command_list.Get() };
+		command_queue->ExecuteCommandLists(1, command_lists);
 
-		EnsureHR(swap_chain_tmp->QueryInterface(swap_chain.Replace()));
+		EnsureHR(swap_chain->Present(1, 0));
+
+		// Update fence value
+		frame.fence_value = frame_fence.SubmitFence(command_queue.Get());
+		frame_index = swap_chain->GetCurrentBackBufferIndex();
 	}
-	frame_index = swap_chain->GetCurrentBackBufferIndex();
 
-	D3D12_CPU_DESCRIPTOR_HANDLE rtv_handle = rtv_heap->GetCPUDescriptorHandleForHeapStart();
-	for (u32 n = 0; n < frame_count; ++n) {
-		EnsureHR(swap_chain->GetBuffer(n, IID_PPV_ARGS(frame_data[n].render_target.Replace())));
-		device->CreateRenderTargetView(frame_data[n].render_target.Get(), nullptr, rtv_handle);
-		frame_data[n].render_target_view = rtv_handle;
-		rtv_handle.ptr += rtv_descriptor_size;
-	}
-}
-
-void GPU_DX12::BeginFrame() {
-	auto& frame = frame_data[frame_index];
-
-	frame_fence.WaitForFence(frame.fence_value, frame_fence_event);
-
-	EnsureHR(frame.command_allocator->Reset());
-
-	EnsureHR(command_list->Reset(frame.command_allocator.Get(), pipeline_state.Get()));
-
-	command_list->RSSetViewports(1, &viewport);
-	command_list->RSSetScissorRects(1, &scissor_rect);
-
-	auto present_to_rt = ResourceBarrier{ frame.render_target.Get(), ResourceState::Present, ResourceState::RenderTarget };
-	command_list->ResourceBarrier(1, &present_to_rt);
-
-	command_list->OMSetRenderTargets(1, &frame.render_target_view, false, nullptr);
-	float clear_color[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
-	command_list->ClearRenderTargetView(frame.render_target_view, clear_color, 0, nullptr);
-
-	EnsureHR(command_list->Close());
-
-	ID3D12CommandList* command_lists[] = { command_list.Get() };
-	command_queue->ExecuteCommandLists(1, command_lists);
-}
-
-void GPU_DX12::RenderTestFrame() {
-	auto& frame = frame_data[frame_index];
-	EnsureHR(command_list->Reset(frame.command_allocator.Get(), pipeline_state.Get()));
-
-	command_list->RSSetViewports(1, &viewport);
-	command_list->RSSetScissorRects(1, &scissor_rect);
-	command_list->OMSetRenderTargets(1, &frame.render_target_view, false, nullptr);
-
-	command_list->SetGraphicsRootSignature(root_signature.Get());
-	command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	command_list->IASetVertexBuffers(0, 1, &vertex_buffer_view);
-	command_list->DrawInstanced(3, 1, 0, 0);
-
-	EnsureHR(command_list->Close());
-
-	ID3D12CommandList* command_lists[] = { command_list.Get() };
-	command_queue->ExecuteCommandLists(1, command_lists);
-}
-
-void GPU_DX12::EndFrame() {
-	auto& frame = frame_data[frame_index];
-	EnsureHR(command_list->Reset(frame.command_allocator.Get(), pipeline_state.Get()));
-
-	auto rt_to_present = ResourceBarrier{ frame.render_target.Get(), ResourceState::RenderTarget, ResourceState::Present };
-	command_list->ResourceBarrier(1, &rt_to_present);
-
-	EnsureHR(command_list->Close());
-
-	ID3D12CommandList* command_lists[] = { command_list.Get() };
-	command_queue->ExecuteCommandLists(1, command_lists);
-
-	EnsureHR(swap_chain->Present(1, 0));
-
-	// Update fence value
-	frame.fence_value = frame_fence.SubmitFence(command_queue.Get());
-	frame_index = swap_chain->GetCurrentBackBufferIndex();
-}
-
-namespace GPU_DX12 {
-	struct StreamFormat {
-		u32 Strides[GPUCommon::MaxStreamSlots];
-		GPUCommon::StreamFormatDesc Desc;
-	};
-	StreamFormat stream_formats[MaxStreamFormats];
-	StreamFormatID next_stream_format_id{ 0 };
-}
-
-
-StreamFormatID GPU_DX12::RegisterStreamFormat(const GPUCommon::StreamFormatDesc& format) { 
-	StreamFormatID id{ next_stream_format_id.Index++ };
-	StreamFormat& compiled_format = stream_formats[id.Index];
-	compiled_format.Desc = format;
-	for (tuple<const GPUCommon::StreamSlotDesc&, u32&> it : Zip(format.Slots, compiled_format.Strides)) {
-		u32& stride = get<1>(it);
-		stride = 0;
-		const GPUCommon::StreamSlotDesc& slot = get<0>(it);
-		for (GPUCommon::StreamElementDesc& elem : slot.Elements) {
-			stride += GPUCommon::GetStreamElementSize(elem);
+	StreamFormatID RegisterStreamFormat(const GPUCommon::StreamFormatDesc& format) {
+		StreamFormatID id{ (u32)stream_formats.AddDefaulted() };
+		StreamFormat& compiled_format = stream_formats[id.Index];
+		compiled_format.Desc = format;
+		for (tuple<const GPUCommon::StreamSlotDesc&, u32&> it : Zip(format.Slots, compiled_format.Strides)) {
+			u32& stride = get<1>(it);
+			stride = 0;
+			const GPUCommon::StreamSlotDesc& slot = get<0>(it);
+			for (GPUCommon::StreamElementDesc& elem : slot.Elements) {
+				stride += GPUCommon::GetStreamElementSize(elem);
+			}
 		}
+
+		return id;
 	}
 
-	return id;
-}
-
-
-struct LinkedProgram {
-	VertexShaderID VertexShader;
-	PixelShaderID PixelShader;
-};
-
-struct VertexShaderInputElement {
-	GPUCommon::ScalarType Type : 2;
-	u8 CountMinusOne : 2;
-	GPUCommon::InputSemantic Semantic : 6;
-	u8 SemanticIndex : 6;
-};
-struct VertexShaderInputs {
-	static constexpr i32 MaxInputs = 8;
-	VertexShaderInputElement Inputs[MaxInputs];
-};
-
-struct InputAssemblerConfig {
-	StreamFormatID StreamFormat;
-	VertexBufferID Slots[GPUCommon::MaxStreamSlots];
-	IndexBufferID IndexBuffer;
-};
-
-struct VertexBuffer { 
-	GPU_DX12::COMPtr<ID3D12Resource> Resource;
-	u32 Size;
-};
-
-namespace GPU_DX12 {
-	COMPtr<ID3DBlob> registered_vertex_shaders[max_shaders];
-	VertexShaderInputs vertex_shader_inputs[max_shaders];
-	VertexShaderID next_vertex_shader_id{ 0 };
-
-	COMPtr<ID3DBlob> registered_pixel_shaders[max_shaders];
-	PixelShaderID next_pixel_shader_id{ 0 };
-
-	LinkedProgram linked_programs[max_programs];
-	ProgramID next_program_id{ 0 };
-
-	VertexBuffer vertex_buffers[max_vertex_buffers];
-	VertexBufferID next_vertex_buffer_id{ 0 };
-
-	InputAssemblerConfig ia_configs[max_ia_configs];
-	InputAssemblerConfigID next_ia_config_id{ 0 };
-
-	COMPtr<ID3D12Resource> constant_buffers[MaxConstantBuffers];
-	ConstantBufferID next_constant_buffer_id{ 0 };
-}
-
-namespace GPU_DX12 {
 	void CompileShaderHLSL(ID3DBlob** compiled_shader, const char* shader_model, const char* entry_point, const PointerRange<const u8>& code) {
 		COMPtr<ID3DBlob> errors;
 
@@ -650,152 +377,210 @@ namespace GPU_DX12 {
 			CHECKF(false, "Compile failed with error: ", error_msg);
 		}
 	}
-}
 
-VertexShaderInputElement ParseInputParameter(D3D12_SIGNATURE_PARAMETER_DESC& input_param) {
-	tuple<GPUCommon::InputSemantic, const char*> table[] = {
-		{ GPUCommon::InputSemantic::Position, "POSITION" },
-	};
-	auto found = Find(Range(table), [&](const tuple<GPUCommon::InputSemantic, const char*>& sem) {
-		return strcmp(get<1>(sem), input_param.SemanticName) == 0;
-	});
-	CHECK(!found.IsEmpty());
-	VertexShaderInputElement out_elem;
-	out_elem.Semantic = std::get<0>(found.Front());
-	out_elem.SemanticIndex = input_param.SemanticIndex;
-	out_elem.Type = GPUCommon::ScalarType::Float;
-	out_elem.CountMinusOne = 3;
-	return out_elem;
-}
-
-VertexShaderID GPU_DX12::CompileVertexShaderHLSL(const char* entry_point, PointerRange<const u8> code) {
-	VertexShaderID id{ next_vertex_shader_id.Index++ };
-	COMPtr<ID3DBlob>& compiled_shader = registered_vertex_shaders[id.Index];
-	CompileShaderHLSL(compiled_shader.Replace(), "vs_5_0", entry_point, code);
-	CHECK(compiled_shader.Get());
-
-	VertexShaderInputs& inputs = vertex_shader_inputs[id.Index];
-
-	COMPtr<ID3D12ShaderReflection> reflector;
-	EnsureHR(D3DReflect(
-		compiled_shader->GetBufferPointer(),
-		compiled_shader->GetBufferSize(),
-		IID_PPV_ARGS(reflector.Replace())
-	));
-	D3D12_SHADER_DESC desc;
-	EnsureHR(reflector->GetDesc(&desc));
-	Array<D3D12_SIGNATURE_PARAMETER_DESC> input_params;
-	CHECK(desc.InputParameters < VertexShaderInputs::MaxInputs);
-	input_params.AddZeroed(desc.InputParameters);
-	for (tuple<u32, VertexShaderInputElement&>  it : Zip(Iota<u32>(), inputs.Inputs)) {
-		D3D12_SIGNATURE_PARAMETER_DESC input_param;
-		reflector->GetInputParameterDesc(get<0>(it), &input_param);
-
-		get<1>(it) = ParseInputParameter(input_param);
+	VertexShaderInputElement ParseInputParameter(D3D12_SIGNATURE_PARAMETER_DESC& input_param) {
+		tuple<GPUCommon::InputSemantic, const char*> table[] = {
+			{ GPUCommon::InputSemantic::Position, "POSITION" },
+		};
+		auto found = Find(Range(table), [&](const tuple<GPUCommon::InputSemantic, const char*>& sem) {
+			return strcmp(get<1>(sem), input_param.SemanticName) == 0;
+		});
+		CHECK(!found.IsEmpty());
+		VertexShaderInputElement out_elem;
+		out_elem.Semantic = std::get<0>(found.Front());
+		out_elem.SemanticIndex = input_param.SemanticIndex;
+		out_elem.Type = GPUCommon::ScalarType::Float;
+		out_elem.CountMinusOne = 3;
+		return out_elem;
 	}
 
-	return id;
-}
-PixelShaderID GPU_DX12::CompilePixelShaderHLSL(const char* entry_point, PointerRange<const u8> code) {
-	PixelShaderID id{ next_pixel_shader_id.Index++ };
-	ID3DBlob** compiled_shader = registered_pixel_shaders[id.Index].Replace();
-	CompileShaderHLSL(compiled_shader, "ps_5_0", entry_point, code);
-	CHECK(*compiled_shader);
-	return id;
-}
+	VertexShaderID CompileVertexShaderHLSL(const char* entry_point, PointerRange<const u8> code) {
+		VertexShaderID id{ (u32)registered_vertex_shaders.AddDefaulted() };
+		COMPtr<ID3DBlob>& compiled_shader = registered_vertex_shaders[id.Index].CompiledShader;
+		CompileShaderHLSL(compiled_shader.Replace(), "vs_5_0", entry_point, code);
+		CHECK(compiled_shader.Get());
 
-ProgramID GPU_DX12::LinkProgram(VertexShaderID vertex_shader, PixelShaderID pixel_shader) {
-	CHECK(next_program_id.Index < max_programs);
-	ProgramID id{ next_program_id.Index++ };
-	linked_programs[id.Index] = { vertex_shader, pixel_shader };
-	return id;
-}
+		VertexShaderInputs& inputs = registered_vertex_shaders[id.Index].Inputs;
 
-ConstantBufferID GPU_DX12::CreateConstantBuffer(PointerRange<const u8> data) {
-	CHECK(next_constant_buffer_id.Index < MaxConstantBuffers);
-	ConstantBufferID id{ next_constant_buffer_id.Index++ };
+		COMPtr<ID3D12ShaderReflection> reflector;
+		EnsureHR(D3DReflect(
+			compiled_shader->GetBufferPointer(),
+			compiled_shader->GetBufferSize(),
+			IID_PPV_ARGS(reflector.Replace())
+		));
+		D3D12_SHADER_DESC desc;
+		EnsureHR(reflector->GetDesc(&desc));
+		Array<D3D12_SIGNATURE_PARAMETER_DESC> input_params;
+		CHECK(desc.InputParameters < VertexShaderInputs::MaxInputElements);
+		input_params.AddZeroed(desc.InputParameters);
+		inputs.InputElements.AddZeroed(desc.InputParameters);
+		for (tuple<u32, VertexShaderInputElement&> it : Zip(Iota<u32>(), inputs.InputElements)) {
+			D3D12_SIGNATURE_PARAMETER_DESC input_param;
+			reflector->GetInputParameterDesc(get<0>(it), &input_param);
 
-	auto cbuffer_desc = BufferDesc{ data.Size() };
-	EnsureHR(device->CreateCommittedResource(
-		&upload_heap_properties,
-		D3D12_HEAP_FLAG_NONE,
-		&cbuffer_desc,
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(constant_buffers[id.Index].Replace())
-	));
-	void* mapped = nullptr;
-	D3D12_RANGE read_range{ 0, 0 };
-	EnsureHR(constant_buffers[id.Index]->Map(0, &read_range, &mapped));
-	memcpy(mapped, &data.Front(), data.Size());
-	constant_buffers[id.Index]->Unmap(0, nullptr);
-	
-	return id;
-}
+			get<1>(it) = ParseInputParameter(input_param);
+		}
 
-VertexBufferID GPU_DX12::CreateVertexBuffer(PointerRange<const u8> data) {
-	CHECK(next_vertex_buffer_id.Index < max_vertex_buffers);
+		return id;
+	}
+	PixelShaderID CompilePixelShaderHLSL(const char* entry_point, PointerRange<const u8> code) {
+		PixelShaderID id{ (u32)registered_pixel_shaders.AddDefaulted() };
+		ID3DBlob** compiled_shader = registered_pixel_shaders[id.Index].Replace();
+		CompileShaderHLSL(compiled_shader, "ps_5_0", entry_point, code);
+		CHECK(*compiled_shader);
+		return id;
+	}
 
-	VertexBufferID id { next_vertex_buffer_id.Index++ };
-	CHECK(vertex_buffers[id.Index].Resource.Get() == nullptr);
-	vertex_buffers[id.Index].Size = (u32)data.Size();
+	ProgramID LinkProgram(VertexShaderID vertex_shader, PixelShaderID pixel_shader) {
+		ProgramID id{ (u32)linked_programs.AddDefaulted() };
+		linked_programs[id.Index] = { vertex_shader, pixel_shader };
+		return id;
+	}
 
-	auto vbuffer_desc = BufferDesc{ (u32)data.Size() };
-	EnsureHR(device->CreateCommittedResource(
-		&upload_heap_properties, // TODO: Upload & copy properly
-		D3D12_HEAP_FLAG_NONE,
-		&vbuffer_desc,
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(vertex_buffers[id.Index].Resource.Replace()))
-	);
+	ConstantBufferID CreateConstantBuffer(PointerRange<const u8> data) {
+		ConstantBufferID id{ (u32)constant_buffers.AddDefaulted() };
 
-	D3D12_RANGE read_range{ 0, 0 };
-	void* mapped = nullptr;
-	EnsureHR(vertex_buffers[id.Index].Resource->Map(0, &read_range, &(void*)mapped));
-	memcpy(mapped, &data.Front(), data.Size());
-	vertex_buffers[id.Index].Resource->Unmap(0, nullptr);
+		auto cbuffer_desc = BufferDesc{ data.Size() };
+		EnsureHR(device->CreateCommittedResource(
+			&upload_heap_properties,
+			D3D12_HEAP_FLAG_NONE,
+			&cbuffer_desc,
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(constant_buffers[id.Index].Replace())
+		));
+		void* mapped = nullptr;
+		D3D12_RANGE read_range{ 0, 0 };
+		EnsureHR(constant_buffers[id.Index]->Map(0, &read_range, &mapped));
+		memcpy(mapped, &data.Front(), data.Size());
+		constant_buffers[id.Index]->Unmap(0, nullptr);
 
-	return id;
-}
+		return id;
+	}
 
-InputAssemblerConfigID GPU_DX12::RegisterInputAssemblyConfig(StreamFormatID stream_id, PointerRange<const VertexBufferID> vbuffers, IndexBufferID ibuffer) {
-	CHECK(vbuffers.Size() <= GPUCommon::MaxStreamSlots);
-	CHECK(next_ia_config_id.Index < max_ia_configs);
+	VertexBufferID CreateVertexBuffer(PointerRange<const u8> data) {
+		VertexBufferID id{ (u32)vertex_buffers.AddDefaulted() };
+		CHECK(vertex_buffers[id.Index].Resource.Get() == nullptr);
+		vertex_buffers[id.Index].Size = (u32)data.Size();
 
-	InputAssemblerConfigID id{ next_ia_config_id.Index++ };
-	InputAssemblerConfig& config = ia_configs[id.Index];
-	Copy(Range(config.Slots), vbuffers);
-	config.IndexBuffer = ibuffer;
-	config.StreamFormat = stream_id;
+		auto vbuffer_desc = BufferDesc{ (u32)data.Size() };
+		EnsureHR(device->CreateCommittedResource(
+			&upload_heap_properties, // TODO: Upload & copy properly
+			D3D12_HEAP_FLAG_NONE,
+			&vbuffer_desc,
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(vertex_buffers[id.Index].Resource.Replace()))
+		);
 
-	return id;
-}
+		D3D12_RANGE read_range{ 0, 0 };
+		void* mapped = nullptr;
+		EnsureHR(vertex_buffers[id.Index].Resource->Map(0, &read_range, &(void*)mapped));
+		memcpy(mapped, &data.Front(), data.Size());
+		vertex_buffers[id.Index].Resource->Unmap(0, nullptr);
 
-// TODO: don't-care states?
-bool operator==(const GPUCommon::DrawPipelineSetup& a, const GPUCommon::DrawPipelineSetup& b) {
-	return a.BlendState.Index == b.BlendState.Index
-		&& a.DepthStencilState.Index == b.DepthStencilState.Index
-		&& a.InputAssemblerConfig.Index == b.InputAssemblerConfig.Index
-		&& a.Program.Index == b.Program.Index
-		&& a.RasterState.Index == b.RasterState.Index;
-}
+		return id;
+	}
 
-namespace GPU_DX12 {
-	Array<tuple<GPUCommon::DrawPipelineSetup, COMPtr<ID3D12PipelineState>>> cached_psos;
+	TextureID CreateTexture2D(u32 width, u32 height, GPUCommon::TextureFormat format, PointerRange<const u8> data) {
+		TextureID id{ (u32)textures.AddDefaulted() };
+		Texture& texture = textures[id.Index];
+
+		TextureDesc2D desc{ width, height, CommonToDX12(format) };
+		EnsureHR(device->CreateCommittedResource(
+			&default_heap_properties, 
+			D3D12_HEAP_FLAG_NONE, 
+			&desc, 
+			D3D12_RESOURCE_STATE_COPY_DEST,
+			nullptr, 
+			IID_PPV_ARGS(texture.Resource.Replace())
+		));
+
+		texture.SRVDesc = TextureViewDesc2D{ CommonToDX12(format) };
+
+		u32 num_rows = 0;
+		u64 row_size = 0, total_size = 0;
+		D3D12_PLACED_SUBRESOURCE_FOOTPRINT layout = {};
+		device->GetCopyableFootprints(&desc, 0, 1, 0, &layout, &num_rows, &row_size, &total_size);
+
+		BufferDesc upload_desc{ total_size };
+		EnsureHR(device->CreateCommittedResource(
+			&upload_heap_properties,
+			D3D12_HEAP_FLAG_NONE,
+			&upload_desc,
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(texture.UploadResource.Replace())
+		));
+
+		{
+			void* mapped = nullptr;
+			texture.UploadResource->Map(0, nullptr, &mapped);
+			D3D12_MEMCPY_DEST dest{ mapped, layout.Footprint.RowPitch, layout.Footprint.RowPitch * num_rows };
+			D3D12_SUBRESOURCE_DATA source{ &data.Front(), CalcRowPitch(format, width), CalcRowPitch(format, width) * 1 };
+			MemcpySubresource(&dest, &source, row_size, num_rows, layout.Footprint.Depth);
+			texture.UploadResource->Unmap(0, nullptr);
+		}
+
+		EnsureHR(copy_command_list->Reset(copy_command_allocator.Get(), nullptr));
+
+		auto copy_dest_to_shader_resource = ResourceBarrier{ texture.Resource.Get(), ResourceState::CopyDest, ResourceState::Common };
+		copy_command_list->ResourceBarrier(1, &copy_dest_to_shader_resource);
+
+		TextureCopyLocation copy_src{ texture.UploadResource.Get(), layout };
+		TextureCopyLocation copy_dest{ texture.Resource.Get(), 0 };
+		copy_command_list->CopyTextureRegion(&copy_dest, 0, 0, 0, &copy_src, nullptr);
+
+		EnsureHR(copy_command_list->Close());
+		ID3D12CommandList* command_lists[] = { copy_command_list.Get() };
+		copy_command_queue->ExecuteCommandLists(1, command_lists);
+		u64 fence_value = copy_fence.SubmitFence(copy_command_queue.Get());
+		copy_fence.WaitForFence(fence_value, copy_fence_event);
+
+		return id;
+	}
+
+	ShaderResourceListID CreateShaderResourceList(const GPUCommon::ShaderResourceListDesc& desc) {
+		ShaderResourceListID id{ (u32)shader_resource_lists.AddDefaulted() };
+		ShaderResourceList& srl = shader_resource_lists[id.Index];
+		srl.desc = desc;
+
+		return id;
+	}
+
+	InputAssemblerConfigID RegisterInputAssemblyConfig(StreamFormatID stream_id, PointerRange<const VertexBufferID> vbuffers, IndexBufferID ibuffer) {
+		CHECK(vbuffers.Size() <= GPUCommon::MaxStreamSlots);
+		InputAssemblerConfigID id{ (u32)ia_configs.AddDefaulted() };
+		InputAssemblerConfig& config = ia_configs[id.Index];
+		Copy(Range(config.Slots), vbuffers);
+		config.IndexBuffer = ibuffer;
+		config.StreamFormat = stream_id;
+
+		return id;
+	}
+
+	// TODO: don't-care states?
+	bool operator==(const GPUCommon::DrawPipelineSetup& a, const GPUCommon::DrawPipelineSetup& b) {
+		return a.BlendState.Index == b.BlendState.Index
+			&& a.DepthStencilState.Index == b.DepthStencilState.Index
+			&& a.InputAssemblerConfig.Index == b.InputAssemblerConfig.Index
+			&& a.Program.Index == b.Program.Index
+			&& a.RasterState.Index == b.RasterState.Index;
+	}
+
 	ID3D12PipelineState* CachePSO(const GPUCommon::DrawPipelineSetup& pipeline_setup) {
-		auto found = Find(cached_psos, [&](tuple<GPUCommon::DrawPipelineSetup, COMPtr<ID3D12PipelineState>>& pair) {
-			if (get<0>(pair) == pipeline_setup) {
+		auto found = Find(cached_psos, [&](CachedPSO& cached) {
+			if (cached.Setup == pipeline_setup) {
 				return true;
 			}
 			return false;
 		});
 		if (!found.IsEmpty()) {
-			return get<1>(found.Front());
+			return found.Front().PSO;
 		}
-		
+
 		size_t index = cached_psos.Add({ pipeline_setup, COMPtr<ID3D12PipelineState>{} });
-		COMPtr<ID3D12PipelineState>& new_pipeline_state = std::get<1>(cached_psos[index]);
+		COMPtr<ID3D12PipelineState>& new_pipeline_state = cached_psos[index].PSO;
 		LinkedProgram program = linked_programs[pipeline_setup.Program.Index];
 
 		// TODO
@@ -804,7 +589,7 @@ namespace GPU_DX12 {
 		};
 
 		auto pipeline_desc = GraphicsPipelineStateDesc{ root_signature.Get() }
-			.VS(registered_vertex_shaders[program.VertexShader.Index])
+			.VS(registered_vertex_shaders[program.VertexShader.Index].CompiledShader)
 			.PS(registered_pixel_shaders[program.PixelShader.Index])
 			.DepthEnable(true)
 			.PrimType(PrimType::Triangle)
@@ -814,104 +599,117 @@ namespace GPU_DX12 {
 
 		return new_pipeline_state.Get();
 	}
-
-	D3D12_PRIMITIVE_TOPOLOGY CommonToDX12(GPUCommon::PrimitiveTopology	pt) {
-		static D3D12_PRIMITIVE_TOPOLOGY list[] = {
-			D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
-			D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
-		};
-		return list[(i32)pt];
-	}
-
+	
 	D3D12_CPU_DESCRIPTOR_HANDLE GetRenderTargetView(D3D12_CPU_DESCRIPTOR_HANDLE backbuffer, RenderTargetID id) {
 		CHECK(id.Index == u32_max);
 		return backbuffer; // TODO
 	}
 
-#if 1
 	D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView(VertexBufferID id, u32 stride) {
 		auto& vb = vertex_buffers[id.Index];
 		return { vb.Resource->GetGPUVirtualAddress(), vb.Size, stride };
 	}
-#else
-	D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView(VertexBufferID , u32 ) {
-		return vertex_buffer_view;
-	}
-#endif
 
 	D3D12_INDEX_BUFFER_VIEW GetIndexBufferView(IndexBufferID) {
 		return {};
 	}
-}
 
-void GPU_DX12::SubmitPass(const GPUCommon::RenderPass& pass) {
-	// Create required PSOs for all draw items
-	Array<ID3D12PipelineState*> item_psos;
-	item_psos.Reserve(pass.DrawItems.Size());
+	void SubmitPass(const GPUCommon::RenderPass& pass) {
+		// Create required PSOs for all draw items
+		Array<ID3D12PipelineState*> item_psos;
+		item_psos.Reserve(pass.DrawItems.Size());
 
-	for (const GPUCommon::DrawItem& item : pass.DrawItems) {
-		ID3D12PipelineState* pso = CachePSO(item.PipelineSetup);
-		CHECK(pso);
-		item_psos.Add(pso);
-	}
-
-	auto& frame = frame_data[frame_index];
-	EnsureHR(command_list->Reset(frame.command_allocator.Get(), pipeline_state.Get()));
-	command_list->SetGraphicsRootSignature(root_signature.Get());
-
-	// Bind RTs for pass
-	CHECK(pass.RenderTargets.Num() <= GPUCommon::MaxRenderTargets);
-	D3D12_CPU_DESCRIPTOR_HANDLE rtvs[GPUCommon::MaxRenderTargets];
-	for (tuple<D3D12_CPU_DESCRIPTOR_HANDLE&, RenderTargetID> it : Zip(rtvs, pass.RenderTargets)) {
-		get<0>(it) = GetRenderTargetView(frame.render_target_view, get<1>(it));
-	}
-	command_list->OMSetRenderTargets((u32)pass.RenderTargets.Num(), rtvs, false, nullptr);
-
-	// TODO: Make part of render pass
-	command_list->RSSetViewports(1, &viewport);
-	command_list->RSSetScissorRects(1, &scissor_rect);
-
-	// Translate draw commands into CommandList calls
-	for (tuple<ID3D12PipelineState*, GPUCommon::DrawItem> draw_it : Zip(item_psos, pass.DrawItems)) {
-		ID3D12PipelineState* pso = get<0>(draw_it);
-		const GPUCommon::DrawItem& item = get<1>(draw_it);
-
-		command_list->SetPipelineState(pso);
-		command_list->IASetPrimitiveTopology(CommonToDX12(item.Command.PrimTopology));
-
-		CHECK(item.BoundResources.ConstantBuffers.Num() <= 1);
-		if (item.BoundResources.ConstantBuffers.Num() > 0 && item.BoundResources.ConstantBuffers[0].Index != u32_max) {
-			command_list->SetGraphicsRootConstantBufferView(0, constant_buffers[item.BoundResources.ConstantBuffers[0].Index]->GetGPUVirtualAddress());
+		for (const GPUCommon::DrawItem& item : pass.DrawItems) {
+			ID3D12PipelineState* pso = CachePSO(item.PipelineSetup);
+			CHECK(pso);
+			item_psos.Add(pso);
 		}
 
-		D3D12_VERTEX_BUFFER_VIEW vbs[GPUCommon::MaxStreamSlots];
-		//D3D12_INDEX_BUFFER_VIEW ib;
-		const InputAssemblerConfig& ia_config = ia_configs[item.PipelineSetup.InputAssemblerConfig.Index];
-		const StreamFormat& stream_format = stream_formats[ia_config.StreamFormat.Index];
-		for (tuple<D3D12_VERTEX_BUFFER_VIEW&, VertexBufferID, u32> vb_it : Zip(vbs, ia_config.Slots, stream_format.Strides)) {
-			D3D12_VERTEX_BUFFER_VIEW& view = get<0>(vb_it);
-			VertexBufferID vb_id = get<1>(vb_it);
-			if (vb_id.Index == u32_max) {
-				view = { 0, 0, 0 };
-			}
-			else {
+		auto& frame = frame_data[frame_index];
+		EnsureHR(command_list->Reset(frame.command_allocator.Get(), nullptr));
+		command_list->SetGraphicsRootSignature(root_signature.Get());
 
-				u32 stride = get<2>(vb_it);
-				view = GetVertexBufferView(vb_id, stride);
+		ID3D12DescriptorHeap* heaps[] = { frame.shader_resource_heap.Get() };
+		command_list->SetDescriptorHeaps((u32)ArraySize(heaps), heaps);
+
+		// Bind RTs for pass
+		CHECK(pass.RenderTargets.Num() <= GPUCommon::MaxRenderTargets);
+		D3D12_CPU_DESCRIPTOR_HANDLE rtvs[GPUCommon::MaxRenderTargets];
+		for (tuple<D3D12_CPU_DESCRIPTOR_HANDLE&, RenderTargetID> it : Zip(rtvs, pass.RenderTargets)) {
+			get<0>(it) = GetRenderTargetView(frame.render_target_view, get<1>(it));
+		}
+		command_list->OMSetRenderTargets((u32)pass.RenderTargets.Num(), rtvs, false, nullptr);
+
+		// TODO: Make part of render pass
+		command_list->RSSetViewports(1, &viewport);
+		command_list->RSSetScissorRects(1, &scissor_rect);
+
+		D3D12_CPU_DESCRIPTOR_HANDLE srv_heap_cursor{ frame.shader_resource_heap->GetCPUDescriptorHandleForHeapStart() };
+		D3D12_GPU_DESCRIPTOR_HANDLE srv_heap_cursor_gpu{ frame.shader_resource_heap->GetGPUDescriptorHandleForHeapStart() };
+
+		// Translate draw commands into CommandList calls
+		for (tuple<ID3D12PipelineState*, GPUCommon::DrawItem> draw_it : Zip(item_psos, pass.DrawItems)) {
+			ID3D12PipelineState* pso = get<0>(draw_it);
+			const GPUCommon::DrawItem& item = get<1>(draw_it);
+
+			command_list->SetPipelineState(pso);
+			command_list->IASetPrimitiveTopology(CommonToDX12(item.Command.PrimTopology));
+
+			CHECK(item.BoundResources.ConstantBuffers.Num() <= 1);
+			if (item.BoundResources.ConstantBuffers.Num() > 0 && item.BoundResources.ConstantBuffers[0].Index != u32_max) {
+				command_list->SetGraphicsRootConstantBufferView(0, constant_buffers[item.BoundResources.ConstantBuffers[0].Index]->GetGPUVirtualAddress());
 			}
+			
+			FixedArray<TextureID, GPUCommon::MaxBoundShaderResources> bound_resources;
+			bound_resources.AddMany(GPUCommon::MaxBoundShaderResources, TextureID{ u32_max });
+			for (ShaderResourceListID id : item.BoundResources.ResourceLists) {
+				const ShaderResourceList& list = shader_resource_lists[id.Index];
+				for (u32 i = list.desc.StartSlot; i < list.desc.Textures.Num() && (i + list.desc.StartSlot < GPUCommon::MaxBoundShaderResources); ++i) {
+					bound_resources[i] = list.desc.Textures[i - list.desc.StartSlot];
+				}
+			}
+
+			D3D12_GPU_DESCRIPTOR_HANDLE table_root = srv_heap_cursor_gpu;
+			for (u32 i = 0; i < bound_resources.Num(); ++i) {
+				D3D12_CPU_DESCRIPTOR_HANDLE descriptor_dest = srv_heap_cursor;
+				srv_heap_cursor.ptr += srv_descriptor_size;
+				srv_heap_cursor_gpu.ptr += srv_descriptor_size;
+				TextureID id = bound_resources[i];
+				if (id.Index == u32_max) { continue; }
+				auto& texture = textures[id.Index];
+				device->CreateShaderResourceView(texture.Resource.Get(), &texture.SRVDesc, descriptor_dest);
+			}
+
+			command_list->SetGraphicsRootDescriptorTable(1, table_root);
+
+			D3D12_VERTEX_BUFFER_VIEW vbs[GPUCommon::MaxStreamSlots];
+			//D3D12_INDEX_BUFFER_VIEW ib;
+			const InputAssemblerConfig& ia_config = ia_configs[item.PipelineSetup.InputAssemblerConfig.Index];
+			const StreamFormat& stream_format = stream_formats[ia_config.StreamFormat.Index];
+			for (tuple<D3D12_VERTEX_BUFFER_VIEW&, VertexBufferID, u32> vb_it : Zip(vbs, ia_config.Slots, stream_format.Strides)) {
+				D3D12_VERTEX_BUFFER_VIEW& view = get<0>(vb_it);
+				VertexBufferID vb_id = get<1>(vb_it);
+				if (vb_id.Index == u32_max) {
+					view = { 0, 0, 0 };
+				}
+				else {
+
+					u32 stride = get<2>(vb_it);
+					view = GetVertexBufferView(vb_id, stride);
+				}
+			}
+
+			command_list->IASetVertexBuffers(0, (u32)ArraySize(vbs), vbs);
+			//if (ia_config.IndexBuffer.Index != u32_max) {
+			//	ib = GetIndexBufferView(ia_config.IndexBuffer);
+			//	command_list->IASetIndexBuffer(&ib);
+			//}
+			command_list->DrawInstanced(item.Command.VertexOrIndexCount, 1, 0, 0);
 		}
 
-		command_list->IASetVertexBuffers(0, (u32)ArraySize(vbs), vbs);
-		//if (ia_config.IndexBuffer.Index != u32_max) {
-		//	ib = GetIndexBufferView(ia_config.IndexBuffer);
-		//	command_list->IASetIndexBuffer(&ib);
-		//}
-		command_list->DrawInstanced(item.Command.VertexOrIndexCount, 1, 0, 0);
+		EnsureHR(command_list->Close());
+
+		ID3D12CommandList* command_lists[] = { command_list.Get() };
+		command_queue->ExecuteCommandLists(1, command_lists);
 	}
-
-	EnsureHR(command_list->Close());
-
-	ID3D12CommandList* command_lists[] = { command_list.Get() };
-	command_queue->ExecuteCommandLists(1, command_lists);
 }
-

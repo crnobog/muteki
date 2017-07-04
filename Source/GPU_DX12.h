@@ -3,10 +3,6 @@
 #include "GPU_Common.h"
 #include "mu-core/PointerRange.h"
 
-namespace mu {
-	template<typename T> class PointerRange;
-}
-
 namespace GPU_DX12 {
 	using GPUCommon::StreamFormatID;
 	using GPUCommon::VertexBufferID;
@@ -16,14 +12,14 @@ namespace GPU_DX12 {
 	using GPUCommon::PixelShaderID;
 	using GPUCommon::ProgramID;
 	using GPUCommon::ConstantBufferID;
-
+	using GPUCommon::TextureID;
+	using GPUCommon::ShaderResourceListID;
 
 	void Init();
 	void Shutdown();
 	void RecreateSwapChain(void* hwnd, u32 width, u32 height);
 
 	void BeginFrame();
-	void RenderTestFrame();
 	void EndFrame();
 
 	void SubmitPass(const GPUCommon::RenderPass& pass);
@@ -38,6 +34,10 @@ namespace GPU_DX12 {
 	ConstantBufferID CreateConstantBuffer(mu::PointerRange<const u8> data);
 	VertexBufferID CreateVertexBuffer(mu::PointerRange<const u8> data);
 	IndexBufferID CreateIndexBuffer();
+
+	TextureID CreateTexture2D(u32 width, u32 height, GPUCommon::TextureFormat format, mu::PointerRange<const u8> data);
+
+	ShaderResourceListID CreateShaderResourceList(const GPUCommon::ShaderResourceListDesc& desc);
 };
 
 namespace GPU = GPU_DX12;

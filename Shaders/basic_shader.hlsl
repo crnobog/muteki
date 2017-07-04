@@ -2,12 +2,23 @@ cbuffer cb_color : register(b0) {
 	float4 color;
 };
 
-float4 vs_main(float4 in_pos : POSITION) : SV_POSITION
+Texture2D diffuse : register(t0);
+SamplerState diffuse_sampler : register(s0);
+
+struct vs_out {
+	float4 pos : SV_POSITION;
+	float4 original_pos : TEXCOORD0;
+};
+
+vs_out vs_main(float4 in_pos : POSITION)
 {
-    return in_pos;
+	vs_out o;
+	o.pos = in_pos;
+	o.original_pos = in_pos;
+    return o;
 }
 
-float4 ps_main(float4 in_pos : SV_POSITION) : SV_TARGET
+float4 ps_main(vs_out i) : SV_TARGET
 {
-    return color;
+    return diffuse.Sample(diffuse_sampler, i.original_pos.xy);
 }

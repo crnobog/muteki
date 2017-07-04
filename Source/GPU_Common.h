@@ -16,6 +16,9 @@ namespace GPUCommon {
 	struct IndexBufferID {
 		u32 Index = u32_max;
 	};
+	struct TextureID {
+		u32 Index = u32_max;
+	};
 	struct StreamFormatID {
 		u32 Index = u32_max;
 	};
@@ -43,12 +46,20 @@ namespace GPUCommon {
 	struct DepthStencilStateID {
 		u32 Index = u32_max;
 	};
+	struct ShaderResourceListID {
+		u32 Index = u32_max;
+	};
 
 	enum class ShaderType {
 		Vertex,
 		Pixel
 	};
 
+	enum class TextureFormat {
+		RGB8,
+		RGBA8,
+	};
+	
 	// Configuration for creating objects/commands
 	enum class PrimitiveTopology {
 		TriangleList,
@@ -64,6 +75,13 @@ namespace GPUCommon {
 
 	enum class ScalarType {
 		Float,
+	};
+
+	constexpr u8 MaxBoundShaderResources = 16;
+	struct ShaderResourceListDesc {
+		u8 StartSlot;
+		mu::FixedArray<TextureID, MaxBoundShaderResources> Textures;
+		// TODO: Buffer bindings
 	};
 
 	// Stream format declaration
@@ -116,8 +134,10 @@ namespace GPUCommon {
 	};
 
 	constexpr size_t MaxBoundConstantBuffers = 4;
+	constexpr size_t MaxBoundResourceLists = 4;
 	struct DrawBoundResources {
 		mu::FixedArray<ConstantBufferID, MaxBoundConstantBuffers> ConstantBuffers;
+		mu::FixedArray<ShaderResourceListID, MaxBoundResourceLists> ResourceLists;
 	};
 	struct DrawItem {
 		DrawPipelineSetup	PipelineSetup;

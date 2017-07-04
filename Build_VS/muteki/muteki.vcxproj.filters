@@ -20,6 +20,9 @@
     <ClCompile Include="..\..\Source\GPUCommon.cpp">
       <Filter>GPU</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Source\GPU_DX12\Utils.cpp">
+      <Filter>GPU\DX12</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="imgui">
@@ -130,6 +133,15 @@
       <Filter>mu-core</Filter>
     </ClInclude>
     <ClInclude Include="..\..\mu-core\Include\mu-core\RangeWrappers.h">
+      <Filter>mu-core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\GPU_DX12\Utils.h">
+      <Filter>GPU\DX12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\GPU_DX12\Fence.h">
+      <Filter>GPU\DX12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\mu-core\Include\mu-core\Pool.h">
       <Filter>mu-core</Filter>
     </ClInclude>
   </ItemGroup>
