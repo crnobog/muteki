@@ -111,8 +111,8 @@ struct GPU_DX12 : public GPUInterface {
 	COMPtr<ID3D12CommandQueue>			copy_command_queue;
 	COMPtr<ID3D12GraphicsCommandList>	copy_command_list;
 	COMPtr<ID3D12CommandAllocator>		copy_command_allocator;
-	Fence	copy_fence;
-	HANDLE	copy_fence_event;
+	Fence								copy_fence;
+	HANDLE								copy_fence_event = nullptr;
 
 	u32 rtv_descriptor_size = 0;
 	u32 srv_descriptor_size = 0;
@@ -124,11 +124,11 @@ struct GPU_DX12 : public GPUInterface {
 		D3D12_CPU_DESCRIPTOR_HANDLE		render_target_view;
 		COMPtr<ID3D12CommandAllocator>	command_allocator;
 		COMPtr<ID3D12DescriptorHeap>	shader_resource_heap; // srv, cbv, uav
-		u64						fence_value;
+		u64								fence_value = 0;
 	} frame_data[frame_count];
 
 	Fence	frame_fence;
-	HANDLE	frame_fence_event;
+	HANDLE	frame_fence_event = nullptr;
 
 	Pool<StreamFormat> stream_formats{ 128 };
 	Pool<VertexShader> registered_vertex_shaders{ 128 };
