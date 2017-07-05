@@ -558,11 +558,11 @@ InputAssemblerConfigID GPU_DX12::RegisterInputAssemblyConfig(StreamFormatID stre
 
 // TODO: don't-care states?
 bool operator==(const GPU::DrawPipelineSetup& a, const GPU::DrawPipelineSetup& b) {
-	return a.BlendState.Index == b.BlendState.Index
-		&& a.DepthStencilState.Index == b.DepthStencilState.Index
-		&& a.InputAssemblerConfig.Index == b.InputAssemblerConfig.Index
-		&& a.Program.Index == b.Program.Index
-		&& a.RasterState.Index == b.RasterState.Index;
+	return a.BlendState == b.BlendState
+		&& a.DepthStencilState == b.DepthStencilState
+		&& a.InputAssemblerConfig == b.InputAssemblerConfig
+		&& a.Program == b.Program
+		&& a.RasterState == b.RasterState;
 }
 
 ID3D12PipelineState* GPU_DX12::CachePSO(const GPU::DrawPipelineSetup& pipeline_setup) {
@@ -598,7 +598,7 @@ ID3D12PipelineState* GPU_DX12::CachePSO(const GPU::DrawPipelineSetup& pipeline_s
 }
 
 D3D12_CPU_DESCRIPTOR_HANDLE GPU_DX12::GetRenderTargetView(D3D12_CPU_DESCRIPTOR_HANDLE backbuffer, RenderTargetID id) {
-	CHECK(id.Index == u32_max);
+	CHECK(id == RenderTargetID{});
 	return backbuffer; // TODO
 }
 
@@ -644,7 +644,7 @@ void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
 		command_list->IASetPrimitiveTopology(CommonToDX12(item.Command.PrimTopology));
 
 		CHECK(item.BoundResources.ConstantBuffers.Num() <= 1);
-		if (item.BoundResources.ConstantBuffers.Num() > 0 && item.BoundResources.ConstantBuffers[0].Index != u32_max) {
+		if (item.BoundResources.ConstantBuffers.Num() > 0 && item.BoundResources.ConstantBuffers[0] != ConstantBufferID{}) {
 			command_list->SetGraphicsRootConstantBufferView(0, constant_buffers[item.BoundResources.ConstantBuffers[0]]->GetGPUVirtualAddress());
 		}
 
@@ -663,7 +663,7 @@ void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
 			srv_heap_cursor.ptr += srv_descriptor_size;
 			srv_heap_cursor_gpu.ptr += srv_descriptor_size;
 			TextureID id = bound_resources[i];
-			if (id.Index == u32_max) { continue; }
+			if (id == TextureID{}) { continue; }
 			auto& texture = textures[id];
 			device->CreateShaderResourceView(texture.Resource.Get(), &texture.SRVDesc, descriptor_dest);
 		}
@@ -677,7 +677,7 @@ void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
 		for (tuple<D3D12_VERTEX_BUFFER_VIEW&, VertexBufferID, u32> vb_it : Zip(vbs, ia_config.Slots, stream_format.Strides)) {
 			D3D12_VERTEX_BUFFER_VIEW& view = get<0>(vb_it);
 			VertexBufferID vb_id = get<1>(vb_it);
-			if (vb_id.Index == u32_max) {
+			if (vb_id == VertexBufferID{}) {
 				view = { 0, 0, 0 };
 			}
 			else {

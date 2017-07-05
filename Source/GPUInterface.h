@@ -9,11 +9,14 @@
 
 #define DECLARE_HANDLE(NAME, INTERNAL) \
 struct NAME { \
-	INTERNAL Index = INTERNAL##_max; \
 	explicit operator size_t() { return Index; } \
 	constexpr NAME() = default; \
 	constexpr explicit NAME(size_t i) : Index((INTERNAL)i) {} \
 	constexpr explicit NAME(INTERNAL i) : Index(i) {} \
+	bool operator==(NAME other) const { return Index == other.Index; } \
+	bool operator!=(NAME other) const { return Index != other.Index; } \
+private: \
+	INTERNAL Index = INTERNAL##_max; \
 }
 
 namespace GPU {
