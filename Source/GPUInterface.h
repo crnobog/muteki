@@ -7,51 +7,33 @@
 #pragma warning(push) 
 #pragma warning(disable : 4100)
 
-struct GPUInterface {
+#define DECLARE_HANDLE(NAME, INTERNAL) \
+struct NAME { \
+	INTERNAL Index = INTERNAL##_max; \
+	explicit operator size_t() { return Index; } \
+	constexpr NAME() = default; \
+	constexpr explicit NAME(size_t i) : Index((INTERNAL)i) {} \
+	constexpr explicit NAME(INTERNAL i) : Index(i) {} \
+}
+
+namespace GPU {
 	// Handles to GPU objects
 	// TODO: Reduces sizes - u16 most places?
-	struct ConstantBufferID {
-		u32 Index = u32_max;
-	};
-	struct VertexBufferID {
-		u32 Index = u32_max;
-	};
-	struct IndexBufferID {
-		u32 Index = u32_max;
-	};
-	struct TextureID {
-		u32 Index = u32_max;
-	};
-	struct StreamFormatID {
-		u32 Index = u32_max;
-	};
-	struct VertexShaderID {
-		u32 Index = u32_max;
-	};
-	struct PixelShaderID {
-		u32 Index = u32_max;
-	};
-	struct ProgramID {
-		u32 Index = u32_max;
-	};
-	struct RenderTargetID {
-		u32 Index = u32_max;
-	};
-	struct InputAssemblerConfigID {
-		u32 Index = u32_max;
-	};
-	struct RasterStateID {
-		u32 Index = u32_max;
-	};
-	struct BlendStateID {
-		u32 Index = u32_max;
-	};
-	struct DepthStencilStateID {
-		u32 Index = u32_max;
-	};
-	struct ShaderResourceListID {
-		u32 Index = u32_max;
-	};
+	DECLARE_HANDLE(ConstantBufferID, u32);
+	DECLARE_HANDLE(VertexBufferID, u32);
+	DECLARE_HANDLE(IndexBufferID, u32);
+	DECLARE_HANDLE(TextureID, u32);
+	DECLARE_HANDLE(RenderTargetID, u32);
+	DECLARE_HANDLE(StreamFormatID, u32);
+	DECLARE_HANDLE(VertexShaderID, u32);
+	DECLARE_HANDLE(PixelShaderID, u32);
+	DECLARE_HANDLE(ProgramID, u32);
+	DECLARE_HANDLE(InputAssemblerConfigID, u32);
+	DECLARE_HANDLE(RasterStateID, u32);
+	DECLARE_HANDLE(BlendStateID, u32);
+	DECLARE_HANDLE(DepthStencilStateID, u32);
+	DECLARE_HANDLE(ShaderResourceListID, u32);
+
 
 	enum class ShaderType {
 		Vertex,
@@ -61,6 +43,13 @@ struct GPUInterface {
 	enum class TextureFormat {
 		RGB8,
 		RGBA8,
+	};
+
+	static constexpr u8 MaxBoundShaderResources = 16;
+	struct ShaderResourceListDesc {
+		u8 StartSlot;
+		mu::FixedArray<TextureID, MaxBoundShaderResources> Textures;
+		// TODO: Buffer bindings
 	};
 
 	// Configuration for creating objects/commands
@@ -80,13 +69,6 @@ struct GPUInterface {
 		Float,
 	};
 
-	static constexpr u8 MaxBoundShaderResources = 16;
-	struct ShaderResourceListDesc {
-		u8 StartSlot;
-		mu::FixedArray<TextureID, MaxBoundShaderResources> Textures;
-		// TODO: Buffer bindings
-	};
-
 	// Stream format declaration
 	static constexpr u8 MaxStreamSlots = 16;
 	static constexpr u8 MaxStreamElements = 8;
@@ -103,7 +85,7 @@ struct GPUInterface {
 		}
 	};
 
-	static u32 GetStreamElementSize(const StreamElementDesc& element);
+	u32 GetStreamElementSize(const StreamElementDesc& element);
 
 	struct StreamSlotDesc {
 		mu::FixedArray<StreamElementDesc, MaxStreamElements> Elements;
@@ -149,7 +131,7 @@ struct GPUInterface {
 	};
 
 	// Render pass
-	static constexpr RenderTargetID BackBufferID = { u32_max };
+	static constexpr RenderTargetID BackBufferID = RenderTargetID{ u32_max };
 	static constexpr u8 MaxRenderTargets = 16;
 	struct RenderPass {
 		mu::FixedArray<RenderTargetID, MaxRenderTargets> RenderTargets;
@@ -158,8 +140,9 @@ struct GPUInterface {
 
 	static_assert(std::is_trivially_destructible_v<DrawItem>, "RenderPass should be trivially destructible");
 	static_assert(std::is_trivially_destructible_v<RenderPass>, "RenderPass should be trivially destructible");
+}
 
-
+struct GPUInterface {
 	virtual ~GPUInterface() {}
 	virtual void Init() = 0;
 	virtual void Shutdown() = 0;
@@ -168,21 +151,23 @@ struct GPUInterface {
 	virtual void BeginFrame() = 0;
 	virtual void EndFrame() = 0;
 
-	virtual void SubmitPass(const RenderPass& pass) = 0;
+	virtual void SubmitPass(const GPU::RenderPass& pass) = 0;
 
-	virtual StreamFormatID RegisterStreamFormat(const StreamFormatDesc& format) = 0;
-	virtual InputAssemblerConfigID RegisterInputAssemblyConfig(StreamFormatID format, mu::PointerRange<const VertexBufferID> vertex_buffers, IndexBufferID index_buffer) = 0;
+	virtual GPU::StreamFormatID RegisterStreamFormat(const GPU::StreamFormatDesc& format) = 0;
+	virtual GPU::InputAssemblerConfigID RegisterInputAssemblyConfig(GPU::StreamFormatID format, mu::PointerRange<const GPU::VertexBufferID> vertex_buffers, GPU::IndexBufferID index_buffer) = 0;
 
-	virtual VertexShaderID CompileVertexShaderHLSL(const char* entry_point, mu::PointerRange<const u8> code) = 0;
-	virtual PixelShaderID CompilePixelShaderHLSL(const char* entry_point, mu::PointerRange<const u8> code) = 0;
-	virtual ProgramID LinkProgram(VertexShaderID vertex_shader, PixelShaderID pixel_shader) = 0;
+	virtual GPU::VertexShaderID CompileVertexShaderHLSL(const char* entry_point, mu::PointerRange<const u8> code) = 0;
+	virtual GPU::PixelShaderID CompilePixelShaderHLSL(const char* entry_point, mu::PointerRange<const u8> code) = 0;
+	virtual GPU::ProgramID LinkProgram(GPU::VertexShaderID vertex_shader, GPU::PixelShaderID pixel_shader) = 0;
 
-	virtual ConstantBufferID CreateConstantBuffer(mu::PointerRange<const u8> data) = 0;
-	virtual VertexBufferID CreateVertexBuffer(mu::PointerRange<const u8> data) = 0;
+	virtual GPU::ConstantBufferID CreateConstantBuffer(mu::PointerRange<const u8> data) = 0;
+	virtual GPU::VertexBufferID CreateVertexBuffer(mu::PointerRange<const u8> data) = 0;
 
-	virtual TextureID CreateTexture2D(u32 width, u32 height, TextureFormat format, mu::PointerRange<const u8> data) = 0;
+	virtual GPU::TextureID CreateTexture2D(u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) = 0;
 
-	virtual ShaderResourceListID CreateShaderResourceList(const ShaderResourceListDesc& desc) = 0;
+	virtual GPU::ShaderResourceListID CreateShaderResourceList(const GPU::ShaderResourceListDesc& desc) = 0;
 };
+
+#undef DECLARE_HANDLE
 
 #pragma warning(pop) 

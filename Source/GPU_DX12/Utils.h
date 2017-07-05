@@ -89,7 +89,7 @@ namespace DX12Util {
 	};
 
 
-	inline D3D12_PRIMITIVE_TOPOLOGY CommonToDX12(GPUInterface::PrimitiveTopology pt) {
+	inline D3D12_PRIMITIVE_TOPOLOGY CommonToDX12(GPU::PrimitiveTopology pt) {
 		static D3D12_PRIMITIVE_TOPOLOGY list[] = {
 			D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
 			D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
@@ -97,9 +97,9 @@ namespace DX12Util {
 		return list[(i32)pt];
 	}
 
-	inline DXGI_FORMAT CommonToDX12(GPUInterface::TextureFormat format) {
+	inline DXGI_FORMAT CommonToDX12(GPU::TextureFormat format) {
 		switch (format) {
-		case GPUInterface::TextureFormat::RGBA8:
+		case GPU::TextureFormat::RGBA8:
 			return DXGI_FORMAT_R8G8B8A8_UNORM;
 		}
 		CHECK(false);
@@ -123,9 +123,9 @@ namespace DX12Util {
 		}
 	}
 
-	inline u32 CalcRowPitch(GPUInterface::TextureFormat format, u32 width) {
+	inline u32 CalcRowPitch(GPU::TextureFormat format, u32 width) {
 		switch (format) {
-		case GPUInterface::TextureFormat::RGBA8:
+		case GPU::TextureFormat::RGBA8:
 			return 4 * width;
 		}		
 		CHECK(false);
@@ -135,9 +135,9 @@ namespace DX12Util {
 	void CompileShaderHLSL(ID3DBlob** compiled_shader, const char* shader_model, const char* entry_point, const mu::PointerRange<const u8>& code);
 
 	struct VertexShaderInputElement {
-		GPUInterface::ScalarType Type : 2;
+		GPU::ScalarType Type : 2;
 		u8 CountMinusOne : 2;
-		GPUInterface::InputSemantic Semantic : 6;
+		GPU::InputSemantic Semantic : 6;
 		u8 SemanticIndex : 6;
 	};
 	VertexShaderInputElement ParseInputParameter(D3D12_SIGNATURE_PARAMETER_DESC& input_param);

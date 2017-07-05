@@ -67,14 +67,14 @@ int main(int, char**) {
 
 	String shader_filename{ GetShaderDirectory(), "basic_shader.hlsl" };
 	Array<u8> shader_txt_code = LoadFileToArray(shader_filename.GetRaw(), FileReadType::Text);
-	GPUInterface::VertexShaderID vshader_id = gpu->CompileVertexShaderHLSL("vs_main", Range(shader_txt_code));
-	GPUInterface::PixelShaderID pshader_id = gpu->CompilePixelShaderHLSL("ps_main", Range(shader_txt_code));
-	GPUInterface::ProgramID program_id = gpu->LinkProgram(vshader_id, pshader_id);
+	GPU::VertexShaderID vshader_id = gpu->CompileVertexShaderHLSL("vs_main", Range(shader_txt_code));
+	GPU::PixelShaderID pshader_id = gpu->CompilePixelShaderHLSL("ps_main", Range(shader_txt_code));
+	GPU::ProgramID program_id = gpu->LinkProgram(vshader_id, pshader_id);
 
-	GPUInterface::StreamFormatDesc stream_format{};
-	stream_format.AddSlot().Set({ GPUInterface::ScalarType::Float, 3, GPUInterface::InputSemantic::Position, 0 });
+	GPU::StreamFormatDesc stream_format{};
+	stream_format.AddSlot().Set({ GPU::ScalarType::Float, 3, GPU::InputSemantic::Position, 0 });
 
-	GPUInterface::StreamFormatID stream_format_id = gpu->RegisterStreamFormat(stream_format);
+	GPU::StreamFormatID stream_format_id = gpu->RegisterStreamFormat(stream_format);
 
 	struct Vertex {
 		Vec3 position;
@@ -82,24 +82,24 @@ int main(int, char**) {
 	Vertex triangle_vertices[] = {
 		{ 0.0f, 0.5f, 0.0f },{ 0.5f, -0.5f, 0.0f },{ -0.5f, -0.5f, 0.0f }
 	};
-	GPUInterface::VertexBufferID vbuffer_id = gpu->CreateVertexBuffer(Range((u8*)triangle_vertices, sizeof(triangle_vertices)));
-	GPUInterface::InputAssemblerConfigID ia_id = gpu->RegisterInputAssemblyConfig(stream_format_id, Range(&vbuffer_id, &vbuffer_id+1), GPUInterface::IndexBufferID{});
+	GPU::VertexBufferID vbuffer_id = gpu->CreateVertexBuffer(Range((u8*)triangle_vertices, sizeof(triangle_vertices)));
+	GPU::InputAssemblerConfigID ia_id = gpu->RegisterInputAssemblyConfig(stream_format_id, Range(&vbuffer_id, &vbuffer_id+1), GPU::IndexBufferID{});
 
 	struct CBuffer_Color {
 		Vec4 color;
 	};
 	CBuffer_Color cbuffer = { { 1.0f, 1.0f, 0.0f, 1.0f } };
-	GPUInterface::ConstantBufferID cbuffer_id = gpu->CreateConstantBuffer(Range((u8*)&cbuffer, sizeof(cbuffer)));
+	GPU::ConstantBufferID cbuffer_id = gpu->CreateConstantBuffer(Range((u8*)&cbuffer, sizeof(cbuffer)));
 
 	Color4 pixels[] = {
 		{ 255, 0, 0, 255 }, { 0, 255, 0, 255 },
 		{ 0, 255, 0, 255 }, { 255, 0, 0, 255 },
 	};
-	GPUInterface::TextureID texture_id = gpu->CreateTexture2D(2, 2, GPUInterface::TextureFormat::RGBA8, Range((u8*)pixels, sizeof(pixels)));
-	GPUInterface::ShaderResourceListDesc resource_list_desc = {};
+	GPU::TextureID texture_id = gpu->CreateTexture2D(2, 2, GPU::TextureFormat::RGBA8, Range((u8*)pixels, sizeof(pixels)));
+	GPU::ShaderResourceListDesc resource_list_desc = {};
 	resource_list_desc.StartSlot = 0;
 	resource_list_desc.Textures.Add(texture_id);
-	GPUInterface::ShaderResourceListID resource_list_id = gpu->CreateShaderResourceList(resource_list_desc);
+	GPU::ShaderResourceListID resource_list_id = gpu->CreateShaderResourceList(resource_list_desc);
 
 	//bool show_test_window = true;
 	while (glfwWindowShouldClose(win) == false) {
@@ -108,17 +108,17 @@ int main(int, char**) {
 		gpu->BeginFrame();
 		//ImGui_Impl_BeginFrame();
 
-		GPUInterface::DrawItem draw_item = {};
+		GPU::DrawItem draw_item = {};
 		// default raster state, blend state, depth stenci state
 		draw_item.PipelineSetup.InputAssemblerConfig = ia_id;
 		draw_item.PipelineSetup.Program = program_id;
 		draw_item.BoundResources.ConstantBuffers.Add(cbuffer_id);
 		draw_item.BoundResources.ResourceLists.Add(resource_list_id);
 		draw_item.Command.VertexOrIndexCount = 3;
-		draw_item.Command.PrimTopology = GPUInterface::PrimitiveTopology::TriangleList;
+		draw_item.Command.PrimTopology = GPU::PrimitiveTopology::TriangleList;
 
-		GPUInterface::RenderPass pass;
-		pass.RenderTargets.Add(GPUInterface::BackBufferID);
+		GPU::RenderPass pass;
+		pass.RenderTargets.Add(GPU::BackBufferID);
 		pass.DrawItems = mu::Range(&draw_item, &draw_item+1);
 		gpu->SubmitPass(pass);
 
