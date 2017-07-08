@@ -1,4 +1,4 @@
-#include "Utils.h"
+#include "DX12Utils.h"
 
 #include <d3dcompiler.h>
 #pragma comment(lib, "d3dcompiler.lib")
@@ -95,7 +95,7 @@ namespace DX12Util {
 		Base::RTVFormats[0] = format;
 		return *this;
 	}
-	GraphicsPipelineStateDesc& GraphicsPipelineStateDesc::InputLayout(D3D12_INPUT_ELEMENT_DESC* elements, u32 num_elements) {
+	GraphicsPipelineStateDesc& GraphicsPipelineStateDesc::InputLayout(const D3D12_INPUT_ELEMENT_DESC* elements, u32 num_elements) {
 		Base::InputLayout.NumElements = num_elements;
 		Base::InputLayout.pInputElementDescs = elements;
 		return *this;
@@ -188,27 +188,8 @@ namespace DX12Util {
 		{ D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS }
 	};
 
-	void CompileShaderHLSL(ID3DBlob** compiled_shader, const char* shader_model, const char* entry_point, const mu::PointerRange<const u8>& code) {
-		COMPtr<ID3DBlob> errors;
 
-		if (!SUCCEEDED(D3DCompile(
-			&code.Front(),
-			code.Size(),
-			nullptr,
-			nullptr,
-			nullptr,
-			entry_point,
-			shader_model,
-			0,
-			0,
-			compiled_shader,
-			errors.Replace()))) {
-			const char* error_msg = (const char*)errors->GetBufferPointer();
-			CHECKF(false, "Compile failed with error: ", error_msg);
-		}
-	}
-
-	VertexShaderInputElement ParseInputParameter(D3D12_SIGNATURE_PARAMETER_DESC& input_param) {
+	DX::VertexShaderInputElement ParseInputParameter(D3D12_SIGNATURE_PARAMETER_DESC& input_param) {
 		std::tuple<GPU::InputSemantic, const char*> table[] = {
 			{ GPU::InputSemantic::Position, "POSITION" },
 		};
@@ -216,7 +197,7 @@ namespace DX12Util {
 			return strcmp(std::get<1>(sem), input_param.SemanticName) == 0;
 		});
 		CHECK(!found.IsEmpty());
-		VertexShaderInputElement out_elem;
+		DX::VertexShaderInputElement out_elem;
 		out_elem.Semantic = std::get<0>(found.Front());
 		out_elem.SemanticIndex = input_param.SemanticIndex;
 		out_elem.Type = GPU::ScalarType::Float;

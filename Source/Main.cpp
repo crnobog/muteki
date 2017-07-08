@@ -2,7 +2,8 @@
 #    pragma comment(linker, "/subsystem:windows /ENTRY:mainCRTStartup")
 #endif
 
-#include "GPU_DX12.h"
+#include "GPU_DX12/GPU_DX12.h"
+#include "GPU_DX11/GPU_DX11.h"
 
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include "GLFW/glfw3.h"
@@ -58,7 +59,7 @@ int main(int, char**) {
 		return 1;
 	}
 
-	GPUInterface* gpu = CreateGPU_DX12();
+	GPUInterface* gpu = CreateGPU_DX11();
 	gpu->Init();
 	HWND hwnd = glfwGetWin32Window(win);
 	gpu->RecreateSwapChain(hwnd, 800, 600);

@@ -1,10 +1,10 @@
 #pragma once
 
-#include "GPU_DX12/Utils.h"
+#include "DX12Utils.h"
 
 namespace DX12Util {
 	struct Fence {
-		COMPtr<ID3D12Fence>		fence;
+		DX::COMPtr<ID3D12Fence> fence;
 		u64						last_value = 0;
 
 		u64 SubmitFence(ID3D12CommandQueue* command_queue) {

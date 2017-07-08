@@ -1,5 +1,5 @@
 #pragma once
 
-#include "GPUInterface.h"
+#include "../GPUInterface.h"
 
 GPUInterface* CreateGPU_DX12();

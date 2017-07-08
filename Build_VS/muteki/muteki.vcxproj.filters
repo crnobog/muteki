@@ -2,9 +2,6 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="..\..\Source\Main.cpp" />
-    <ClCompile Include="..\..\Source\GPU_DX12.cpp">
-      <Filter>GPU\DX12</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\imgui\imgui.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
@@ -17,11 +14,23 @@
     <ClCompile Include="..\..\mu-core\Source\mu-core.cpp">
       <Filter>mu-core</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Source\GPU_DX12\Utils.cpp">
-      <Filter>GPU\DX12</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Source\GPUInterface.cpp">
       <Filter>GPU</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\GPU_DX12\GPU_DX12.cpp">
+      <Filter>GPU\DX12</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\GPU_DX11\GPU_DX11.cpp">
+      <Filter>GPU\DX11</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\GPU_DX12\DX12Utils.cpp">
+      <Filter>GPU\DX12</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\GPU_DX11\DX11Utils.cpp">
+      <Filter>GPU\DX11</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\GPU_DXShared\DXSharedUtils.cpp">
+      <Filter>GPU\DXShared</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -39,6 +48,12 @@
     </Filter>
     <Filter Include="Shaders_DX12">
       <UniqueIdentifier>{608186c7-272f-45df-8c05-7a8363bd5d69}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GPU\DX11">
+      <UniqueIdentifier>{03e3d2c5-1816-40b6-bbb5-55b2274bce18}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GPU\DXShared">
+      <UniqueIdentifier>{63b4fb84-776c-469a-8ede-48f3a8bd83ca}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -83,9 +98,6 @@
     </ClInclude>
     <ClInclude Include="..\..\mu-core\Include\mu-core\RefCountPtr.h">
       <Filter>mu-core</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\GPU_DX12.h">
-      <Filter>GPU\DX12</Filter>
     </ClInclude>
     <ClInclude Include="..\..\mu-core\Include\mu-core\Vectors.h">
       <Filter>mu-core</Filter>
@@ -132,9 +144,6 @@
     <ClInclude Include="..\..\mu-core\Include\mu-core\RangeWrappers.h">
       <Filter>mu-core</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Source\GPU_DX12\Utils.h">
-      <Filter>GPU\DX12</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Source\GPU_DX12\Fence.h">
       <Filter>GPU\DX12</Filter>
     </ClInclude>
@@ -143,6 +152,21 @@
     </ClInclude>
     <ClInclude Include="..\..\Source\GPUInterface.h">
       <Filter>GPU</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\GPU_DX11\GPU_DX11.h">
+      <Filter>GPU\DX11</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\GPU_DX12\GPU_DX12.h">
+      <Filter>GPU\DX12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\GPU_DXShared\DXSharedUtils.h">
+      <Filter>GPU\DXShared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\GPU_DX12\DX12Utils.h">
+      <Filter>GPU\DX12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\GPU_DX11\DX11Utils.h">
+      <Filter>GPU\DX11</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

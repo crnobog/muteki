@@ -10,8 +10,8 @@
 #include "mu-core/Vectors.h"
 #include "mu-core/Utils.h"
 
-#include "GPU_DX12/Fence.h"
-#include "GPU_DX12/Utils.h"
+#include "Fence.h"
+#include "DX12Utils.h"
 
 #include <d3d12.h>
 #include <d3d12sdklayers.h>
@@ -25,6 +25,7 @@ using namespace DX12Util;
 using std::tuple;
 using std::get;
 using namespace mu;
+using DX::COMPtr;
 
 using StreamFormatID = GPU::StreamFormatID;
 using VertexBufferID = GPU::VertexBufferID;
@@ -39,57 +40,67 @@ using TextureID = GPU::TextureID;
 using ShaderResourceListID = GPU::ShaderResourceListID;
 using RenderPass = GPU::RenderPass;
 
-// Internal types
-struct StreamFormat {
-	u32 Strides[GPU::MaxStreamSlots];
-	GPU::StreamFormatDesc Desc;
-};
-
-struct LinkedProgram {
-	VertexShaderID VertexShader;
-	PixelShaderID PixelShader;
-};
-
-struct VertexShaderInputs {
-	static constexpr i32 MaxInputElements = 8;
-	FixedArray<VertexShaderInputElement, MaxInputElements> InputElements;
-};
-struct VertexShader {
-	COMPtr<ID3DBlob> CompiledShader;
-	VertexShaderInputs Inputs;
-};
-
-struct InputAssemblerConfig {
-	StreamFormatID StreamFormat;
-	VertexBufferID Slots[GPU::MaxStreamSlots];
-	IndexBufferID IndexBuffer;
-};
-
-struct VertexBuffer {
-	COMPtr<ID3D12Resource> Resource;
-	u32 Size;
-
-	D3D12_VERTEX_BUFFER_VIEW MakeVertexBufferView(u32 stride) {
-		return { Resource->GetGPUVirtualAddress(), Size, stride };
-	}
-};
-
-struct CachedPSO {
-	GPU::DrawPipelineSetup Setup;
-	COMPtr<ID3D12PipelineState> PSO;
-};
-
-struct Texture {
-	COMPtr<ID3D12Resource> Resource;
-	COMPtr<ID3D12Resource> UploadResource;
-	D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc;
-};
-
-struct ShaderResourceList {
-	GPU::ShaderResourceListDesc desc;
-};
 
 struct GPU_DX12 : public GPUInterface {
+
+	// Internal types
+	struct StreamFormat {
+		FixedArray<u32, GPU::MaxStreamSlots> Strides;
+		GPU::StreamFormatDesc Desc;
+		Array<D3D12_INPUT_ELEMENT_DESC> InputLayout;
+	};
+
+	struct LinkedProgram {
+		VertexShaderID VertexShader;
+		PixelShaderID PixelShader;
+	};
+
+	struct VertexShaderInputs {
+		static constexpr i32 MaxInputElements = 8;
+		FixedArray<DX::VertexShaderInputElement, MaxInputElements> InputElements;
+	};
+	struct VertexShader {
+		COMPtr<ID3DBlob> CompiledShader;
+		VertexShaderInputs Inputs;
+	};
+
+	struct InputAssemblerConfig {
+		StreamFormatID StreamFormat;
+		FixedArray<VertexBufferID, GPU::MaxStreamSlots> Slots;
+		IndexBufferID IndexBuffer;
+	};
+
+	struct VertexBuffer {
+		COMPtr<ID3D12Resource> Resource;
+		u32 Size;
+
+		D3D12_VERTEX_BUFFER_VIEW MakeVertexBufferView(u32 stride) {
+			return { Resource->GetGPUVirtualAddress(), Size, stride };
+		}
+	};
+
+	struct CachedPSO {
+		GPU::DrawPipelineSetup Setup;
+		COMPtr<ID3D12PipelineState> PSO;
+	};
+
+	struct Texture {
+		COMPtr<ID3D12Resource> Resource;
+		COMPtr<ID3D12Resource> UploadResource;
+		D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc;
+	};
+
+	struct ShaderResourceList {
+		GPU::ShaderResourceListDesc Desc;
+	};
+
+	GPU_DX12() = default;
+	~GPU_DX12() = default;
+	GPU_DX12(const GPU_DX12&) = delete;
+	void operator=(const GPU_DX12&) = delete;
+	GPU_DX12(GPU_DX12&&) = delete;
+	void operator=(GPU_DX12&&) = delete;
+
 	static constexpr u32 frame_count = 2;
 	static constexpr u32 max_descriptors_per_frame = 128; // TODO: Use a pool of descriptor heaps?
 	static constexpr D3D12_HEAP_PROPERTIES upload_heap_properties{ D3D12_HEAP_TYPE_UPLOAD, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 };
@@ -144,22 +155,22 @@ struct GPU_DX12 : public GPUInterface {
 	virtual void Init() override;
 	virtual void Shutdown() override;
 	virtual void RecreateSwapChain(void* hwnd, u32 width, u32 height) override;
-	
+
 	virtual void BeginFrame() override;
 	virtual void EndFrame() override;
-	
+
 	virtual void SubmitPass(const RenderPass& pass) override;
-	
+
 	virtual StreamFormatID RegisterStreamFormat(const GPU::StreamFormatDesc& format) override;
 	virtual InputAssemblerConfigID RegisterInputAssemblyConfig(StreamFormatID format, mu::PointerRange<const VertexBufferID> vertex_buffers, IndexBufferID index_buffer) override;
-	
+
 	virtual VertexShaderID CompileVertexShaderHLSL(const char* entry_point, mu::PointerRange<const u8> code) override;
 	virtual PixelShaderID CompilePixelShaderHLSL(const char* entry_point, mu::PointerRange<const u8> code) override;
 	virtual ProgramID LinkProgram(VertexShaderID vertex_shader, PixelShaderID pixel_shader) override;
-	
+
 	virtual ConstantBufferID CreateConstantBuffer(mu::PointerRange<const u8> data) override;
 	virtual VertexBufferID CreateVertexBuffer(mu::PointerRange<const u8> data) override;
-	
+
 	virtual TextureID CreateTexture2D(u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) override;
 
 	virtual ShaderResourceListID CreateShaderResourceList(const GPU::ShaderResourceListDesc& desc) override;
@@ -376,14 +387,24 @@ StreamFormatID GPU_DX12::RegisterStreamFormat(const GPU::StreamFormatDesc& forma
 	StreamFormatID id = stream_formats.AddDefaulted();
 	StreamFormat& compiled_format = stream_formats[id];
 	compiled_format.Desc = format;
-	for (tuple<const GPU::StreamSlotDesc&, u32&> it : Zip(format.Slots, compiled_format.Strides)) {
-		u32& stride = get<1>(it);
-		stride = 0;
-		const GPU::StreamSlotDesc& slot = get<0>(it);
+	compiled_format.Strides.AddZeroed(format.Slots.Num());
+	for (u32 slot_idx = 0; slot_idx < format.Slots.Num(); ++slot_idx) {
+		u32& stride = compiled_format.Strides[slot_idx];
+		const GPU::StreamSlotDesc& slot = format.Slots[slot_idx];
 		for (GPU::StreamElementDesc& elem : slot.Elements) {
 			stride += GPU::GetStreamElementSize(elem);
+			compiled_format.InputLayout.Add(D3D12_INPUT_ELEMENT_DESC{
+				DX::GetSemanticName(elem.Semantic),
+				elem.SemanticIndex,
+				DX::GetStreamElementFormat(elem),
+				slot_idx,
+				D3D12_APPEND_ALIGNED_ELEMENT,
+				D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+				0
+			});
 		}
 	}
+
 
 	return id;
 }
@@ -394,7 +415,7 @@ StreamFormatID GPU_DX12::RegisterStreamFormat(const GPU::StreamFormatDesc& forma
 VertexShaderID GPU_DX12::CompileVertexShaderHLSL(const char* entry_point, PointerRange<const u8> code) {
 	VertexShaderID id = registered_vertex_shaders.AddDefaulted();
 	COMPtr<ID3DBlob>& compiled_shader = registered_vertex_shaders[id].CompiledShader;
-	CompileShaderHLSL(compiled_shader.Replace(), "vs_5_0", entry_point, code);
+	DX::CompileShaderHLSL(compiled_shader.Replace(), "vs_5_0", entry_point, code);
 	CHECK(compiled_shader.Get());
 
 	VertexShaderInputs& inputs = registered_vertex_shaders[id].Inputs;
@@ -411,7 +432,7 @@ VertexShaderID GPU_DX12::CompileVertexShaderHLSL(const char* entry_point, Pointe
 	CHECK(desc.InputParameters < VertexShaderInputs::MaxInputElements);
 	input_params.AddZeroed(desc.InputParameters);
 	inputs.InputElements.AddZeroed(desc.InputParameters);
-	for (tuple<u32, VertexShaderInputElement&> it : Zip(Iota<u32>(), inputs.InputElements)) {
+	for (tuple<u32, DX::VertexShaderInputElement&> it : Zip(Iota<u32>(), inputs.InputElements)) {
 		D3D12_SIGNATURE_PARAMETER_DESC input_param;
 		reflector->GetInputParameterDesc(get<0>(it), &input_param);
 
@@ -423,7 +444,7 @@ VertexShaderID GPU_DX12::CompileVertexShaderHLSL(const char* entry_point, Pointe
 PixelShaderID GPU_DX12::CompilePixelShaderHLSL(const char* entry_point, PointerRange<const u8> code) {
 	PixelShaderID id = registered_pixel_shaders.AddDefaulted();
 	ID3DBlob** compiled_shader = registered_pixel_shaders[id].Replace();
-	CompileShaderHLSL(compiled_shader, "ps_5_0", entry_point, code);
+	DX::CompileShaderHLSL(compiled_shader, "ps_5_0", entry_point, code);
 	CHECK(*compiled_shader);
 	return id;
 }
@@ -514,7 +535,7 @@ TextureID GPU_DX12::CreateTexture2D(u32 width, u32 height, GPU::TextureFormat fo
 		void* mapped = nullptr;
 		texture.UploadResource->Map(0, nullptr, &mapped);
 		D3D12_MEMCPY_DEST dest{ mapped, layout.Footprint.RowPitch, layout.Footprint.RowPitch * num_rows };
-		D3D12_SUBRESOURCE_DATA source{ &data.Front(), CalcRowPitch(format, width), CalcRowPitch(format, width) * 1 };
+		D3D12_SUBRESOURCE_DATA source{ &data.Front(), DX::CalcRowPitch(format, width), DX::CalcRowPitch(format, width) * 1 };
 		MemcpySubresource(&dest, &source, row_size, num_rows, layout.Footprint.Depth);
 		texture.UploadResource->Unmap(0, nullptr);
 	}
@@ -540,7 +561,7 @@ TextureID GPU_DX12::CreateTexture2D(u32 width, u32 height, GPU::TextureFormat fo
 ShaderResourceListID GPU_DX12::CreateShaderResourceList(const GPU::ShaderResourceListDesc& desc) {
 	ShaderResourceListID id = shader_resource_lists.AddDefaulted();
 	ShaderResourceList& srl = shader_resource_lists[id];
-	srl.desc = desc;
+	srl.Desc = desc;
 
 	return id;
 }
@@ -549,7 +570,7 @@ InputAssemblerConfigID GPU_DX12::RegisterInputAssemblyConfig(StreamFormatID stre
 	CHECK(vbuffers.Size() <= GPU::MaxStreamSlots);
 	InputAssemblerConfigID id = ia_configs.AddDefaulted();
 	InputAssemblerConfig& config = ia_configs[id];
-	Copy(Range(config.Slots), vbuffers);
+	config.Slots.AddRange(vbuffers);
 	config.IndexBuffer = ibuffer;
 	config.StreamFormat = stream_id;
 
@@ -581,9 +602,8 @@ ID3D12PipelineState* GPU_DX12::CachePSO(const GPU::DrawPipelineSetup& pipeline_s
 	LinkedProgram program = linked_programs[pipeline_setup.Program];
 
 	// TODO
-	D3D12_INPUT_ELEMENT_DESC input_layout[] = {
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-	};
+	const InputAssemblerConfig& ia_config = ia_configs[pipeline_setup.InputAssemblerConfig];
+	const StreamFormat& stream_format = stream_formats[ia_config.StreamFormat];
 
 	auto pipeline_desc = GraphicsPipelineStateDesc{ root_signature.Get() }
 		.VS(registered_vertex_shaders[program.VertexShader].CompiledShader)
@@ -591,7 +611,7 @@ ID3D12PipelineState* GPU_DX12::CachePSO(const GPU::DrawPipelineSetup& pipeline_s
 		.DepthEnable(true)
 		.PrimType(PrimType::Triangle)
 		.RenderTargets(DXGI_FORMAT_R8G8B8A8_UNORM)
-		.InputLayout(input_layout, (u32)ArraySize(input_layout));
+		.InputLayout(stream_format.InputLayout.Data(), (u32)stream_format.InputLayout.Num());
 	EnsureHR(device->CreateGraphicsPipelineState(&pipeline_desc, IID_PPV_ARGS(new_pipeline_state.Replace())));
 
 	return new_pipeline_state.Get();
@@ -652,8 +672,8 @@ void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
 		bound_resources.AddMany(GPU::MaxBoundShaderResources, TextureID{ u32_max });
 		for (ShaderResourceListID id : item.BoundResources.ResourceLists) {
 			const ShaderResourceList& list = shader_resource_lists[id];
-			for (u32 i = list.desc.StartSlot; i < list.desc.Textures.Num() && (i + list.desc.StartSlot < GPU::MaxBoundShaderResources); ++i) {
-				bound_resources[i] = list.desc.Textures[i - list.desc.StartSlot];
+			for (u32 i = list.Desc.StartSlot; i < list.Desc.Textures.Num() && (i + list.Desc.StartSlot < GPU::MaxBoundShaderResources); ++i) {
+				bound_resources[i] = list.Desc.Textures[i - list.Desc.StartSlot];
 			}
 		}
 
@@ -670,10 +690,11 @@ void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
 
 		command_list->SetGraphicsRootDescriptorTable(1, table_root);
 
-		D3D12_VERTEX_BUFFER_VIEW vbs[GPU::MaxStreamSlots];
+		FixedArray<D3D12_VERTEX_BUFFER_VIEW, GPU::MaxStreamSlots> vbs;
 		//D3D12_INDEX_BUFFER_VIEW ib;
 		const InputAssemblerConfig& ia_config = ia_configs[item.PipelineSetup.InputAssemblerConfig];
 		const StreamFormat& stream_format = stream_formats[ia_config.StreamFormat];
+		vbs.AddZeroed(ia_config.Slots.Num());
 		for (tuple<D3D12_VERTEX_BUFFER_VIEW&, VertexBufferID, u32> vb_it : Zip(vbs, ia_config.Slots, stream_format.Strides)) {
 			D3D12_VERTEX_BUFFER_VIEW& view = get<0>(vb_it);
 			VertexBufferID vb_id = get<1>(vb_it);
@@ -687,7 +708,7 @@ void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
 			}
 		}
 
-		command_list->IASetVertexBuffers(0, (u32)ArraySize(vbs), vbs);
+		command_list->IASetVertexBuffers(0, (u32)vbs.Num(), vbs.Data());
 		//if (ia_config.IndexBuffer.Index != u32_max) {
 		//	ib = GetIndexBufferView(ia_config.IndexBuffer);
 		//	command_list->IASetIndexBuffer(&ib);

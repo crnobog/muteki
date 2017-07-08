@@ -168,8 +168,11 @@
     <ClCompile Include="..\..\imgui\imgui_draw.cpp" />
     <ClCompile Include="..\..\mu-core\Source\mu-core.cpp" />
     <ClCompile Include="..\..\Source\GPUInterface.cpp" />
-    <ClCompile Include="..\..\Source\GPU_DX12.cpp" />
-    <ClCompile Include="..\..\Source\GPU_DX12\Utils.cpp" />
+    <ClCompile Include="..\..\Source\GPU_DX11\GPU_DX11.cpp" />
+    <ClCompile Include="..\..\Source\GPU_DX11\DX11Utils.cpp" />
+    <ClCompile Include="..\..\Source\GPU_DX12\GPU_DX12.cpp" />
+    <ClCompile Include="..\..\Source\GPU_DX12\DX12Utils.cpp" />
+    <ClCompile Include="..\..\Source\GPU_DXShared\DXSharedUtils.cpp" />
     <ClCompile Include="..\..\Source\Main.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -204,9 +207,12 @@
     <ClInclude Include="..\..\mu-core\Include\mu-core\Vectors.h" />
     <ClInclude Include="..\..\mu-core\Include\mu-core\ZipRange.h" />
     <ClInclude Include="..\..\Source\GPUInterface.h" />
-    <ClInclude Include="..\..\Source\GPU_DX12.h" />
+    <ClInclude Include="..\..\Source\GPU_DX11\GPU_DX11.h" />
+    <ClInclude Include="..\..\Source\GPU_DX11\DX11Utils.h" />
     <ClInclude Include="..\..\Source\GPU_DX12\Fence.h" />
-    <ClInclude Include="..\..\Source\GPU_DX12\Utils.h" />
+    <ClInclude Include="..\..\Source\GPU_DX12\GPU_DX12.h" />
+    <ClInclude Include="..\..\Source\GPU_DX12\DX12Utils.h" />
+    <ClInclude Include="..\..\Source\GPU_DXShared\DXSharedUtils.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Shaders\basic_shader.hlsl">
