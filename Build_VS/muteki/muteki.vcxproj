@@ -55,6 +55,7 @@
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
   <ImportGroup Label="Shared">
+    <Import Project="..\..\mu-core\Build_VS\mu-core\mu-core.vcxitems" Label="Shared" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -166,7 +167,6 @@
     <ClCompile Include="..\..\imgui\imgui.cpp" />
     <ClCompile Include="..\..\imgui\imgui_demo.cpp" />
     <ClCompile Include="..\..\imgui\imgui_draw.cpp" />
-    <ClCompile Include="..\..\mu-core\Source\mu-core.cpp" />
     <ClCompile Include="..\..\Source\GPUInterface.cpp" />
     <ClCompile Include="..\..\Source\GPU_DX11\GPU_DX11.cpp" />
     <ClCompile Include="..\..\Source\GPU_DX11\DX11Utils.cpp" />
@@ -182,30 +182,6 @@
     <ClInclude Include="..\..\imgui\stb_rect_pack.h" />
     <ClInclude Include="..\..\imgui\stb_textedit.h" />
     <ClInclude Include="..\..\imgui\stb_truetype.h" />
-    <ClInclude Include="..\..\mu-core\Include\mu-core\Algorithms.h" />
-    <ClInclude Include="..\..\mu-core\Include\mu-core\Array.h" />
-    <ClInclude Include="..\..\mu-core\Include\mu-core\Debug.h" />
-    <ClInclude Include="..\..\mu-core\Include\mu-core\FileReader.h" />
-    <ClInclude Include="..\..\mu-core\Include\mu-core\FixedArray.h" />
-    <ClInclude Include="..\..\mu-core\Include\mu-core\Functors.h" />
-    <ClInclude Include="..\..\mu-core\Include\mu-core\IotaRange.h" />
-    <ClInclude Include="..\..\mu-core\Include\mu-core\Math.h" />
-    <ClInclude Include="..\..\mu-core\Include\mu-core\Metaprogramming.h" />
-    <ClInclude Include="..\..\mu-core\Include\mu-core\mu-core.h" />
-    <ClInclude Include="..\..\mu-core\Include\mu-core\PointerRange.h" />
-    <ClInclude Include="..\..\mu-core\Include\mu-core\Pool.h" />
-    <ClInclude Include="..\..\mu-core\Include\mu-core\PrimitiveTypes.h" />
-    <ClInclude Include="..\..\mu-core\Include\mu-core\RangeIteration.h" />
-    <ClInclude Include="..\..\mu-core\Include\mu-core\Ranges.h" />
-    <ClInclude Include="..\..\mu-core\Include\mu-core\RangeWrappers.h" />
-    <ClInclude Include="..\..\mu-core\Include\mu-core\RefCountPtr.h" />
-    <ClInclude Include="..\..\mu-core\Include\mu-core\Scope.h" />
-    <ClInclude Include="..\..\mu-core\Include\mu-core\String.h" />
-    <ClInclude Include="..\..\mu-core\Include\mu-core\StringFormat.h" />
-    <ClInclude Include="..\..\mu-core\Include\mu-core\TransformRange.h" />
-    <ClInclude Include="..\..\mu-core\Include\mu-core\Utils.h" />
-    <ClInclude Include="..\..\mu-core\Include\mu-core\Vectors.h" />
-    <ClInclude Include="..\..\mu-core\Include\mu-core\ZipRange.h" />
     <ClInclude Include="..\..\Source\GPUInterface.h" />
     <ClInclude Include="..\..\Source\GPU_DX11\GPU_DX11.h" />
     <ClInclude Include="..\..\Source\GPU_DX11\DX11Utils.h" />

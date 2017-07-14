@@ -4,18 +4,19 @@
 
 #include "GPU_DX12/GPU_DX12.h"
 #include "GPU_DX11/GPU_DX11.h"
+#include "Vectors.h"
 
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include "GLFW/glfw3.h"
 #include "GLFW/glfw3native.h"
 
-#include "mu-core/Vectors.h"
 #include "mu-core/Paths.h"
 #include "mu-core/Debug.h"
 #include "mu-core/String.h"
 #include "mu-core/FileReader.h"
 
 #include "imgui.h"
+
 
 using namespace mu;
 
@@ -80,10 +81,11 @@ int main(int, char**) {
 	struct Vertex {
 		Vec3 position;
 	};
-	Vertex triangle_vertices[] = {
-		{ 0.0f, 0.5f, 0.0f },{ 0.5f, -0.5f, 0.0f },{ -0.5f, -0.5f, 0.0f }
-	};
-	GPU::VertexBufferID vbuffer_id = gpu->CreateVertexBuffer(Range((u8*)triangle_vertices, sizeof(triangle_vertices)));
+	Array<Vertex> triangle_vertices;
+	triangle_vertices.Emplace({ { 0.0f, 0.5f, 0.0f } });
+	triangle_vertices.Emplace({ { 0.5f, -0.5f, 0.0f } });
+	triangle_vertices.Emplace({ { -0.5f, -0.5f, 0.0f } });
+	GPU::VertexBufferID vbuffer_id = gpu->CreateVertexBuffer(Range(triangle_vertices.Bytes(), triangle_vertices.NumBytes()));
 	GPU::InputAssemblerConfigID ia_id = gpu->RegisterInputAssemblyConfig(stream_format_id, Range(&vbuffer_id, &vbuffer_id+1), GPU::IndexBufferID{});
 
 	struct CBuffer_Color {

@@ -7,11 +7,11 @@
 #include "mu-core/FixedArray.h"
 #include "mu-core/Pool.h"
 #include "mu-core/Ranges.h"
-#include "mu-core/Vectors.h"
 #include "mu-core/Utils.h"
 
 #include "Fence.h"
 #include "DX12Utils.h"
+#include "../Vectors.h"
 
 #include <d3d12.h>
 #include <d3d12sdklayers.h>

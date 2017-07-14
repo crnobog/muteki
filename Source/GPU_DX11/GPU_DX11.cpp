@@ -4,12 +4,12 @@
 #include "GPU_DX11.h"
 #include "DX11Utils.h"
 #include "../GPU_DXShared/DXSharedUtils.h"
+#include "../Vectors.h"
 
 #include "mu-core/FixedArray.h"
 #include "mu-core/Pool.h"
 #include "mu-core/Ranges.h"
 #include "mu-core/String.h"
-#include "mu-core/Vectors.h"
 #include "mu-core/Utils.h"
 
 #include <d3d11.h>
