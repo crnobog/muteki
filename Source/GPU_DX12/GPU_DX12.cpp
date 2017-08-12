@@ -171,6 +171,7 @@ struct GPU_DX12 : public GPUInterface {
 	COMPtr<IDXGISwapChain3>				swap_chain;
 	D3D12_VIEWPORT						viewport = {};
 	D3D12_RECT							scissor_rect = {};
+	Vector<u32, 2>						swap_chain_dimensions;
 	
 	COMPtr<ID3D12CommandQueue>			copy_command_queue;
 	COMPtr<ID3D12GraphicsCommandList>	copy_command_list;
@@ -205,7 +206,11 @@ struct GPU_DX12 : public GPUInterface {
 	// BEGIN GPUInterface functions
 	virtual void Init() override;
 	virtual void Shutdown() override;
-	virtual void RecreateSwapChain(void* hwnd, u32 width, u32 height) override;
+	virtual void CreateSwapChain(void* hwnd, u32 width, u32 height) override;
+	virtual void ResizeSwapChain(void* hwnd, u32 width, u32 height) override;
+	virtual Vector<u32, 2> GetSwapChainDimensions() override {
+		return swap_chain_dimensions;
+	}
 
 	virtual GPUFrameInterface* BeginFrame() override;
 	virtual void EndFrame(GPUFrameInterface* frame) override;
@@ -231,6 +236,8 @@ struct GPU_DX12 : public GPUInterface {
 
 	virtual ShaderResourceListID CreateShaderResourceList(const GPU::ShaderResourceListDesc& desc) override;
 	// END GPUInterface functions
+
+	void OnSwapChainUpdated();
 
 	D3D12_CPU_DESCRIPTOR_HANDLE GetRenderTargetView(D3D12_CPU_DESCRIPTOR_HANDLE backbuffer, RenderTargetID id);
 	D3D12_CONSTANT_BUFFER_VIEW_DESC GetConstantBufferViewDesc(GPU_DX12_Frame* frame, ConstantBufferID id);
@@ -372,10 +379,8 @@ void GPU_DX12::Shutdown() {
 	// TODO: Empty all pools
 }
 
-void GPU_DX12::RecreateSwapChain(void* hwnd, u32 width, u32 height) {
-	viewport = D3D12_VIEWPORT{ 0.0f, 0.0f, (float)width, (float)height, 0.0f, 1.0f };
-	scissor_rect = D3D12_RECT{ 0, 0, (LONG)width, (LONG)height };
-
+void GPU_DX12::CreateSwapChain(void* hwnd, u32 width, u32 height) {
+	swap_chain_dimensions = { width, height };
 	DXGI_SWAP_CHAIN_DESC1 swap_chain_desc = {};
 	swap_chain_desc.BufferCount = frame_count;
 	swap_chain_desc.Width = width;
@@ -398,8 +403,26 @@ void GPU_DX12::RecreateSwapChain(void* hwnd, u32 width, u32 height) {
 
 		EnsureHR(swap_chain_tmp->QueryInterface(swap_chain.Replace()));
 	}
-	frame_index = swap_chain->GetCurrentBackBufferIndex();
+	OnSwapChainUpdated();
+}
 
+void GPU_DX12::ResizeSwapChain(void*, u32 width, u32 height) {
+	// TODO: Resizing the swap chain resets which buffer we need to use
+	//	wait for idle here so we can reset frame index? 
+	//	or set up render targets for each frame after we resize
+	// Just getting the frame index seems to work for now, but seems like a race condition waiting to happen.
+
+	for (u32 n = 0; n < frame_count; ++n) {
+		frame_data[n]->render_target.Clear();
+	}
+	swap_chain_dimensions = { width, height };
+	EnsureHR(swap_chain->ResizeBuffers(frame_count, width, height, DXGI_FORMAT_R8G8B8A8_UNORM, 0));
+
+	OnSwapChainUpdated();
+}
+
+void GPU_DX12::OnSwapChainUpdated() {
+	u32 width = swap_chain_dimensions[0], height = swap_chain_dimensions[1];
 	D3D12_CPU_DESCRIPTOR_HANDLE rtv_handle = rtv_heap->GetCPUDescriptorHandleForHeapStart();
 	for (u32 n = 0; n < frame_count; ++n) {
 		EnsureHR(swap_chain->GetBuffer(n, IID_PPV_ARGS(frame_data[n]->render_target.Replace())));
@@ -407,6 +430,10 @@ void GPU_DX12::RecreateSwapChain(void* hwnd, u32 width, u32 height) {
 		frame_data[n]->render_target_view = rtv_handle;
 		rtv_handle.ptr += rtv_descriptor_size;
 	}
+	frame_index = swap_chain->GetCurrentBackBufferIndex();
+
+	viewport = D3D12_VIEWPORT{ 0.0f, 0.0f, (float)width, (float)height, 0.0f, 1.0f };
+	scissor_rect = D3D12_RECT{ 0, 0, (LONG)width, (LONG)height };
 }
 
 GPUFrameInterface* GPU_DX12::BeginFrame() {

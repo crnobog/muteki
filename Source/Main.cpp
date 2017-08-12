@@ -46,6 +46,10 @@ struct ImGuiImpl {
 		io.IniFilename = nullptr;
 		io.LogFilename = nullptr;
 
+		RECT rect;
+		GetClientRect(m_hwnd, &rect);
+		io.DisplaySize = ImVec2((float)(rect.right - rect.left), (float)(rect.bottom - rect.top));
+
 		GPU::PipelineStateDesc pipeline_state_desc = {};
 
 		String shader_filename{ GetShaderDirectory(), "imgui.hlsl" };
@@ -86,9 +90,8 @@ struct ImGuiImpl {
 	void BeginFrame() {
 		ImGuiIO& io = ImGui::GetIO();
 
-		RECT rect;
-		GetClientRect(m_hwnd, &rect);
-		io.DisplaySize = ImVec2((float)(rect.right - rect.left), (float)(rect.bottom - rect.top));
+		Vector<u32, 2> current = m_gpu->GetSwapChainDimensions();
+		io.DisplaySize = ImVec2((float)current[0], (float)current[1]);
 
 		ImGui::NewFrame();
 	}
@@ -166,15 +169,19 @@ int main(int, char**) {
 		return 1;
 	}
 
-	GLFWwindow* win = glfwCreateWindow(800, 600, "muteki", nullptr, nullptr);
+	GLFWwindow* win = glfwCreateWindow(1600, 900, "muteki", nullptr, nullptr);
 	if (!win) {
 		return 1;
 	}
 
-	GPUInterface* gpu = CreateGPU_DX11();
+	GPUInterface* gpu = CreateGPU_DX12();
 	gpu->Init();
 	HWND hwnd = glfwGetWin32Window(win);
-	gpu->RecreateSwapChain(hwnd, 800, 600);
+	{
+		i32 fb_width, fb_height;
+		glfwGetFramebufferSize(win, &fb_width, &fb_height);
+		gpu->CreateSwapChain(hwnd, fb_width, fb_height);
+	}
 
 	ImGuiImpl imgui;
 	imgui.Init(hwnd, gpu);
@@ -219,6 +226,15 @@ int main(int, char**) {
 	bool show_test_window = true;
 	while (glfwWindowShouldClose(win) == false) {
 		glfwPollEvents();
+
+		{
+			Vector<u32, 2> current_size = gpu->GetSwapChainDimensions();
+			i32 fb_width, fb_height;
+			glfwGetFramebufferSize(win, &fb_width, &fb_height);
+			if ((u32)fb_width != current_size[0] || (u32)fb_height != current_size[1]) {
+				gpu->ResizeSwapChain(hwnd, fb_width, fb_height);
+			}
+		}
 
 		auto* gpu_frame = gpu->BeginFrame();
 		imgui.BeginFrame();

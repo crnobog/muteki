@@ -114,6 +114,7 @@ struct GPU_DX11 : public GPUInterface {
 	COMPtr<IDXGISwapChain3>				m_swap_chain;
 	COMPtr<ID3D11Texture2D>				m_back_buffer;
 	COMPtr<ID3D11RenderTargetView>		m_back_buffer_rtv;
+	Vector<u32, 2>						m_swap_chain_dimensions;
 
 	COMPtr<ID3D11SamplerState>			m_default_sampler;
 
@@ -136,7 +137,9 @@ struct GPU_DX11 : public GPUInterface {
 	// BEGIN GPUInterface functions
 	virtual void Init() override;
 	virtual void Shutdown() override;
-	virtual void RecreateSwapChain(void* hwnd, u32 width, u32 height) override;
+	virtual void CreateSwapChain(void* hwnd, u32 width, u32 height) override;
+	virtual void ResizeSwapChain(void* hwnd, u32 width, u32 height) override;
+	virtual Vector<u32, 2> GetSwapChainDimensions() override { return m_swap_chain_dimensions; }
 
 	virtual GPUFrameInterface* BeginFrame() override;
 	virtual void EndFrame(GPUFrameInterface* frame) override;
@@ -165,6 +168,8 @@ struct GPU_DX11 : public GPUInterface {
 
 	virtual ShaderResourceListID CreateShaderResourceList(const GPU::ShaderResourceListDesc& desc) override;
 	// END GPUInterface functions
+
+	void OnSwapChainUpdated();
 
 	ID3D11RenderTargetView* GetRenderTargetView(RenderTargetID id) {
 		CHECK(id == RenderTargetID{});
@@ -207,10 +212,8 @@ void GPU_DX11::Shutdown() {
 	m_device.Clear();
 	m_immediate_context.Clear();
 }
-void GPU_DX11::RecreateSwapChain(void* hwnd, u32 width, u32 height) {
-	m_viewport = D3D11_VIEWPORT{ 0.0f, 0.0f, (float)width, (float)height, 0.0f, 1.0f };
-	m_scissor_rect = D3D11_RECT{ 0, 0, (LONG)width, (LONG)height };
-
+void GPU_DX11::CreateSwapChain(void* hwnd, u32 width, u32 height) {
+	m_swap_chain_dimensions = { width, height };
 	DXGI_SWAP_CHAIN_DESC1 swap_chain_desc = {};
 	swap_chain_desc.BufferCount = frame_count;
 	swap_chain_desc.Width = width;
@@ -222,26 +225,41 @@ void GPU_DX11::RecreateSwapChain(void* hwnd, u32 width, u32 height) {
 	
 	{
 		COMPtr<IDXGISwapChain1> swap_chain_tmp;
-		m_dxgi_factory->CreateSwapChainForHwnd(
+		EnsureHR(m_dxgi_factory->CreateSwapChainForHwnd(
 			m_device.Get(),
 			(HWND)hwnd,
 			&swap_chain_desc,
 			nullptr, // fullscreen desc
 			nullptr, // restrict output
-			swap_chain_tmp.Replace());
+			swap_chain_tmp.Replace()));
 		EnsureHR(m_dxgi_factory->MakeWindowAssociation((HWND)hwnd, DXGI_MWA_NO_ALT_ENTER));
 
 		EnsureHR(swap_chain_tmp->QueryInterface(m_swap_chain.Replace()));
 	}
-	m_frame_index = m_swap_chain->GetCurrentBackBufferIndex();
-	
+
+	OnSwapChainUpdated();
+}
+void GPU_DX11::ResizeSwapChain(void* hwnd, u32 width, u32 height) {
+	m_back_buffer.Clear();
+	m_back_buffer_rtv.Clear();
+	m_swap_chain_dimensions = { width, height };
+	EnsureHR(m_swap_chain->ResizeBuffers(frame_count, width, height, DXGI_FORMAT_R8G8B8A8_UNORM, 0));
+
+	OnSwapChainUpdated();
+}
+void GPU_DX11::OnSwapChainUpdated() {
+	u32 width = m_swap_chain_dimensions[0], height = m_swap_chain_dimensions[1];
 	EnsureHR(m_swap_chain->GetBuffer(0, IID_PPV_ARGS(m_back_buffer.Replace())));
 
 	D3D11_RENDER_TARGET_VIEW_DESC back_buffer_rtv_desc = {};
-	back_buffer_rtv_desc.Format = swap_chain_desc.Format;
+	back_buffer_rtv_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	back_buffer_rtv_desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
 	back_buffer_rtv_desc.Texture2D.MipSlice = 0;
-	m_device->CreateRenderTargetView(m_back_buffer.Get(), &back_buffer_rtv_desc, m_back_buffer_rtv.Replace());
+	EnsureHR(m_device->CreateRenderTargetView(m_back_buffer.Get(), &back_buffer_rtv_desc, m_back_buffer_rtv.Replace()));
+
+	m_viewport = D3D11_VIEWPORT{ 0.0f, 0.0f, (float)width, (float)height, 0.0f, 1.0f };
+	m_scissor_rect = D3D11_RECT{ 0, 0, (LONG)width, (LONG)height };
+	m_frame_index = m_swap_chain->GetCurrentBackBufferIndex();
 }
 GPUFrameInterface* GPU_DX11::BeginFrame() {
 	float clear_color[4] = { 0.0f, 0.0f, 1.0f, 1.0f };

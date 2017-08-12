@@ -265,7 +265,9 @@ struct GPUInterface {
 	virtual ~GPUInterface() {}
 	virtual void Init() = 0;
 	virtual void Shutdown() = 0;
-	virtual void RecreateSwapChain(void* hwnd, u32 width, u32 height) = 0;
+	virtual void CreateSwapChain(void* hwnd, u32 width, u32 height) = 0;
+	virtual void ResizeSwapChain(void* hwnd, u32 width, u32 height) = 0;
+	virtual Vector<u32, 2> GetSwapChainDimensions() = 0;
 
 	virtual GPUFrameInterface* BeginFrame() = 0;
 	virtual void EndFrame(GPUFrameInterface*) = 0;
