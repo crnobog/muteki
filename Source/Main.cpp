@@ -43,6 +43,8 @@ struct ImGuiImpl {
 		m_gpu = gpu;
 		ImGuiIO& io = ImGui::GetIO();
 		io.ImeWindowHandle = hwnd;
+		io.IniFilename = nullptr;
+		io.LogFilename = nullptr;
 
 		GPU::PipelineStateDesc pipeline_state_desc = {};
 
