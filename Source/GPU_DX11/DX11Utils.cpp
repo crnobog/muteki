@@ -10,6 +10,9 @@ namespace DX11Util {
 	DX::VertexShaderInputElement ParseInputParameter(D3D11_SIGNATURE_PARAMETER_DESC& input_param) {
 		std::tuple<GPU::InputSemantic, const char*> table[] = {
 			{ GPU::InputSemantic::Position, "POSITION" },
+			{ GPU::InputSemantic::Color, "COLOR" },
+			{ GPU::InputSemantic::Texcoord, "TEXCOORD" },
+			{ GPU::InputSemantic::Normal, "NORMAL" },
 		};
 		auto found = mu::Find(mu::Range(table), [&](const std::tuple<GPU::InputSemantic, const char*>& sem) {
 			return strcmp(std::get<1>(sem), input_param.SemanticName) == 0;

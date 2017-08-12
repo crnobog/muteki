@@ -1,6 +1,9 @@
 #pragma once
 
+#include "mu-core/PrimitiveTypes.h"
 #include "mu-core/Utils.h"
+
+#include <initializer_list>
 
 #pragma warning (push)
 #pragma warning (disable : 4201) // Disable warning about nonstandard anonymous structs 
@@ -136,13 +139,13 @@ struct Matrix {
 	const T& operator()(size_t i, size_t j) const { return M[i][j]; }
 };
 
-using Vec2 = Vector<float, 2>;
-using Vec3 = Vector<float, 3>;
-using Vec4 = Vector<float, 4>;
+using Vec2 = Vector<f32, 2>;
+using Vec3 = Vector<f32, 3>;
+using Vec4 = Vector<f32, 4>;
 
-using Mat3x3 = Matrix<float, 3, 3>;
-using Mat3x4 = Matrix<float, 3, 4>;
-using Mat4x4 = Matrix<float, 4, 4>;
+using Mat3x3 = Matrix<f32, 3, 3>;
+using Mat3x4 = Matrix<f32, 3, 4>;
+using Mat4x4 = Matrix<f32, 4, 4>;
 
 template<typename T, size_t N>
 inline Vector<T, N> operator-(Vector<T, N> v) {

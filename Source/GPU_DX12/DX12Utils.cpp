@@ -100,6 +100,18 @@ namespace DX12Util {
 		Base::InputLayout.pInputElementDescs = elements;
 		return *this;
 	}
+	GraphicsPipelineStateDesc& GraphicsPipelineStateDesc::BlendState(const GPU::BlendStateDesc& desc) {
+		Base::BlendState.AlphaToCoverageEnable = desc.AlphaToCoverageEnable;
+		Base::BlendState.IndependentBlendEnable = false;
+		Base::BlendState.RenderTarget[0] = D3D12_RENDER_TARGET_BLEND_DESC{
+			desc.BlendEnable, false,
+			CommonToDX12(desc.ColorBlend.Source), CommonToDX12(desc.ColorBlend.Dest),CommonToDX12(desc.ColorBlend.Op),
+			CommonToDX12(desc.AlphaBlend.Source), CommonToDX12(desc.AlphaBlend.Dest),CommonToDX12(desc.AlphaBlend.Op),
+			D3D12_LOGIC_OP_NOOP,
+			(UINT8)0xF,
+		};
+		return *this;
+	}
 
 
 	static_assert(D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT == 8, "D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT != 8");
@@ -192,6 +204,9 @@ namespace DX12Util {
 	DX::VertexShaderInputElement ParseInputParameter(D3D12_SIGNATURE_PARAMETER_DESC& input_param) {
 		std::tuple<GPU::InputSemantic, const char*> table[] = {
 			{ GPU::InputSemantic::Position, "POSITION" },
+			{ GPU::InputSemantic::Color, "COLOR" },
+			{ GPU::InputSemantic::Texcoord, "TEXCOORD" },
+			{ GPU::InputSemantic::Normal, "NORMAL" },
 		};
 		auto found = mu::Find(mu::Range(table), [&](const std::tuple<GPU::InputSemantic, const char*>& sem) {
 			return strcmp(std::get<1>(sem), input_param.SemanticName) == 0;

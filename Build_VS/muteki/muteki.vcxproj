@@ -189,6 +189,8 @@
     <ClInclude Include="..\..\Source\GPU_DX12\GPU_DX12.h" />
     <ClInclude Include="..\..\Source\GPU_DX12\DX12Utils.h" />
     <ClInclude Include="..\..\Source\GPU_DXShared\DXSharedUtils.h" />
+    <ClInclude Include="..\..\Source\Rect.h" />
+    <ClInclude Include="..\..\Source\Vectors.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Shaders\basic_shader.hlsl">
@@ -196,6 +198,11 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\Shaders\imgui.hlsl">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>

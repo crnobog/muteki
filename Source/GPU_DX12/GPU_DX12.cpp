@@ -27,10 +27,8 @@ using std::get;
 using namespace mu;
 using DX::COMPtr;
 
-using StreamFormatID = GPU::StreamFormatID;
 using VertexBufferID = GPU::VertexBufferID;
 using IndexBufferID = GPU::IndexBufferID;
-using InputAssemblerConfigID = GPU::InputAssemblerConfigID;
 using VertexShaderID = GPU::VertexShaderID;
 using PixelShaderID = GPU::PixelShaderID;
 using ProgramID = GPU::ProgramID;
@@ -39,7 +37,50 @@ using RenderTargetID = GPU::RenderTargetID;
 using TextureID = GPU::TextureID;
 using ShaderResourceListID = GPU::ShaderResourceListID;
 using RenderPass = GPU::RenderPass;
+using PipelineStateID = GPU::PipelineStateID;
 
+struct GPUAllocation {
+	D3D12_GPU_VIRTUAL_ADDRESS	GPUAddress;
+	u32							Size;
+	void*						CPUAddress;
+};
+
+struct DX12LinearAllocator {
+	struct GPU_DX12* m_gpu = nullptr;
+	COMPtr<ID3D12Resource> m_data;
+	u8* m_data_cpu_ptr = nullptr;
+	size_t m_max = 0;
+	size_t m_used = 0;
+
+	DX12LinearAllocator(struct GPU_DX12* gpu);
+	GPUAllocation Allocate(u32 size);
+	void Reset() {
+		m_used = 0;
+	}
+};
+
+struct GPU_DX12_Frame : public GPUFrameInterface {
+	struct GPU_DX12* m_gpu = nullptr;
+	GPU_DX12_Frame(struct GPU_DX12* gpu) : m_gpu(gpu), linear_allocator(gpu) {}
+
+	COMPtr<ID3D12Resource>					render_target;
+	D3D12_CPU_DESCRIPTOR_HANDLE				render_target_view;
+	COMPtr<ID3D12DescriptorHeap>			shader_resource_heap; // srv, cbv, uav
+	u64										fence_value = 0;
+	DX12LinearAllocator						linear_allocator;
+	Array<D3D12_CONSTANT_BUFFER_VIEW_DESC>	temp_cbs;
+	Array<D3D12_VERTEX_BUFFER_VIEW>			temp_vbs;	// stride is not stored
+	Array<D3D12_INDEX_BUFFER_VIEW>			temp_ibs;	// format is not stored
+
+	Array<COMPtr<ID3D12CommandAllocator>>	command_allocators;
+	size_t									used_command_allocators = 0;
+
+	virtual ConstantBufferID GetTemporaryConstantBuffer(PointerRange<const u8>) override;
+	virtual VertexBufferID GetTemporaryVertexBuffer(mu::PointerRange<const u8> data) override;
+	virtual IndexBufferID GetTemporaryIndexBuffer(mu::PointerRange<const u8> data) override;
+
+	ID3D12CommandAllocator*	GetCommandAllocator();
+};
 
 struct GPU_DX12 : public GPUInterface {
 
@@ -65,7 +106,6 @@ struct GPU_DX12 : public GPUInterface {
 	};
 
 	struct InputAssemblerConfig {
-		StreamFormatID StreamFormat;
 		FixedArray<VertexBufferID, GPU::MaxStreamSlots> Slots;
 		IndexBufferID IndexBuffer;
 	};
@@ -79,9 +119,19 @@ struct GPU_DX12 : public GPUInterface {
 		}
 	};
 
-	struct CachedPSO {
-		GPU::DrawPipelineSetup Setup;
-		COMPtr<ID3D12PipelineState> PSO;
+	struct IndexBuffer {
+		COMPtr<ID3D12Resource> Resource;
+		u32 Size;
+
+		D3D12_INDEX_BUFFER_VIEW MakeIndexBufferView(DXGI_FORMAT format) {
+			return { Resource->GetGPUVirtualAddress(), Size, format };
+		}
+	};
+
+	struct PipelineState {
+		GPU::PipelineStateDesc					Desc;
+		COMPtr<ID3D12PipelineState>				PSO;
+		FixedArray<u32, GPU::MaxStreamSlots>	VBStrides;
 	};
 
 	struct Texture {
@@ -94,8 +144,13 @@ struct GPU_DX12 : public GPUInterface {
 		GPU::ShaderResourceListDesc Desc;
 	};
 
-	GPU_DX12() = default;
-	~GPU_DX12() = default;
+	struct ConstantBuffer {
+		COMPtr<ID3D12Resource> Resource;
+		D3D12_CONSTANT_BUFFER_VIEW_DESC ViewDesc = { 0, 0 };
+	};
+
+	GPU_DX12();
+	~GPU_DX12();
 	GPU_DX12(const GPU_DX12&) = delete;
 	void operator=(const GPU_DX12&) = delete;
 	GPU_DX12(GPU_DX12&&) = delete;
@@ -116,9 +171,7 @@ struct GPU_DX12 : public GPUInterface {
 	COMPtr<IDXGISwapChain3>				swap_chain;
 	D3D12_VIEWPORT						viewport = {};
 	D3D12_RECT							scissor_rect = {};
-
-	Array<CachedPSO> cached_psos;
-
+	
 	COMPtr<ID3D12CommandQueue>			copy_command_queue;
 	COMPtr<ID3D12GraphicsCommandList>	copy_command_list;
 	COMPtr<ID3D12CommandAllocator>		copy_command_allocator;
@@ -130,56 +183,69 @@ struct GPU_DX12 : public GPUInterface {
 
 	u32 frame_index = 0;
 
-	struct FrameData {
-		COMPtr<ID3D12Resource>			render_target;
-		D3D12_CPU_DESCRIPTOR_HANDLE		render_target_view;
-		COMPtr<ID3D12CommandAllocator>	command_allocator;
-		COMPtr<ID3D12DescriptorHeap>	shader_resource_heap; // srv, cbv, uav
-		u64								fence_value = 0;
-	} frame_data[frame_count];
+	GPU_DX12_Frame* frame_data[frame_count] = { nullptr, };
 
 	Fence	frame_fence;
 	HANDLE	frame_fence_event = nullptr;
 
-	Pool<StreamFormat, StreamFormatID> stream_formats{ 128 };
-	Pool<VertexShader, VertexShaderID> registered_vertex_shaders{ 128 };
-	Pool<COMPtr<ID3DBlob>, PixelShaderID> registered_pixel_shaders{ 128 };
-	Pool<LinkedProgram, ProgramID> linked_programs{ 128 };
-	Pool<VertexBuffer, VertexBufferID> vertex_buffers{ 128 };
-	Pool<InputAssemblerConfig, InputAssemblerConfigID> ia_configs{ 128 };
-	Pool<COMPtr<ID3D12Resource>, ConstantBufferID> constant_buffers{ 128 };
-	Pool<Texture, TextureID> textures{ 128 };
-	Pool<ShaderResourceList, ShaderResourceListID> shader_resource_lists{ 128 };
+	Pool<VertexShader,				VertexShaderID> registered_vertex_shaders{ 128 };
+	Pool<COMPtr<ID3DBlob>,			PixelShaderID> registered_pixel_shaders{ 128 };
+	Pool<LinkedProgram,				ProgramID> linked_programs{ 128 };
+	Pool<Texture,					TextureID> textures{ 128 };
+	Pool<ShaderResourceList,		ShaderResourceListID> shader_resource_lists{ 128 };
+	Pool<PipelineState,				PipelineStateID> pipeline_states{ 128 };
+
+	static constexpr size_t max_persistent_cbs = 128;
+	Pool<ConstantBuffer, ConstantBufferID> constant_buffers{ max_persistent_cbs };
+	static constexpr size_t max_persistent_vbs = 128;
+	Pool<VertexBuffer, VertexBufferID> vertex_buffers{ max_persistent_vbs};
+	static constexpr size_t max_persistent_ibs = 128;
+	Pool<IndexBuffer, IndexBufferID> index_buffers{ max_persistent_ibs };
 
 	// BEGIN GPUInterface functions
 	virtual void Init() override;
 	virtual void Shutdown() override;
 	virtual void RecreateSwapChain(void* hwnd, u32 width, u32 height) override;
 
-	virtual void BeginFrame() override;
-	virtual void EndFrame() override;
+	virtual GPUFrameInterface* BeginFrame() override;
+	virtual void EndFrame(GPUFrameInterface* frame) override;
 
 	virtual void SubmitPass(const RenderPass& pass) override;
-
-	virtual StreamFormatID RegisterStreamFormat(const GPU::StreamFormatDesc& format) override;
-	virtual InputAssemblerConfigID RegisterInputAssemblyConfig(StreamFormatID format, mu::PointerRange<const VertexBufferID> vertex_buffers, IndexBufferID index_buffer) override;
 
 	virtual VertexShaderID CompileVertexShaderHLSL(const char* entry_point, mu::PointerRange<const u8> code) override;
 	virtual PixelShaderID CompilePixelShaderHLSL(const char* entry_point, mu::PointerRange<const u8> code) override;
 	virtual ProgramID LinkProgram(VertexShaderID vertex_shader, PixelShaderID pixel_shader) override;
 
+	virtual GPU::PipelineStateID CreatePipelineState(const GPU::PipelineStateDesc& desc) override;
+	virtual void DestroyPipelineState(GPU::PipelineStateID id) override;
+
 	virtual ConstantBufferID CreateConstantBuffer(mu::PointerRange<const u8> data) override;
+	virtual void DestroyConstantBuffer(ConstantBufferID id) override;
+
 	virtual VertexBufferID CreateVertexBuffer(mu::PointerRange<const u8> data) override;
+	virtual void DestroyVertexBuffer(GPU::VertexBufferID id) override;
+	virtual IndexBufferID CreateIndexBuffer(mu::PointerRange<const u8> data) override;
+	virtual void DestroyIndexBuffer(GPU::IndexBufferID id) override;
 
 	virtual TextureID CreateTexture2D(u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) override;
 
 	virtual ShaderResourceListID CreateShaderResourceList(const GPU::ShaderResourceListDesc& desc) override;
 	// END GPUInterface functions
 
-
-	ID3D12PipelineState* CachePSO(const GPU::DrawPipelineSetup& pipeline_setup);
 	D3D12_CPU_DESCRIPTOR_HANDLE GetRenderTargetView(D3D12_CPU_DESCRIPTOR_HANDLE backbuffer, RenderTargetID id);
+	D3D12_CONSTANT_BUFFER_VIEW_DESC GetConstantBufferViewDesc(GPU_DX12_Frame* frame, ConstantBufferID id);
+	D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView(GPU_DX12_Frame* frame, VertexBufferID vb_id, u32 stride);
+	D3D12_INDEX_BUFFER_VIEW GetIndexBufferView(GPU_DX12_Frame* frame, IndexBufferID id);
 };
+
+GPU_DX12::GPU_DX12() {
+}
+
+GPU_DX12::~GPU_DX12() {
+	for (u32 i = 0; i < frame_count; ++i) {
+		delete frame_data[i];
+	}
+}
 
 GPUInterface* CreateGPU_DX12() {
 	return new GPU_DX12;
@@ -199,6 +265,10 @@ void GPU_DX12::Init() {
 	EnsureHR(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(dxgi_factory.Replace())));
 	EnsureHR(D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(device.Replace())));
 
+	for (u32 i = 0; i < frame_count; ++i) {
+		frame_data[i] = new GPU_DX12_Frame(this);
+	}
+
 	{
 		D3D12_COMMAND_QUEUE_DESC queue_desc = {};
 		queue_desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
@@ -211,15 +281,16 @@ void GPU_DX12::Init() {
 
 		EnsureHR(device->CreateCommandQueue(&queue_desc, IID_PPV_ARGS(command_queue.Replace())));
 		for (u32 i = 0; i < frame_count; ++i) {
-			EnsureHR(device->CreateCommandAllocator(queue_desc.Type, IID_PPV_ARGS(frame_data[i].command_allocator.Replace())));
-			EnsureHR(device->CreateDescriptorHeap(&heap_desc, IID_PPV_ARGS(frame_data[i].shader_resource_heap.Replace())));
+			frame_data[i]->command_allocators.Add({});
+			EnsureHR(device->CreateCommandAllocator(queue_desc.Type, IID_PPV_ARGS(frame_data[i]->command_allocators[0].Replace())));
+			EnsureHR(device->CreateDescriptorHeap(&heap_desc, IID_PPV_ARGS(frame_data[i]->shader_resource_heap.Replace())));
 		}
 	}
 
 	EnsureHR(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(frame_fence.fence.Replace())));
 	EnsureHR(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(copy_fence.fence.Replace())));
 
-	EnsureHR(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frame_data[0].command_allocator.Get(), nullptr, IID_PPV_ARGS(command_list.Replace())));
+	EnsureHR(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frame_data[0]->command_allocators[0].Get(), nullptr, IID_PPV_ARGS(command_list.Replace())));
 	command_list->Close(); // Force closed so it doesn't hold on to command allocator 0
 
 	D3D12_DESCRIPTOR_HEAP_DESC rtv_heap_desc = {};
@@ -295,11 +366,10 @@ void GPU_DX12::Shutdown() {
 	for (i32 i = 0; i < frame_count; ++i) {
 		auto& frame = frame_data[i];
 
-		frame_fence.WaitForFence(frame.fence_value, frame_fence_event);
+		frame_fence.WaitForFence(frame->fence_value, frame_fence_event);
 	}
 
-	stream_formats.Empty();
-	registered_vertex_shaders.Empty();
+	// TODO: Empty all pools
 }
 
 void GPU_DX12::RecreateSwapChain(void* hwnd, u32 width, u32 height) {
@@ -332,43 +402,47 @@ void GPU_DX12::RecreateSwapChain(void* hwnd, u32 width, u32 height) {
 
 	D3D12_CPU_DESCRIPTOR_HANDLE rtv_handle = rtv_heap->GetCPUDescriptorHandleForHeapStart();
 	for (u32 n = 0; n < frame_count; ++n) {
-		EnsureHR(swap_chain->GetBuffer(n, IID_PPV_ARGS(frame_data[n].render_target.Replace())));
-		device->CreateRenderTargetView(frame_data[n].render_target.Get(), nullptr, rtv_handle);
-		frame_data[n].render_target_view = rtv_handle;
+		EnsureHR(swap_chain->GetBuffer(n, IID_PPV_ARGS(frame_data[n]->render_target.Replace())));
+		device->CreateRenderTargetView(frame_data[n]->render_target.Get(), nullptr, rtv_handle);
+		frame_data[n]->render_target_view = rtv_handle;
 		rtv_handle.ptr += rtv_descriptor_size;
 	}
 }
 
-void GPU_DX12::BeginFrame() {
+GPUFrameInterface* GPU_DX12::BeginFrame() {
 	auto& frame = frame_data[frame_index];
 
-	frame_fence.WaitForFence(frame.fence_value, frame_fence_event);
-
-	EnsureHR(frame.command_allocator->Reset());
-
-	EnsureHR(command_list->Reset(frame.command_allocator.Get(), nullptr));
+	frame_fence.WaitForFence(frame->fence_value, frame_fence_event);
+	frame->used_command_allocators = 0;
+	
+	ID3D12CommandAllocator* command_allocator = frame->GetCommandAllocator();
+	EnsureHR(command_list->Reset(command_allocator, nullptr));
 
 	command_list->RSSetViewports(1, &viewport);
 	command_list->RSSetScissorRects(1, &scissor_rect);
 
-	auto present_to_rt = ResourceBarrier{ frame.render_target.Get(), ResourceState::Present, ResourceState::RenderTarget };
+	auto present_to_rt = ResourceBarrier{ frame->render_target.Get(), ResourceState::Present, ResourceState::RenderTarget };
 	command_list->ResourceBarrier(1, &present_to_rt);
 
-	command_list->OMSetRenderTargets(1, &frame.render_target_view, false, nullptr);
+	command_list->OMSetRenderTargets(1, &frame->render_target_view, false, nullptr);
 	float clear_color[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
-	command_list->ClearRenderTargetView(frame.render_target_view, clear_color, 0, nullptr);
+	command_list->ClearRenderTargetView(frame->render_target_view, clear_color, 0, nullptr);
 
 	EnsureHR(command_list->Close());
 
 	ID3D12CommandList* command_lists[] = { command_list.Get() };
 	command_queue->ExecuteCommandLists(1, command_lists);
+	return frame;
 }
 
-void GPU_DX12::EndFrame() {
-	auto& frame = frame_data[frame_index];
-	EnsureHR(command_list->Reset(frame.command_allocator.Get(), nullptr));
+void GPU_DX12::EndFrame(GPUFrameInterface* frame_interface) {
+	auto frame = frame_data[frame_index];
+	CHECK(frame == frame_interface);
 
-	auto rt_to_present = ResourceBarrier{ frame.render_target.Get(), ResourceState::RenderTarget, ResourceState::Present };
+	ID3D12CommandAllocator* command_allocator = frame->GetCommandAllocator();
+	EnsureHR(command_list->Reset(command_allocator, nullptr));
+
+	auto rt_to_present = ResourceBarrier{ frame->render_target.Get(), ResourceState::RenderTarget, ResourceState::Present };
 	command_list->ResourceBarrier(1, &rt_to_present);
 
 	EnsureHR(command_list->Close());
@@ -378,36 +452,13 @@ void GPU_DX12::EndFrame() {
 
 	EnsureHR(swap_chain->Present(1, 0));
 
+	frame->linear_allocator.Reset();
+
 	// Update fence value
-	frame.fence_value = frame_fence.SubmitFence(command_queue.Get());
+	frame->fence_value = frame_fence.SubmitFence(command_queue.Get());
 	frame_index = swap_chain->GetCurrentBackBufferIndex();
 }
 
-StreamFormatID GPU_DX12::RegisterStreamFormat(const GPU::StreamFormatDesc& format) {
-	StreamFormatID id = stream_formats.AddDefaulted();
-	StreamFormat& compiled_format = stream_formats[id];
-	compiled_format.Desc = format;
-	compiled_format.Strides.AddZeroed(format.Slots.Num());
-	for (u32 slot_idx = 0; slot_idx < format.Slots.Num(); ++slot_idx) {
-		u32& stride = compiled_format.Strides[slot_idx];
-		const GPU::StreamSlotDesc& slot = format.Slots[slot_idx];
-		for (GPU::StreamElementDesc& elem : slot.Elements) {
-			stride += GPU::GetStreamElementSize(elem);
-			compiled_format.InputLayout.Add(D3D12_INPUT_ELEMENT_DESC{
-				DX::GetSemanticName(elem.Semantic),
-				elem.SemanticIndex,
-				DX::GetStreamElementFormat(elem),
-				slot_idx,
-				D3D12_APPEND_ALIGNED_ELEMENT,
-				D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
-				0
-			});
-		}
-	}
-
-
-	return id;
-}
 
 
 
@@ -455,9 +506,57 @@ ProgramID GPU_DX12::LinkProgram(VertexShaderID vertex_shader, PixelShaderID pixe
 	return id;
 }
 
-ConstantBufferID GPU_DX12::CreateConstantBuffer(PointerRange<const u8> data) {
-	ConstantBufferID id = constant_buffers.AddDefaulted();
+GPU::PipelineStateID GPU_DX12::CreatePipelineState(const GPU::PipelineStateDesc& desc) {
+	auto found = Find(pipeline_states, [&](tuple<PipelineStateID, PipelineState&> ps) {
+		if (get<1>(ps).Desc == desc) {
+			return true;
+		}
+		return false;
+	});
+	if (!found.IsEmpty()) {
+		return get<0>(found.Front());
+	}
 
+
+	PipelineStateID id = pipeline_states.AddDefaulted();
+	PipelineState& ps = pipeline_states[id];
+	ps.Desc = desc;
+	LinkedProgram program = linked_programs[desc.Program];
+	Array<D3D12_INPUT_ELEMENT_DESC> input_layout; // TODO: fixed array
+
+	for (u32 slot_idx = 0; slot_idx < desc.StreamFormat.Slots.Num(); ++slot_idx) {
+		u32& stride = ps.VBStrides.AddZeroed(1).Front();
+		const GPU::StreamSlotDesc& slot = desc.StreamFormat.Slots[slot_idx];
+		for (GPU::StreamElementDesc& elem : slot.Elements) {
+			stride += GPU::GetStreamElementSize(elem);
+			input_layout.Add(D3D12_INPUT_ELEMENT_DESC{
+				DX::GetSemanticName(elem.Semantic),
+				elem.SemanticIndex,
+				DX::GetStreamElementFormat(elem),
+				slot_idx,
+				D3D12_APPEND_ALIGNED_ELEMENT,
+				D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+				0
+			});
+		}
+	}
+
+	auto pipeline_desc = GraphicsPipelineStateDesc{ root_signature.Get() }
+		.VS(registered_vertex_shaders[program.VertexShader].CompiledShader)
+		.PS(registered_pixel_shaders[program.PixelShader])
+		.DepthEnable(false)
+		.BlendState(desc.BlendState)
+		.PrimType(PrimType::Triangle)
+		.RenderTargets(DXGI_FORMAT_R8G8B8A8_UNORM)
+		.InputLayout(input_layout.Data(), (u32)input_layout.Num());
+	EnsureHR(device->CreateGraphicsPipelineState(&pipeline_desc, IID_PPV_ARGS(ps.PSO.Replace())));
+
+	return id;
+}
+void GPU_DX12::DestroyPipelineState(GPU::PipelineStateID) {}
+
+ConstantBufferID GPU_DX12::CreateConstantBuffer(PointerRange<const u8> data) {
+	COMPtr<ID3D12Resource> cbuffer;
 	auto cbuffer_desc = BufferDesc{ data.Size() };
 	EnsureHR(device->CreateCommittedResource(
 		&upload_heap_properties,
@@ -465,15 +564,21 @@ ConstantBufferID GPU_DX12::CreateConstantBuffer(PointerRange<const u8> data) {
 		&cbuffer_desc,
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
-		IID_PPV_ARGS(constant_buffers[id].Replace())
+		IID_PPV_ARGS(cbuffer.Replace())
 	));
 	void* mapped = nullptr;
 	D3D12_RANGE read_range{ 0, 0 };
-	EnsureHR(constant_buffers[id]->Map(0, &read_range, &mapped));
+	EnsureHR(cbuffer->Map(0, &read_range, &mapped));
 	memcpy(mapped, &data.Front(), data.Size());
-	constant_buffers[id]->Unmap(0, nullptr);
+	cbuffer->Unmap(0, nullptr);
+
+	ConstantBufferID id = constant_buffers.Emplace(ConstantBuffer{ cbuffer, { cbuffer->GetGPUVirtualAddress(), (u32)data.Size() } });
 
 	return id;
+}
+
+void GPU_DX12::DestroyConstantBuffer(ConstantBufferID) {
+	CHECKF(false, "Not yet implemented");
 }
 
 VertexBufferID GPU_DX12::CreateVertexBuffer(PointerRange<const u8> data) {
@@ -493,11 +598,42 @@ VertexBufferID GPU_DX12::CreateVertexBuffer(PointerRange<const u8> data) {
 
 	D3D12_RANGE read_range{ 0, 0 };
 	void* mapped = nullptr;
-	EnsureHR(vertex_buffers[id].Resource->Map(0, &read_range, &(void*)mapped));
+	EnsureHR(vertex_buffers[id].Resource->Map(0, &read_range, &mapped));
 	memcpy(mapped, &data.Front(), data.Size());
 	vertex_buffers[id].Resource->Unmap(0, nullptr);
 
 	return id;
+}
+
+void GPU_DX12::DestroyVertexBuffer(GPU::VertexBufferID) {
+	CHECKF(false, "Not yet implemented");
+}
+
+IndexBufferID GPU_DX12::CreateIndexBuffer(mu::PointerRange<const u8> data) {
+	IndexBufferID id = index_buffers.AddDefaulted();
+	index_buffers[id].Size = (u32)data.Size();
+
+	auto ibuffer_desc = BufferDesc{ (u32)data.Size() };
+	EnsureHR(device->CreateCommittedResource(
+		&upload_heap_properties,
+		D3D12_HEAP_FLAG_NONE,
+		&ibuffer_desc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(index_buffers[id].Resource.Replace()))
+		);
+
+	D3D12_RANGE read_range{ 0, 0 };
+	void* mapped = nullptr;
+	EnsureHR(index_buffers[id].Resource->Map(0, &read_range, &mapped));
+	memcpy(mapped, &data.Front(), data.Size());
+	index_buffers[id].Resource->Unmap(0, nullptr);
+
+	return id;
+}
+
+void GPU_DX12::DestroyIndexBuffer(GPU::IndexBufferID) {
+	CHECKF(false, "Not yet implemented");
 }
 
 TextureID GPU_DX12::CreateTexture2D(u32 width, u32 height, GPU::TextureFormat format, PointerRange<const u8> data) {
@@ -566,85 +702,64 @@ ShaderResourceListID GPU_DX12::CreateShaderResourceList(const GPU::ShaderResourc
 	return id;
 }
 
-InputAssemblerConfigID GPU_DX12::RegisterInputAssemblyConfig(StreamFormatID stream_id, PointerRange<const VertexBufferID> vbuffers, IndexBufferID ibuffer) {
-	CHECK(vbuffers.Size() <= GPU::MaxStreamSlots);
-	InputAssemblerConfigID id = ia_configs.AddDefaulted();
-	InputAssemblerConfig& config = ia_configs[id];
-	config.Slots.AddRange(vbuffers);
-	config.IndexBuffer = ibuffer;
-	config.StreamFormat = stream_id;
-
-	return id;
-}
-
-// TODO: don't-care states?
-bool operator==(const GPU::DrawPipelineSetup& a, const GPU::DrawPipelineSetup& b) {
-	return a.BlendState == b.BlendState
-		&& a.DepthStencilState == b.DepthStencilState
-		&& a.InputAssemblerConfig == b.InputAssemblerConfig
-		&& a.Program == b.Program
-		&& a.RasterState == b.RasterState;
-}
-
-ID3D12PipelineState* GPU_DX12::CachePSO(const GPU::DrawPipelineSetup& pipeline_setup) {
-	auto found = Find(cached_psos, [&](CachedPSO& cached) {
-		if (cached.Setup == pipeline_setup) {
-			return true;
-		}
-		return false;
-	});
-	if (!found.IsEmpty()) {
-		return found.Front().PSO;
-	}
-
-	size_t index = cached_psos.Add({ pipeline_setup, COMPtr<ID3D12PipelineState>{} });
-	COMPtr<ID3D12PipelineState>& new_pipeline_state = cached_psos[index].PSO;
-	LinkedProgram program = linked_programs[pipeline_setup.Program];
-
-	// TODO
-	const InputAssemblerConfig& ia_config = ia_configs[pipeline_setup.InputAssemblerConfig];
-	const StreamFormat& stream_format = stream_formats[ia_config.StreamFormat];
-
-	auto pipeline_desc = GraphicsPipelineStateDesc{ root_signature.Get() }
-		.VS(registered_vertex_shaders[program.VertexShader].CompiledShader)
-		.PS(registered_pixel_shaders[program.PixelShader])
-		.DepthEnable(true)
-		.PrimType(PrimType::Triangle)
-		.RenderTargets(DXGI_FORMAT_R8G8B8A8_UNORM)
-		.InputLayout(stream_format.InputLayout.Data(), (u32)stream_format.InputLayout.Num());
-	EnsureHR(device->CreateGraphicsPipelineState(&pipeline_desc, IID_PPV_ARGS(new_pipeline_state.Replace())));
-
-	return new_pipeline_state.Get();
-}
 
 D3D12_CPU_DESCRIPTOR_HANDLE GPU_DX12::GetRenderTargetView(D3D12_CPU_DESCRIPTOR_HANDLE backbuffer, RenderTargetID id) {
 	CHECK(id == RenderTargetID{});
 	return backbuffer; // TODO
 }
 
-void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
-	// Create required PSOs for all draw items
-	Array<ID3D12PipelineState*> item_psos;
-	item_psos.Reserve(pass.DrawItems.Size());
-
-	for (const GPU::DrawItem& item : pass.DrawItems) {
-		ID3D12PipelineState* pso = CachePSO(item.PipelineSetup);
-		CHECK(pso);
-		item_psos.Add(pso);
+D3D12_CONSTANT_BUFFER_VIEW_DESC GPU_DX12::GetConstantBufferViewDesc(GPU_DX12_Frame* frame, ConstantBufferID id) {
+	if ((size_t)id < max_persistent_cbs) {
+		return constant_buffers[id].ViewDesc;
 	}
+	else {
+		return frame->temp_cbs[(size_t)id - max_persistent_cbs];
+	}
+}
 
-	auto& frame = frame_data[frame_index];
-	EnsureHR(command_list->Reset(frame.command_allocator.Get(), nullptr));
+D3D12_VERTEX_BUFFER_VIEW GPU_DX12::GetVertexBufferView(GPU_DX12_Frame* frame, VertexBufferID vb_id, u32 stride) {
+	if (vb_id == VertexBufferID{}) {
+		return {};
+	}
+	else if ((size_t)vb_id >= max_persistent_vbs) {
+		auto tmp = frame->temp_vbs[(size_t)vb_id - max_persistent_vbs];
+		return { tmp.BufferLocation, tmp.SizeInBytes, stride };
+	}
+	else {
+		return vertex_buffers[vb_id].MakeVertexBufferView(stride);
+	}
+}
+
+
+D3D12_INDEX_BUFFER_VIEW GPU_DX12::GetIndexBufferView(GPU_DX12_Frame* frame, IndexBufferID id) {
+	if (id == IndexBufferID{}) {
+		return { };
+	}
+	else if ((size_t)id >= max_persistent_ibs) {
+		auto tmp = frame->temp_ibs[(size_t)id - max_persistent_ibs];
+		return { tmp.BufferLocation, tmp.SizeInBytes, DXGI_FORMAT_R16_UINT };
+	}
+	else {
+		return index_buffers[id].MakeIndexBufferView(DXGI_FORMAT_R16_UINT);
+	}
+}
+
+void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
+	auto frame = frame_data[frame_index];
+
+	ID3D12CommandAllocator* command_allocator = frame->GetCommandAllocator();
+	EnsureHR(command_list->Reset(command_allocator, nullptr));
+
 	command_list->SetGraphicsRootSignature(root_signature.Get());
 
-	ID3D12DescriptorHeap* heaps[] = { frame.shader_resource_heap.Get() };
+	ID3D12DescriptorHeap* heaps[] = { frame->shader_resource_heap.Get() };
 	command_list->SetDescriptorHeaps((u32)ArraySize(heaps), heaps);
 
 	// Bind RTs for pass
 	CHECK(pass.RenderTargets.Num() <= GPU::MaxRenderTargets);
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvs[GPU::MaxRenderTargets];
 	for (tuple<D3D12_CPU_DESCRIPTOR_HANDLE&, RenderTargetID> it : Zip(rtvs, pass.RenderTargets)) {
-		get<0>(it) = GetRenderTargetView(frame.render_target_view, get<1>(it));
+		get<0>(it) = GetRenderTargetView(frame->render_target_view, get<1>(it));
 	}
 	command_list->OMSetRenderTargets((u32)pass.RenderTargets.Num(), rtvs, false, nullptr);
 
@@ -652,20 +767,25 @@ void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
 	command_list->RSSetViewports(1, &viewport);
 	command_list->RSSetScissorRects(1, &scissor_rect);
 
-	D3D12_CPU_DESCRIPTOR_HANDLE srv_heap_cursor{ frame.shader_resource_heap->GetCPUDescriptorHandleForHeapStart() };
-	D3D12_GPU_DESCRIPTOR_HANDLE srv_heap_cursor_gpu{ frame.shader_resource_heap->GetGPUDescriptorHandleForHeapStart() };
+	D3D12_CPU_DESCRIPTOR_HANDLE srv_heap_cursor{ frame->shader_resource_heap->GetCPUDescriptorHandleForHeapStart() };
+	D3D12_GPU_DESCRIPTOR_HANDLE srv_heap_cursor_gpu{ frame->shader_resource_heap->GetGPUDescriptorHandleForHeapStart() };
 
 	// Translate draw commands into CommandList calls
-	for (tuple<ID3D12PipelineState*, GPU::DrawItem> draw_it : Zip(item_psos, pass.DrawItems)) {
-		ID3D12PipelineState* pso = get<0>(draw_it);
-		const GPU::DrawItem& item = get<1>(draw_it);
-
+	for (const GPU::DrawItem& item : pass.DrawItems) {
+		const PipelineState& pipeline_state = pipeline_states[item.PipelineState];
+		ID3D12PipelineState* pso = pipeline_state.PSO;
+		CHECK(pso);
 		command_list->SetPipelineState(pso);
 		command_list->IASetPrimitiveTopology(CommonToDX12(item.Command.PrimTopology));
 
-		CHECK(item.BoundResources.ConstantBuffers.Num() <= 1);
+		//FixedArray<D3D12_CONSTANT_BUFFER_VIEW_DESC, GPU::MaxBoundConstantBuffers> cbs;
+		//for (ConstantBufferID id : item.BoundResources.ConstantBuffers) {
+		//	cbs.Add(GetConstantBufferViewDesc(id));
+		//}
+		CHECK(item.BoundResources.ConstantBuffers.Num() <= 1); // TODO: Update root signature
 		if (item.BoundResources.ConstantBuffers.Num() > 0 && item.BoundResources.ConstantBuffers[0] != ConstantBufferID{}) {
-			command_list->SetGraphicsRootConstantBufferView(0, constant_buffers[item.BoundResources.ConstantBuffers[0]]->GetGPUVirtualAddress());
+			D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc = GetConstantBufferViewDesc(frame, item.BoundResources.ConstantBuffers[0]);
+			command_list->SetGraphicsRootConstantBufferView(0, cbv_desc.BufferLocation);
 		}
 
 		FixedArray<TextureID, GPU::MaxBoundShaderResources> bound_resources;
@@ -690,34 +810,92 @@ void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
 
 		command_list->SetGraphicsRootDescriptorTable(1, table_root);
 
+		const GPU::StreamSetup& stream_setup = item.StreamSetup;
 		FixedArray<D3D12_VERTEX_BUFFER_VIEW, GPU::MaxStreamSlots> vbs;
-		//D3D12_INDEX_BUFFER_VIEW ib;
-		const InputAssemblerConfig& ia_config = ia_configs[item.PipelineSetup.InputAssemblerConfig];
-		const StreamFormat& stream_format = stream_formats[ia_config.StreamFormat];
-		vbs.AddZeroed(ia_config.Slots.Num());
-		for (tuple<D3D12_VERTEX_BUFFER_VIEW&, VertexBufferID, u32> vb_it : Zip(vbs, ia_config.Slots, stream_format.Strides)) {
-			D3D12_VERTEX_BUFFER_VIEW& view = get<0>(vb_it);
-			VertexBufferID vb_id = get<1>(vb_it);
-			if (vb_id == VertexBufferID{}) {
-				view = { 0, 0, 0 };
-			}
-			else {
 
-				u32 stride = get<2>(vb_it);
-				view = vertex_buffers[vb_id].MakeVertexBufferView(stride);
-			}
+		for (tuple<VertexBufferID, u32> it : Zip(item.StreamSetup.VertexBuffers, pipeline_state.VBStrides)) {
+			VertexBufferID vb_id = get<0>(it);
+			u32 stride = get<1>(it);
+			vbs.Add(GetVertexBufferView(frame, vb_id, stride));
 		}
 
 		command_list->IASetVertexBuffers(0, (u32)vbs.Num(), vbs.Data());
-		//if (ia_config.IndexBuffer.Index != u32_max) {
-		//	ib = GetIndexBufferView(ia_config.IndexBuffer);
-		//	command_list->IASetIndexBuffer(&ib);
-		//}
-		command_list->DrawInstanced(item.Command.VertexOrIndexCount, 1, 0, 0);
+		if (stream_setup.IndexBuffer != IndexBufferID{}) {
+			D3D12_INDEX_BUFFER_VIEW ib = GetIndexBufferView(frame, stream_setup.IndexBuffer);
+
+			//ib.BufferLocation += item.Command.IndexOffset * sizeof(u16); // TODO: variable index size
+			command_list->IASetIndexBuffer(&ib);
+			command_list->DrawIndexedInstanced(item.Command.VertexOrIndexCount, 1, item.Command.IndexOffset, 0, 0);
+		}
+		else {
+			command_list->IASetIndexBuffer(nullptr);
+			command_list->DrawInstanced(item.Command.VertexOrIndexCount, 1, 0, 0);
+		}
 	}
 
 	EnsureHR(command_list->Close());
 
 	ID3D12CommandList* command_lists[] = { command_list.Get() };
 	command_queue->ExecuteCommandLists(1, command_lists);
+}
+
+
+DX12LinearAllocator::DX12LinearAllocator(GPU_DX12* gpu) : m_gpu(gpu) {
+	m_max = 2 * 1024 * 1024;
+	auto desc = BufferDesc{ m_max };
+	EnsureHR(gpu->device->CreateCommittedResource(
+		&gpu->upload_heap_properties,
+		D3D12_HEAP_FLAG_NONE,
+		&desc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(m_data.Replace())
+	));
+	EnsureHR(m_data->Map(0, nullptr, &(void*)m_data_cpu_ptr));
+}
+
+GPUAllocation DX12LinearAllocator::Allocate(u32 size) {
+	size = AlignPow2(size, 256);
+	CHECKF(m_used + size <= m_max, "Ran out of space trying to allocate ", size, " bytes");
+
+	D3D12_GPU_VIRTUAL_ADDRESS addr = m_data->GetGPUVirtualAddress() + m_used;
+	void* cpu_addr = m_data_cpu_ptr + m_used;
+	m_used += size;
+
+	return { addr, size, cpu_addr };
+}
+
+ConstantBufferID GPU_DX12_Frame::GetTemporaryConstantBuffer(PointerRange<const u8> data) {
+	auto addr = linear_allocator.Allocate((u32)data.Size());
+	memcpy(addr.CPUAddress, &data.Front(), data.Size());
+	auto index = temp_cbs.Add({ addr.GPUAddress, (u32)data.Size() });
+	return ConstantBufferID{ index + m_gpu->max_persistent_cbs };
+}
+
+VertexBufferID GPU_DX12_Frame::GetTemporaryVertexBuffer(mu::PointerRange<const u8> data) {
+	auto addr = linear_allocator.Allocate((u32)data.Size());
+	memcpy(addr.CPUAddress, &data.Front(), data.Size());
+	auto index = temp_vbs.Add({ addr.GPUAddress, (u32)data.Size(), 0 });
+	return VertexBufferID{ index + m_gpu->max_persistent_vbs };
+}
+IndexBufferID GPU_DX12_Frame::GetTemporaryIndexBuffer(mu::PointerRange<const u8> data) {
+	auto addr = linear_allocator.Allocate((u32)data.Size());
+	memcpy(addr.CPUAddress, &data.Front(), data.Size());
+	auto index = temp_ibs.Add({ addr.GPUAddress, (u32)data.Size(), DXGI_FORMAT_UNKNOWN });
+	return IndexBufferID{ index + m_gpu->max_persistent_ibs };
+}
+
+ID3D12CommandAllocator* GPU_DX12_Frame::GetCommandAllocator() {
+	if (used_command_allocators >= command_allocators.Num()) {
+		size_t index = command_allocators.Add({});
+
+		D3D12_COMMAND_QUEUE_DESC queue_desc = {};
+		queue_desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+		queue_desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+		EnsureHR(m_gpu->device->CreateCommandAllocator(queue_desc.Type, IID_PPV_ARGS(command_allocators[index].Replace())));
+	}
+	ID3D12CommandAllocator* alloc = command_allocators[used_command_allocators];
+	alloc->Reset();
+	++used_command_allocators;
+	return alloc;
 }

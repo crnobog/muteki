@@ -10,15 +10,15 @@ struct vs_out {
 	float4 original_pos : TEXCOORD0;
 };
 
-vs_out vs_main(float4 in_pos : POSITION)
+vs_out vs_main(float3 in_pos : POSITION0)
 {
 	vs_out o;
-	o.pos = in_pos;
-	o.original_pos = in_pos;
+	o.pos = float4(in_pos, 1.0f);
+	o.original_pos = float4(in_pos, 1.0f);
     return o;
 }
 
 float4 ps_main(vs_out i) : SV_TARGET
 {
-    return diffuse.Sample(diffuse_sampler, i.original_pos.xy);
+    return diffuse.Sample(diffuse_sampler, i.original_pos.xy) * color;
 }

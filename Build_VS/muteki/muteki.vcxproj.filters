@@ -90,8 +90,11 @@
     <ClInclude Include="..\..\Source\GPU_DX11\DX11Utils.h">
       <Filter>GPU\DX11</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Source\Vectors.h" />
+    <ClInclude Include="..\..\Source\Rect.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Shaders\basic_shader.hlsl" />
+    <None Include="..\..\Shaders\imgui.hlsl" />
   </ItemGroup>
 </Project>

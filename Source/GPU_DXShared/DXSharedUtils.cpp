@@ -27,12 +27,15 @@ namespace DX {
 	}
 
 	const char* GetHLSLTypeName(GPU::StreamElementDesc desc) {
+		static const char* float_names[] = { "float", "float2", "float3", "float4" };
+		static const char* uint_names[] = { "uint", "uint2", "uint3", "uint4" };
+		static const char* int_names[] = { "int", "int2", "int3", "int4" };
 		switch (desc.Type) {
-		case GPU::ScalarType::Float:
-			static const char* names[] = { "float", "float2", "float3", "float4" };
-			CHECK(desc.Count < ArraySize(names));
-			return names[desc.Count];
+		case GPU::ScalarType::Float: return float_names[desc.CountMinusOne];
+		case GPU::ScalarType::U8: if (desc.Normalized) { return float_names[desc.CountMinusOne]; }
+								  else { return uint_names[desc.CountMinusOne]; }
 		}
+		CHECK(false);
 		return "";
 	}
 	const char* GetSemanticName(GPU::InputSemantic semantic) {
@@ -45,10 +48,21 @@ namespace DX {
 	DXGI_FORMAT GetStreamElementFormat(GPU::StreamElementDesc desc) {
 		switch (desc.Type) {
 		case GPU::ScalarType::Float:
+		{
 			static const DXGI_FORMAT float_formats[] = {
 				DXGI_FORMAT_R32_FLOAT, DXGI_FORMAT_R32G32_FLOAT, DXGI_FORMAT_R32G32B32_FLOAT, DXGI_FORMAT_R32G32B32A32_FLOAT };
-			CHECK(desc.Count > 0 && desc.Count < 5);
-			return float_formats[desc.Count-1];
+			return float_formats[desc.CountMinusOne];
+		}
+		case GPU::ScalarType::U8:
+		{
+			static const DXGI_FORMAT byte_formats[] = {
+				DXGI_FORMAT_R8_UINT, DXGI_FORMAT_R8G8_UINT, DXGI_FORMAT_R8G8B8A8_UINT, DXGI_FORMAT_R8G8B8A8_UINT,
+			};
+			static const DXGI_FORMAT byte_formats_norm[] = {
+				DXGI_FORMAT_R8_UNORM, DXGI_FORMAT_R8G8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM, 
+			};
+			return (desc.Normalized ? byte_formats_norm : byte_formats)[desc.CountMinusOne];
+		}
 		}
 		return DXGI_FORMAT_UNKNOWN;
 	}
