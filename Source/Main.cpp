@@ -169,6 +169,7 @@ int main(int, char**) {
 		return 1;
 	}
 
+	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	GLFWwindow* win = glfwCreateWindow(1600, 900, "muteki", nullptr, nullptr);
 	if (!win) {
 		return 1;
