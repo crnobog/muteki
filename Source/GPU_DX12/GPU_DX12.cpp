@@ -294,6 +294,7 @@ GPUInterface* CreateGPU_DX12() {
 void GPU_DX12::Init() {
 	UINT dxgiFactoryFlags = 0;
 
+	if( true )
 	{
 		COMPtr<ID3D12Debug> debug_interface;
 		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(debug_interface.Replace())))) {
@@ -504,7 +505,7 @@ void GPU_DX12::EndFrame(GPUFrameInterface* frame_interface) {
 	ID3D12CommandList* command_lists[] = { command_list.Get() };
 	command_queue->ExecuteCommandLists(1, command_lists);
 
-	EnsureHR(swap_chain->Present(1, 0));
+	EnsureHR(swap_chain->Present(0, 0));
 
 	frame->linear_allocator.FrameReset();
 	frame->descriptor_table_allocator.FrameReset();
