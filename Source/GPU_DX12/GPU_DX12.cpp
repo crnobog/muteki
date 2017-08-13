@@ -54,19 +54,52 @@ struct DX12LinearAllocator {
 
 	DX12LinearAllocator(struct GPU_DX12* gpu);
 	GPUAllocation Allocate(u32 size);
-	void Reset() {
+	void FrameReset() {
 		m_used = 0;
+	}
+};
+
+struct DX12DescriptorTable {
+	D3D12_CPU_DESCRIPTOR_HANDLE m_cpu_handle;
+	D3D12_GPU_DESCRIPTOR_HANDLE m_gpu_handle;
+	u32 m_descriptor_size;
+	u32 m_num_descriptors;
+
+	D3D12_CPU_DESCRIPTOR_HANDLE GetCPUHandle(u32 index) { 
+		return { m_cpu_handle.ptr + index * m_descriptor_size };
+	}
+	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandle(u32 index) {
+		return { m_gpu_handle.ptr + index * m_descriptor_size };
+	}
+};
+
+struct DX12DescriptorTableLinearAllocator {
+	struct GPU_DX12* m_gpu = nullptr;
+	COMPtr<ID3D12DescriptorHeap> m_heap;
+	u32 m_total_descriptors;
+	u32 m_used_descriptors;
+	u32 m_descriptor_size;
+
+	DX12DescriptorTableLinearAllocator(GPU_DX12* gpu);
+
+	DX12DescriptorTable AllocateTable(u32 num_descriptors);
+	void FrameReset() {
+		m_used_descriptors = 0;
 	}
 };
 
 struct GPU_DX12_Frame : public GPUFrameInterface {
 	struct GPU_DX12* m_gpu = nullptr;
-	GPU_DX12_Frame(struct GPU_DX12* gpu) : m_gpu(gpu), linear_allocator(gpu) {}
+	GPU_DX12_Frame(struct GPU_DX12* gpu) 
+		: m_gpu(gpu)
+		, linear_allocator(gpu)
+		, descriptor_table_allocator(gpu) {
+	}
 
 	COMPtr<ID3D12Resource>					render_target;
 	D3D12_CPU_DESCRIPTOR_HANDLE				render_target_view;
-	COMPtr<ID3D12DescriptorHeap>			shader_resource_heap; // srv, cbv, uav
 	u64										fence_value = 0;
+	DX12DescriptorTableLinearAllocator		descriptor_table_allocator;
 	DX12LinearAllocator						linear_allocator;
 	Array<D3D12_CONSTANT_BUFFER_VIEW_DESC>	temp_cbs;
 	Array<D3D12_VERTEX_BUFFER_VIEW>			temp_vbs;	// stride is not stored
@@ -281,16 +314,10 @@ void GPU_DX12::Init() {
 		queue_desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 		queue_desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 
-		D3D12_DESCRIPTOR_HEAP_DESC heap_desc = {};
-		heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		heap_desc.NumDescriptors = max_descriptors_per_frame;
-		heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-
 		EnsureHR(device->CreateCommandQueue(&queue_desc, IID_PPV_ARGS(command_queue.Replace())));
 		for (u32 i = 0; i < frame_count; ++i) {
 			frame_data[i]->command_allocators.Add({});
 			EnsureHR(device->CreateCommandAllocator(queue_desc.Type, IID_PPV_ARGS(frame_data[i]->command_allocators[0].Replace())));
-			EnsureHR(device->CreateDescriptorHeap(&heap_desc, IID_PPV_ARGS(frame_data[i]->shader_resource_heap.Replace())));
 		}
 	}
 
@@ -479,7 +506,8 @@ void GPU_DX12::EndFrame(GPUFrameInterface* frame_interface) {
 
 	EnsureHR(swap_chain->Present(1, 0));
 
-	frame->linear_allocator.Reset();
+	frame->linear_allocator.FrameReset();
+	frame->descriptor_table_allocator.FrameReset();
 
 	// Update fence value
 	frame->fence_value = frame_fence.SubmitFence(command_queue.Get());
@@ -779,7 +807,8 @@ void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
 
 	command_list->SetGraphicsRootSignature(root_signature.Get());
 
-	ID3D12DescriptorHeap* heaps[] = { frame->shader_resource_heap.Get() };
+	// TODO: Need to handle reallocating new heaps and putting them in the command list. What's the cost of SetDescriptorHeaps?
+	ID3D12DescriptorHeap* heaps[] = { frame->descriptor_table_allocator.m_heap.Get() };
 	command_list->SetDescriptorHeaps((u32)ArraySize(heaps), heaps);
 
 	// Bind RTs for pass
@@ -793,9 +822,6 @@ void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
 	// TODO: Make part of render pass
 	command_list->RSSetViewports(1, &viewport);
 	command_list->RSSetScissorRects(1, &scissor_rect);
-
-	D3D12_CPU_DESCRIPTOR_HANDLE srv_heap_cursor{ frame->shader_resource_heap->GetCPUDescriptorHandleForHeapStart() };
-	D3D12_GPU_DESCRIPTOR_HANDLE srv_heap_cursor_gpu{ frame->shader_resource_heap->GetGPUDescriptorHandleForHeapStart() };
 
 	// Translate draw commands into CommandList calls
 	for (const GPU::DrawItem& item : pass.DrawItems) {
@@ -824,18 +850,15 @@ void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
 			}
 		}
 
-		D3D12_GPU_DESCRIPTOR_HANDLE table_root = srv_heap_cursor_gpu;
+		DX12DescriptorTable srv_table = frame->descriptor_table_allocator.AllocateTable((u32)bound_resources.Num());
 		for (u32 i = 0; i < bound_resources.Num(); ++i) {
-			D3D12_CPU_DESCRIPTOR_HANDLE descriptor_dest = srv_heap_cursor;
-			srv_heap_cursor.ptr += srv_descriptor_size;
-			srv_heap_cursor_gpu.ptr += srv_descriptor_size;
 			TextureID id = bound_resources[i];
 			if (id == TextureID{}) { continue; }
 			auto& texture = textures[id];
-			device->CreateShaderResourceView(texture.Resource.Get(), &texture.SRVDesc, descriptor_dest);
+			device->CreateShaderResourceView(texture.Resource.Get(), &texture.SRVDesc, srv_table.GetCPUHandle(i)); // TODO: Copy descriptors instead of recreating them
 		}
 
-		command_list->SetGraphicsRootDescriptorTable(1, table_root);
+		command_list->SetGraphicsRootDescriptorTable(1, srv_table.GetGPUHandle(0));
 
 		const GPU::StreamSetup& stream_setup = item.StreamSetup;
 		FixedArray<D3D12_VERTEX_BUFFER_VIEW, GPU::MaxStreamSlots> vbs;
@@ -926,3 +949,36 @@ ID3D12CommandAllocator* GPU_DX12_Frame::GetCommandAllocator() {
 	++used_command_allocators;
 	return alloc;
 }
+
+DX12DescriptorTableLinearAllocator::DX12DescriptorTableLinearAllocator(GPU_DX12* gpu) 
+	: m_gpu(gpu) {
+	m_descriptor_size = m_gpu->device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	m_total_descriptors = 128;
+	m_used_descriptors = 0;
+	
+	D3D12_DESCRIPTOR_HEAP_DESC desc{};
+	desc.NodeMask = 0;
+	desc.NumDescriptors = m_total_descriptors;
+	desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	EnsureHR(m_gpu->device->CreateDescriptorHeap(
+		&desc,
+		IID_PPV_ARGS(m_heap.Replace()))
+	);
+}
+
+DX12DescriptorTable DX12DescriptorTableLinearAllocator::AllocateTable(u32 num_descriptors) {
+	CHECK(m_used_descriptors + num_descriptors <= m_total_descriptors);
+	DX12DescriptorTable table{ 
+		m_heap->GetCPUDescriptorHandleForHeapStart(), 
+		m_heap->GetGPUDescriptorHandleForHeapStart(), 
+		m_descriptor_size, 
+		num_descriptors 
+	};
+	table.m_cpu_handle.ptr += m_used_descriptors * m_descriptor_size;
+	table.m_gpu_handle.ptr += m_used_descriptors * m_descriptor_size;
+
+	m_used_descriptors += num_descriptors;
+	return table;
+}
+
