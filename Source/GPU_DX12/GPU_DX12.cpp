@@ -596,6 +596,7 @@ GPU::PipelineStateID GPU_DX12::CreatePipelineState(const GPU::PipelineStateDesc&
 		.PS(m_registered_pixel_shaders[program.PixelShader])
 		.DepthEnable(false)
 		.BlendState(desc.BlendState)
+		.RasterState(desc.RasterState)
 		.PrimType(PrimType::Triangle)
 		.RenderTargets(DXGI_FORMAT_R8G8B8A8_UNORM)
 		.InputLayout(input_layout.Data(), (u32)input_layout.Num());
@@ -816,8 +817,8 @@ void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
 
 	// TODO: Make part of render pass
 	m_command_list->RSSetViewports(1, &m_viewport);
+
 	D3D12_RECT scissor_rect = { (LONG)pass.ClipRect.Left, (LONG)pass.ClipRect.Top, (LONG)pass.ClipRect.Right, (LONG)pass.ClipRect.Bottom };
-	m_command_list->RSSetScissorRects(1, &scissor_rect);
 
 	// Translate draw commands into CommandList calls
 	for (const GPU::DrawItem& item : pass.DrawItems) {
@@ -826,6 +827,13 @@ void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
 		CHECK(pso);
 		m_command_list->SetPipelineState(pso);
 		m_command_list->IASetPrimitiveTopology(CommonToDX12(item.Command.PrimTopology));
+
+		if (pipeline_state.Desc.RasterState.ScissorEnable) {
+			m_command_list->RSSetScissorRects(1, &scissor_rect);
+		}
+		else {
+			m_command_list->RSSetScissorRects(0, nullptr);
+		}
 
 		//FixedArray<D3D12_CONSTANT_BUFFER_VIEW_DESC, GPU::MaxBoundConstantBuffers> cbs;
 		//for (ConstantBufferID id : item.BoundResources.ConstantBuffers) {

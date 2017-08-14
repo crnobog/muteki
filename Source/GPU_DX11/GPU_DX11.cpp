@@ -95,6 +95,7 @@ struct GPU_DX11 : public GPUInterface {
 		COMPtr<ID3D11InputLayout> InputLayout;
 		FixedArray<u32, GPU::MaxStreamSlots> StreamStrides;
 		COMPtr<ID3D11BlendState> BlendState;
+		COMPtr<ID3D11RasterizerState> RasterState;
 	};
 
 	GPU_DX11() : m_frame_data(this) {
@@ -307,6 +308,8 @@ void GPU_DX11::SubmitPass(const RenderPass& pass) {
 		u32 sample_mask = 0xFFFFFFFF;
 		context->OMSetBlendState(pso.BlendState.Get(), blend_factor, sample_mask);
 
+		context->RSSetState(pso.RasterState.Get());
+
 		const LinkedProgram& program = m_linked_programs[pso.Desc.Program];
 		context->VSSetShader(m_vertex_shaders[program.VertexShader].CompiledShader.Get(), nullptr, 0);
 		context->PSSetShader(m_pixel_shaders[program.PixelShader].Get(), nullptr, 0);
@@ -468,6 +471,19 @@ GPU::PipelineStateID GPU_DX11::CreatePipelineState(const GPU::PipelineStateDesc&
 		(UINT8)0xF
 	};
 	EnsureHR(m_device->CreateBlendState(&blend_desc, pso.BlendState.Replace())); // TODO: Dedup?
+
+	D3D11_RASTERIZER_DESC raster_desc = {};
+	raster_desc.FillMode = CommonToDX11(desc.RasterState.FillMode);
+	raster_desc.CullMode = CommonToDX11(desc.RasterState.CullMode);
+	raster_desc.FrontCounterClockwise = desc.RasterState.FrontFace == GPU::FrontFace::CounterClockwise;
+	raster_desc.DepthBias = desc.RasterState.DepthBias;
+	raster_desc.DepthBiasClamp = desc.RasterState.DepthBiasClamp;
+	raster_desc.SlopeScaledDepthBias = desc.RasterState.SlopeScaledDepthBias;
+	raster_desc.DepthClipEnable = desc.RasterState.DepthClipEnable;
+	raster_desc.ScissorEnable = desc.RasterState.ScissorEnable;
+	raster_desc.MultisampleEnable = desc.RasterState.MultisampleEnable;
+	raster_desc.AntialiasedLineEnable = desc.RasterState.AntiAliasedLineEnable;
+	EnsureHR(m_device->CreateRasterizerState(&raster_desc, pso.RasterState.Replace()));
 
 	return id;
 }

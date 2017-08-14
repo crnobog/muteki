@@ -112,7 +112,20 @@ namespace DX12Util {
 		};
 		return *this;
 	}
-
+	GraphicsPipelineStateDesc& GraphicsPipelineStateDesc::RasterState(const GPU::RasterStateDesc& desc) {
+		Base::RasterizerState.FillMode = CommonToDX12(desc.FillMode);
+		Base::RasterizerState.CullMode = CommonToDX12(desc.CullMode);
+		Base::RasterizerState.FrontCounterClockwise = desc.FrontFace == GPU::FrontFace::CounterClockwise;
+		Base::RasterizerState.DepthBias = desc.DepthBias;
+		Base::RasterizerState.DepthBiasClamp = desc.DepthBiasClamp;
+		Base::RasterizerState.SlopeScaledDepthBias = desc.SlopeScaledDepthBias;
+		Base::RasterizerState.DepthClipEnable = desc.DepthClipEnable;
+		Base::RasterizerState.MultisampleEnable = desc.MultisampleEnable;
+		Base::RasterizerState.AntialiasedLineEnable = desc.AntiAliasedLineEnable;
+		Base::RasterizerState.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+		Base::RasterizerState.ForcedSampleCount = 0;
+		return *this;
+	}
 
 	static_assert(D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT == 8, "D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT != 8");
 	const D3D12_BLEND_DESC DefaultBlendDesc = { false, false,{
@@ -177,7 +190,7 @@ namespace DX12Util {
 
 	const D3D12_RASTERIZER_DESC DefaultRasterizerState = {
 		D3D12_FILL_MODE_SOLID,
-		D3D12_CULL_MODE_BACK,
+		D3D12_CULL_MODE_NONE,
 		false,
 		D3D12_DEFAULT_DEPTH_BIAS,
 		D3D12_DEFAULT_DEPTH_BIAS_CLAMP,

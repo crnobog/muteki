@@ -67,6 +67,9 @@ struct ImGuiImpl {
 		pipeline_state_desc.BlendState.ColorBlend = { GPU::BlendValue::SourceAlpha, GPU::BlendOp::Add, GPU::BlendValue::InverseSourceAlpha };
 		pipeline_state_desc.BlendState.AlphaBlend = { GPU::BlendValue::InverseSourceAlpha, GPU::BlendOp::Add, GPU::BlendValue::Zero };
 
+		pipeline_state_desc.RasterState.CullMode = GPU::CullMode::None;
+		pipeline_state_desc.RasterState.ScissorEnable = true;
+
 		m_pipeline_state = gpu->CreatePipelineState(pipeline_state_desc); // TODO: Correct blend state etc
 		
 		io.Fonts->AddFontDefault();
@@ -222,6 +225,8 @@ int main(int, char**) {
 	pipeline_state_desc.Program = program_id;
 	pipeline_state_desc.StreamFormat.AddSlot().Set({ GPU::ScalarType::Float, 3, GPU::InputSemantic::Position, 0 });
 	pipeline_state_desc.BlendState.BlendEnable = false;
+	pipeline_state_desc.RasterState.ScissorEnable = true;
+	pipeline_state_desc.RasterState.CullMode = GPU::CullMode::Back;
 	GPU::PipelineStateID pipeline_state = gpu->CreatePipelineState(pipeline_state_desc);
 
 	struct Vertex {

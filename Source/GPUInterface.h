@@ -33,7 +33,6 @@ namespace GPU {
 	DECLARE_HANDLE(VertexShaderID, u32);
 	DECLARE_HANDLE(PixelShaderID, u32);
 	DECLARE_HANDLE(ProgramID, u32);
-	DECLARE_HANDLE(RasterStateID, u32);
 	DECLARE_HANDLE(DepthStencilStateID, u32);
 	DECLARE_HANDLE(ShaderResourceListID, u32);
 	DECLARE_HANDLE(PipelineStateID, u32);
@@ -86,7 +85,7 @@ namespace GPU {
 		bool Normalized;
 
 		StreamElementDesc() {};
-		StreamElementDesc(ScalarType type, u8 count, InputSemantic semantic, u8 sem_index, bool normalized = false ) {
+		StreamElementDesc(ScalarType type, u8 count, InputSemantic semantic, u8 sem_index, bool normalized = false) {
 			Type = type; CountMinusOne = count - 1; Semantic = semantic; SemanticIndex = sem_index;
 			Normalized = normalized;
 		}
@@ -120,6 +119,33 @@ namespace GPU {
 	struct StreamSetup {
 		mu::FixedArray<VertexBufferID, MaxStreamSlots> VertexBuffers;
 		IndexBufferID IndexBuffer;
+	};
+
+	enum class FillMode {
+		Solid,
+		Wireframe,
+	};
+	enum class CullMode {
+		None,
+		Front,
+		Back
+	};
+	enum class FrontFace {
+		Clockwise,
+		CounterClockwise,
+	};
+	
+	struct RasterStateDesc {
+		FillMode FillMode = FillMode::Solid;
+		CullMode CullMode = CullMode::None;
+		FrontFace FrontFace = FrontFace::Clockwise;
+		i32 DepthBias = 0;
+		float DepthBiasClamp = 0.0f;
+		float SlopeScaledDepthBias = 0.0f;
+		bool DepthClipEnable = false;
+		bool ScissorEnable = false;
+		bool MultisampleEnable = false;
+		bool AntiAliasedLineEnable = false;
 	};
 
 	enum class BlendOp {
@@ -157,7 +183,7 @@ namespace GPU {
 
 	struct PipelineStateDesc {
 		ProgramID				Program;
-		RasterStateID			RasterState;
+		RasterStateDesc			RasterState;
 		BlendStateDesc			BlendState;
 		DepthStencilStateID		DepthStencilState;
 		StreamFormatDesc		StreamFormat;
@@ -222,6 +248,20 @@ namespace GPU {
 		}
 		return true;
 	}
+
+	inline bool operator==(const GPU::RasterStateDesc& a, const GPU::RasterStateDesc& b) {
+		return a.CullMode == b.CullMode
+			&& a.FillMode == b.FillMode
+			&& a.FrontFace == b.FrontFace
+			&& a.DepthBias == b.DepthBias
+			&& a.DepthBiasClamp == b.DepthBiasClamp
+			&& a.SlopeScaledDepthBias == b.SlopeScaledDepthBias
+			&& a.ScissorEnable == b.ScissorEnable
+			&& a.AntiAliasedLineEnable == b.AntiAliasedLineEnable
+			&& a.MultisampleEnable == b.MultisampleEnable
+			&& a.DepthClipEnable == b.DepthClipEnable;
+	}
+	inline bool operator!=(const GPU::RasterStateDesc& a, const GPU::RasterStateDesc& b) { return !(a == b); }
 
 	inline bool operator==(const GPU::BlendEquation& a, const GPU::BlendEquation& b) {
 		return a.Source == b.Source

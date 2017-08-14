@@ -61,6 +61,7 @@ namespace DX12Util {
 	extern const D3D12_RASTERIZER_DESC DefaultRasterizerState;
 	extern const D3D12_DEPTH_STENCIL_DESC DefaultDepthStencilState;
 
+	// TODO: This feels unnecessary, get rid of it
 	struct GraphicsPipelineStateDesc : D3D12_GRAPHICS_PIPELINE_STATE_DESC {
 		typedef D3D12_GRAPHICS_PIPELINE_STATE_DESC Base;
 		GraphicsPipelineStateDesc(ID3D12RootSignature* root_signature);
@@ -71,6 +72,7 @@ namespace DX12Util {
 		GraphicsPipelineStateDesc& RenderTargets(DXGI_FORMAT format);
 		GraphicsPipelineStateDesc& InputLayout(const D3D12_INPUT_ELEMENT_DESC* elements, u32 num_elements);
 		GraphicsPipelineStateDesc& BlendState(const GPU::BlendStateDesc& desc);
+		GraphicsPipelineStateDesc& RasterState(const GPU::RasterStateDesc& desc);
 	};
 
 
@@ -118,6 +120,25 @@ namespace DX12Util {
 		}
 		CHECK(false);
 		return D3D12_BLEND_ZERO;
+	}
+
+	inline D3D12_FILL_MODE CommonToDX12(GPU::FillMode mode) {
+		switch (mode) {
+		case GPU::FillMode::Wireframe: return D3D12_FILL_MODE_WIREFRAME;
+		case GPU::FillMode::Solid: return D3D12_FILL_MODE_SOLID;
+		}
+		CHECK(false);
+		return D3D12_FILL_MODE_WIREFRAME;
+	}
+
+	inline D3D12_CULL_MODE CommonToDX12(GPU::CullMode mode) {
+		switch (mode) {
+		case GPU::CullMode::None: return D3D12_CULL_MODE_NONE;
+		case GPU::CullMode::Front: return D3D12_CULL_MODE_FRONT;
+		case GPU::CullMode::Back: return D3D12_CULL_MODE_BACK;
+		}
+		CHECK(false);
+		return D3D12_CULL_MODE_NONE;
 	}
 
 	inline void MemcpySubresource(

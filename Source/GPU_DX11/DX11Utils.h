@@ -38,4 +38,23 @@ namespace DX11Util {
 		CHECK(false);
 		return D3D11_BLEND_ZERO;
 	}
+
+	inline D3D11_FILL_MODE CommonToDX11(GPU::FillMode mode) {
+		switch (mode) {
+		case GPU::FillMode::Wireframe: return D3D11_FILL_WIREFRAME;
+		case GPU::FillMode::Solid: return D3D11_FILL_SOLID;
+		}
+		CHECK(false);
+		return D3D11_FILL_WIREFRAME;
+	}
+
+	inline D3D11_CULL_MODE CommonToDX11(GPU::CullMode mode) {
+		switch (mode) {
+		case GPU::CullMode::None: return D3D11_CULL_NONE;
+		case GPU::CullMode::Front: return D3D11_CULL_FRONT;
+		case GPU::CullMode::Back: return D3D11_CULL_BACK;
+		}
+		CHECK(false);
+		return D3D11_CULL_NONE;
+	}
 };
