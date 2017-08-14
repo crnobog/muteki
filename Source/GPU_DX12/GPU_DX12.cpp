@@ -951,7 +951,7 @@ ID3D12CommandAllocator* GPU_DX12_Frame::GetCommandAllocator() {
 DX12DescriptorTableLinearAllocator::DX12DescriptorTableLinearAllocator(GPU_DX12* gpu) 
 	: m_gpu(gpu) {
 	m_descriptor_size = m_gpu->m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	m_total_descriptors = 128;
+	m_total_descriptors = 2048;
 	m_used_descriptors = 0;
 	
 	D3D12_DESCRIPTOR_HEAP_DESC desc{};
