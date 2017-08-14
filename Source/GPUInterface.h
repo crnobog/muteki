@@ -187,7 +187,7 @@ namespace GPU {
 	static constexpr RenderTargetID BackBufferID = RenderTargetID{ u32_max };
 	static constexpr u8 MaxRenderTargets = 16;
 	struct RenderPass {
-		Rectf ClipRect = { 0.0f, 0.0f, 0.0f, 0.0f }; // TODO: Document clip space?
+		Rect<u32> ClipRect = { 0, 0, 0, 0}; // TODO: Document clip space?
 		mu::FixedArray<RenderTargetID, MaxRenderTargets> RenderTargets;
 		mu::PointerRange<const DrawItem> DrawItems;
 	};

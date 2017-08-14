@@ -144,7 +144,7 @@ struct ImGuiImpl {
 					// TODO: Reconsider where clip rect fits into api
 					last_clip_rect = draw_cmd.ClipRect;
 					current_pass = &passes.AddZeroed();
-					current_pass->ClipRect = { last_clip_rect.X, last_clip_rect.Y, last_clip_rect.Z, last_clip_rect.W };
+					current_pass->ClipRect = { (u32)last_clip_rect.X, (u32)last_clip_rect.Y, (u32)last_clip_rect.Z, (u32)last_clip_rect.W };
 					current_pass->DrawItems = { gpu_cmd_cursor.m_start, 0 };
 					current_pass->RenderTargets.Add(GPU::RenderTargetID{});
 				}
@@ -253,14 +253,12 @@ int main(int, char**) {
 	while (glfwWindowShouldClose(win) == false) {
 		glfwPollEvents();
 
-		{
-			Vector<u32, 2> current_size = gpu->GetSwapChainDimensions();
-			i32 fb_width, fb_height;
-			glfwGetFramebufferSize(win, &fb_width, &fb_height);
-			if ((u32)fb_width != current_size[0] || (u32)fb_height != current_size[1]) {
-				gpu->ResizeSwapChain(hwnd, fb_width, fb_height);
-			}
-		}
+		Vector<u32, 2> current_size = gpu->GetSwapChainDimensions();
+		i32 fb_width, fb_height;
+		glfwGetFramebufferSize(win, &fb_width, &fb_height);
+		if ((u32)fb_width != current_size[0] || (u32)fb_height != current_size[1]) {
+			gpu->ResizeSwapChain(hwnd, fb_width, fb_height);
+		}		
 
 		auto* gpu_frame = gpu->BeginFrame();
 		Vector<double, 2> mouse_pos;
@@ -284,6 +282,7 @@ int main(int, char**) {
 		GPU::RenderPass pass;
 		pass.RenderTargets.Add(GPU::BackBufferID);
 		pass.DrawItems = mu::Range(&draw_item, &draw_item+1);
+		pass.ClipRect = { 0, 0, current_size[0], current_size[1] };
 		gpu->SubmitPass(pass);
 
 		if (show_test_window) {

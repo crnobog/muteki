@@ -201,7 +201,6 @@ struct GPU_DX12 : public GPUInterface {
 
 	COMPtr<IDXGISwapChain3>				m_swap_chain;
 	D3D12_VIEWPORT						m_viewport = {};
-	D3D12_RECT							m_scissor_rect = {};
 	Vector<u32, 2>						m_swap_chain_dimensions;
 	
 	COMPtr<ID3D12CommandQueue>			m_copy_command_queue;
@@ -458,7 +457,6 @@ void GPU_DX12::OnSwapChainUpdated() {
 	m_frame_index = m_swap_chain->GetCurrentBackBufferIndex();
 
 	m_viewport = D3D12_VIEWPORT{ 0.0f, 0.0f, (float)width, (float)height, 0.0f, 1.0f };
-	m_scissor_rect = D3D12_RECT{ 0, 0, (LONG)width, (LONG)height };
 }
 
 GPUFrameInterface* GPU_DX12::BeginFrame() {
@@ -471,7 +469,6 @@ GPUFrameInterface* GPU_DX12::BeginFrame() {
 	EnsureHR(m_command_list->Reset(command_allocator, nullptr));
 
 	m_command_list->RSSetViewports(1, &m_viewport);
-	m_command_list->RSSetScissorRects(1, &m_scissor_rect);
 
 	auto present_to_rt = ResourceBarrier{ frame->m_render_target.Get(), ResourceState::Present, ResourceState::RenderTarget };
 	m_command_list->ResourceBarrier(1, &present_to_rt);
@@ -819,7 +816,8 @@ void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
 
 	// TODO: Make part of render pass
 	m_command_list->RSSetViewports(1, &m_viewport);
-	m_command_list->RSSetScissorRects(1, &m_scissor_rect);
+	D3D12_RECT scissor_rect = { (LONG)pass.ClipRect.Left, (LONG)pass.ClipRect.Top, (LONG)pass.ClipRect.Right, (LONG)pass.ClipRect.Bottom };
+	m_command_list->RSSetScissorRects(1, &scissor_rect);
 
 	// Translate draw commands into CommandList calls
 	for (const GPU::DrawItem& item : pass.DrawItems) {

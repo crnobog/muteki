@@ -119,7 +119,6 @@ struct GPU_DX11 : public GPUInterface {
 	COMPtr<ID3D11SamplerState>			m_default_sampler;
 
 	D3D11_VIEWPORT			m_viewport = {};
-	D3D11_RECT				m_scissor_rect = {};
 	u32						m_frame_index = 0;
 
 	Pool<COMPtr<ID3D11Buffer>, VertexBufferID>			m_vertex_buffers{ 128 };
@@ -258,7 +257,6 @@ void GPU_DX11::OnSwapChainUpdated() {
 	EnsureHR(m_device->CreateRenderTargetView(m_back_buffer.Get(), &back_buffer_rtv_desc, m_back_buffer_rtv.Replace()));
 
 	m_viewport = D3D11_VIEWPORT{ 0.0f, 0.0f, (float)width, (float)height, 0.0f, 1.0f };
-	m_scissor_rect = D3D11_RECT{ 0, 0, (LONG)width, (LONG)height };
 	m_frame_index = m_swap_chain->GetCurrentBackBufferIndex();
 }
 GPUFrameInterface* GPU_DX11::BeginFrame() {
@@ -297,7 +295,8 @@ void GPU_DX11::SubmitPass(const RenderPass& pass) {
 
 	// TODO: Make part of render pass
 	context->RSSetViewports(1, &m_viewport);
-	context->RSSetScissorRects(1, &m_scissor_rect);
+	D3D11_RECT scissor_rect{ (LONG)pass.ClipRect.Left, (LONG)pass.ClipRect.Top, (LONG)pass.ClipRect.Right, (LONG)pass.ClipRect.Bottom };
+	context->RSSetScissorRects(1, &scissor_rect);
 
 	for (const GPU::DrawItem& item : pass.DrawItems) {
 		context->IASetPrimitiveTopology(DX::CommonToDX(item.Command.PrimTopology));
