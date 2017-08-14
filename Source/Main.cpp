@@ -65,11 +65,11 @@ struct ImGuiImpl {
 
 		pipeline_state_desc.BlendState.BlendEnable = true;
 		pipeline_state_desc.BlendState.ColorBlend = { GPU::BlendValue::SourceAlpha, GPU::BlendOp::Add, GPU::BlendValue::InverseSourceAlpha };
-		pipeline_state_desc.BlendState.AlphaBlend = { GPU::BlendValue::InverseSourceAlpha, GPU::BlendOp::Add, GPU::BlendValue::SourceAlpha };
+		pipeline_state_desc.BlendState.AlphaBlend = { GPU::BlendValue::InverseSourceAlpha, GPU::BlendOp::Add, GPU::BlendValue::Zero };
 
 		m_pipeline_state = gpu->CreatePipelineState(pipeline_state_desc); // TODO: Correct blend state etc
 		
-		//io.Fonts->AddFontDefault();
+		io.Fonts->AddFontDefault();
 		u8* pixels = nullptr;
 		i32 width=0, height=0;
 		io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
@@ -87,11 +87,20 @@ struct ImGuiImpl {
 		ImGui::Shutdown();
 	}
 
-	void BeginFrame() {
+	void BeginFrame( Vector<double, 2> mouse_pos, Vector<bool, 3> mouse_buttons ) {
 		ImGuiIO& io = ImGui::GetIO();
 
 		Vector<u32, 2> current = m_gpu->GetSwapChainDimensions();
 		io.DisplaySize = ImVec2((float)current[0], (float)current[1]);
+
+		io.MousePos = ImVec2{ (float)mouse_pos.X, (float)mouse_pos.Y };
+		io.MouseDown[0] = mouse_buttons[0];
+		io.MouseDown[1] = mouse_buttons[1];
+		io.MouseDown[2] = mouse_buttons[2];
+
+		static double last_time = glfwGetTime();
+		io.DeltaTime = (float)(glfwGetTime() - last_time);
+		last_time = glfwGetTime();
 
 		ImGui::NewFrame();
 	}
@@ -162,6 +171,19 @@ struct ImGuiImpl {
 
 using Color4 = Vector<u8, 4>;
 
+bool mouse_pressed[3] = {false, };
+void OnMouseButton(GLFWwindow*, i32 button, i32 action, i32) {
+	if (action == GLFW_PRESS && button >= 0 && button < 3) {
+		mouse_pressed[button] = true;
+	}
+}
+
+void OnChar(GLFWwindow*, u32 c) {
+	ImGuiIO& io = ImGui::GetIO();
+	if (c > 0 && c < 0x10000)
+		io.AddInputCharacter((u16)c);
+}
+
 int main(int, char**) {
 	dbg::Log("Running from: ", paths::GetExecutableDirectory());
 
@@ -186,6 +208,9 @@ int main(int, char**) {
 
 	ImGuiImpl imgui;
 	imgui.Init(hwnd, gpu);
+
+	glfwSetMouseButtonCallback(win, OnMouseButton);
+	glfwSetCharCallback(win, OnChar);
 
 	String shader_filename{ GetShaderDirectory(), "basic_shader.hlsl" };
 	Array<u8> shader_txt_code = LoadFileToArray(shader_filename.GetRaw(), FileReadType::Text);
@@ -238,7 +263,14 @@ int main(int, char**) {
 		}
 
 		auto* gpu_frame = gpu->BeginFrame();
-		imgui.BeginFrame();
+		Vector<double, 2> mouse_pos;
+		Vector<bool, 3> mouse_buttons;
+		glfwGetCursorPos(win, &mouse_pos[0], &mouse_pos[1]);
+		for (i32 i = 0; i < 3; ++i) {
+			mouse_buttons[i] = mouse_pressed[i] || glfwGetMouseButton(win, i) != 0;
+			mouse_pressed[i] = false;
+		}
+		imgui.BeginFrame(mouse_pos, mouse_buttons);
 
 		GPU::DrawItem draw_item = {};
 		// default raster state, blend state, depth stenci state
