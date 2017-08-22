@@ -5,6 +5,7 @@
 
 #include "mu-core/Array.h"
 #include "mu-core/FixedArray.h"
+#include "mu-core/HashTable.h"
 #include "mu-core/Pool.h"
 #include "mu-core/Ranges.h"
 #include "mu-core/Utils.h"
@@ -224,6 +225,8 @@ struct GPU_DX12 : public GPUInterface {
 	Pool<LinkedProgram,				ProgramID> m_linked_programs{ 128 };
 	Pool<Texture,					TextureID> m_textures{ 128 };
 	Pool<ShaderResourceList,		ShaderResourceListID> m_shader_resource_lists{ 128 };
+
+	HashTable<GPU::PipelineStateDesc, PipelineStateID> m_cached_pipeline_states;
 	Pool<PipelineState,				PipelineStateID> m_pipeline_states{ 128 };
 
 	static constexpr size_t max_persistent_cbs = 128;
@@ -557,18 +560,12 @@ ProgramID GPU_DX12::LinkProgram(VertexShaderID vertex_shader, PixelShaderID pixe
 }
 
 GPU::PipelineStateID GPU_DX12::CreatePipelineState(const GPU::PipelineStateDesc& desc) {
-	auto found = Find(m_pipeline_states, [&](tuple<PipelineStateID, PipelineState&> ps) {
-		if (get<1>(ps).Desc == desc) {
-			return true;
-		}
-		return false;
-	});
-	if (!found.IsEmpty()) {
-		return get<0>(found.Front());
+	PipelineStateID id = m_cached_pipeline_states.FindOrDefault(desc);
+	if (id != PipelineStateID{}) {
+		return id;
 	}
 
-
-	PipelineStateID id = m_pipeline_states.AddDefaulted();
+	id = m_pipeline_states.AddDefaulted();
 	PipelineState& ps = m_pipeline_states[id];
 	ps.Desc = desc;
 	LinkedProgram program = m_linked_programs[desc.Program];
