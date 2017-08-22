@@ -77,7 +77,7 @@
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
   <ImportGroup Label="Shared">
-    <Import Project="..\..\mu-core\Build_VS\mu-core\mu-core.vcxitems" Label="Shared" />
+    <Import Project="..\..\Submodules\mu-core\Build_VS\mu-core\mu-core.vcxitems" Label="Shared" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -106,8 +106,8 @@
     <OutDir>$(SolutionDir)..\Binaries\</OutDir>
     <IntDir>$(SolutionDir)..\Intermediate\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <TargetName>$(ProjectName)-$(Platform)-$(Configuration)</TargetName>
-    <LibraryPath>$(SolutionDir)..\glfw\build\src\Debug;$(LibraryPath)</LibraryPath>
-    <IncludePath>$(SolutionDir)..\imgui\;$(SolutionDir)..\mu-core\Include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)..\Submodules\glfw\build\src\Debug;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)..\Submodules\imgui\;$(SolutionDir)..\Submodules\mu-core\Include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -120,16 +120,16 @@
     <OutDir>$(SolutionDir)..\Binaries\</OutDir>
     <IntDir>$(SolutionDir)..\Intermediate\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <TargetName>$(ProjectName)-$(Platform)-$(Configuration)</TargetName>
-    <LibraryPath>$(SolutionDir)..\glfw\build\src\RelWithDebInfo;$(LibraryPath)</LibraryPath>
-    <IncludePath>$(SolutionDir)..\imgui\;$(SolutionDir)..\mu-core\Include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)..\Submodules\glfw\build\src\RelWithDebInfo;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)..\Submodules\imgui\;$(SolutionDir)..\Submodules\mu-core\Include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Dev|x64'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)..\Binaries\</OutDir>
     <IntDir>$(SolutionDir)..\Intermediate\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <TargetName>$(ProjectName)-$(Platform)-$(Configuration)</TargetName>
-    <LibraryPath>$(SolutionDir)..\glfw\build\src\RelWithDebInfo;$(LibraryPath)</LibraryPath>
-    <IncludePath>$(SolutionDir)..\imgui\;$(SolutionDir)..\mu-core\Include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)..\Submodules\glfw\build\src\RelWithDebInfo;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)..\Submodules\imgui\;$(SolutionDir)..\Submodules\mu-core\Include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -152,7 +152,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>STRICT;NOMINMAX;WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;_DEBUG;_WINDOWS;%(PreprocessorDefinitions);_GLFW_WIN32;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\glfw\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\Submodules\glfw\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MinimalRebuild>false</MinimalRebuild>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -207,7 +207,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>STRICT;NOMINMAX;WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;NDEBUG;_WINDOWS;%(PreprocessorDefinitions);_GLFW_WIN32;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\glfw\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\Submodules\glfw\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -230,7 +230,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>STRICT;NOMINMAX;WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;NDEBUG;_WINDOWS;%(PreprocessorDefinitions);_GLFW_WIN32;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\glfw\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\Submodules\glfw\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <WholeProgramOptimization>false</WholeProgramOptimization>
@@ -243,9 +243,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\imgui\imgui.cpp" />
-    <ClCompile Include="..\..\imgui\imgui_demo.cpp" />
-    <ClCompile Include="..\..\imgui\imgui_draw.cpp" />
+    <ClCompile Include="..\..\Submodules\imgui\imgui.cpp" />
+    <ClCompile Include="..\..\Submodules\imgui\imgui_demo.cpp" />
+    <ClCompile Include="..\..\Submodules\imgui\imgui_draw.cpp" />
     <ClCompile Include="..\..\Source\GPUInterface.cpp" />
     <ClCompile Include="..\..\Source\GPU_DX11\GPU_DX11.cpp" />
     <ClCompile Include="..\..\Source\GPU_DX11\DX11Utils.cpp" />
@@ -255,12 +255,12 @@
     <ClCompile Include="..\..\Source\Main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\imgui\imconfig.h" />
-    <ClInclude Include="..\..\imgui\imgui.h" />
-    <ClInclude Include="..\..\imgui\imgui_internal.h" />
-    <ClInclude Include="..\..\imgui\stb_rect_pack.h" />
-    <ClInclude Include="..\..\imgui\stb_textedit.h" />
-    <ClInclude Include="..\..\imgui\stb_truetype.h" />
+    <ClInclude Include="..\..\Submodules\imgui\imconfig.h" />
+    <ClInclude Include="..\..\Submodules\imgui\imgui.h" />
+    <ClInclude Include="..\..\Submodules\imgui\imgui_internal.h" />
+    <ClInclude Include="..\..\Submodules\imgui\stb_rect_pack.h" />
+    <ClInclude Include="..\..\Submodules\imgui\stb_textedit.h" />
+    <ClInclude Include="..\..\Submodules\imgui\stb_truetype.h" />
     <ClInclude Include="..\..\Source\GPUInterface.h" />
     <ClInclude Include="..\..\Source\GPU_DX11\GPU_DX11.h" />
     <ClInclude Include="..\..\Source\GPU_DX11\DX11Utils.h" />

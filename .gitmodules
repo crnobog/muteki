@@ -1,11 +1,11 @@
 [submodule "mu-core"]
-	path = mu-core
+	path = Submodules/mu-core
 	url = https://github.com/crnobog/mu-core.git
 	branch = muteki
 [submodule "imgui"]
-	path = imgui
+	path = Submodules/imgui
 	url = https://github.com/crnobog/imgui.git
 [submodule "glfw"]
-	path = glfw
+	path = Submodules/glfw
 	url = https://github.com/crnobog/glfw.git
 	branch = muteki
