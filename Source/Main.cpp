@@ -267,9 +267,9 @@ int main(int, char**) {
 		Vec3 position;
 	};
 	Array<Vertex> triangle_vertices;
-	triangle_vertices.Emplace({ { 0.0f, 0.5f, 0.0f } });
-	triangle_vertices.Emplace({ { 0.5f, -0.5f, 0.0f } });
-	triangle_vertices.Emplace({ { -0.5f, -0.5f, 0.0f } });
+	triangle_vertices.Add({ { 0.0f, 0.5f, 0.0f } });
+	triangle_vertices.Add({ { 0.5f, -0.5f, 0.0f } });
+	triangle_vertices.Add({ { -0.5f, -0.5f, 0.0f } });
 	GPU::VertexBufferID vbuffer_id = gpu->CreateVertexBuffer(Range(triangle_vertices.Bytes(), triangle_vertices.NumBytes()));
 
 	struct CBuffer_Color {
