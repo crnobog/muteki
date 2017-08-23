@@ -2,15 +2,6 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="..\..\Source\Main.cpp" />
-    <ClCompile Include="..\..\imgui\imgui.cpp">
-      <Filter>imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\imgui\imgui_demo.cpp">
-      <Filter>imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\imgui\imgui_draw.cpp">
-      <Filter>imgui</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Source\GPUInterface.cpp">
       <Filter>GPU</Filter>
     </ClCompile>
@@ -29,6 +20,9 @@
     <ClCompile Include="..\..\Source\GPU_DXShared\DXSharedUtils.cpp">
       <Filter>GPU\DXShared</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Submodules\imgui\imgui.cpp" />
+    <ClCompile Include="..\..\Submodules\imgui\imgui_demo.cpp" />
+    <ClCompile Include="..\..\Submodules\imgui\imgui_draw.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="imgui">
@@ -51,24 +45,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\imgui\imconfig.h">
-      <Filter>imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\imgui\imgui.h">
-      <Filter>imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\imgui\imgui_internal.h">
-      <Filter>imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\imgui\stb_rect_pack.h">
-      <Filter>imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\imgui\stb_textedit.h">
-      <Filter>imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\imgui\stb_truetype.h">
-      <Filter>imgui</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Source\GPU_DX12\Fence.h">
       <Filter>GPU\DX12</Filter>
     </ClInclude>
@@ -92,6 +68,12 @@
     </ClInclude>
     <ClInclude Include="..\..\Source\Vectors.h" />
     <ClInclude Include="..\..\Source\Rect.h" />
+    <ClInclude Include="..\..\Submodules\imgui\imconfig.h" />
+    <ClInclude Include="..\..\Submodules\imgui\imgui.h" />
+    <ClInclude Include="..\..\Submodules\imgui\imgui_internal.h" />
+    <ClInclude Include="..\..\Submodules\imgui\stb_rect_pack.h" />
+    <ClInclude Include="..\..\Submodules\imgui\stb_textedit.h" />
+    <ClInclude Include="..\..\Submodules\imgui\stb_truetype.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Shaders\basic_shader.hlsl" />
