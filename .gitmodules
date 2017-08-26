@@ -5,7 +5,3 @@
 [submodule "imgui"]
 	path = Submodules/imgui
 	url = https://github.com/crnobog/imgui.git
-[submodule "glfw"]
-	path = Submodules/glfw
-	url = https://github.com/crnobog/glfw.git
-	branch = muteki
