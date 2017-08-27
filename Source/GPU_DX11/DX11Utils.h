@@ -18,7 +18,7 @@ namespace DX11Util {
 		case GPU::BlendOp::Min:				return D3D11_BLEND_OP_MIN;
 		case GPU::BlendOp::Max:				return D3D11_BLEND_OP_MAX;
 		}
-		CHECK(false);
+		Assert(false);
 		return D3D11_BLEND_OP_ADD;
 	}
 
@@ -35,7 +35,7 @@ namespace DX11Util {
 		case GPU::BlendValue::DestColor:			return D3D11_BLEND_DEST_COLOR;
 		case GPU::BlendValue::InverseDestColor:		return D3D11_BLEND_INV_DEST_COLOR;
 		}
-		CHECK(false);
+		Assert(false);
 		return D3D11_BLEND_ZERO;
 	}
 
@@ -44,7 +44,7 @@ namespace DX11Util {
 		case GPU::FillMode::Wireframe: return D3D11_FILL_WIREFRAME;
 		case GPU::FillMode::Solid: return D3D11_FILL_SOLID;
 		}
-		CHECK(false);
+		Assert(false);
 		return D3D11_FILL_WIREFRAME;
 	}
 
@@ -54,7 +54,7 @@ namespace DX11Util {
 		case GPU::CullMode::Front: return D3D11_CULL_FRONT;
 		case GPU::CullMode::Back: return D3D11_CULL_BACK;
 		}
-		CHECK(false);
+		Assert(false);
 		return D3D11_CULL_NONE;
 	}
 };

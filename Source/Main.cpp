@@ -161,7 +161,7 @@ struct ImGuiImpl {
 
 			u32 index_offset = 0;
 			for (const ImDrawCmd& draw_cmd : draw_list->CmdBuffer) {
-				CHECK(!draw_cmd.UserCallback);
+				Assert(!draw_cmd.UserCallback);
 				if (!current_pass || Vec4(draw_cmd.ClipRect) != last_clip_rect) {
 					// Start new pass to change clip rect
 					// TODO: Reconsider where clip rect fits into api
@@ -336,7 +336,6 @@ int main(int, char**) {
 	imgui.Shutdown();
 	gpu->Shutdown();
 	delete gpu;
-
 
 	return 0;
 }

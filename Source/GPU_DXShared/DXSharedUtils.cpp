@@ -22,7 +22,7 @@ namespace DX {
 			compiled_shader,
 			errors.Replace()))) {
 			const char* error_msg = (const char*)errors->GetBufferPointer();
-			CHECKF(false, "Compile failed with error: ", error_msg);
+			Assert(false, "Compile failed with error: ", error_msg);
 		}
 	}
 
@@ -35,14 +35,14 @@ namespace DX {
 		case GPU::ScalarType::U8: if (desc.Normalized) { return float_names[desc.CountMinusOne]; }
 								  else { return uint_names[desc.CountMinusOne]; }
 		}
-		CHECK(false);
+		Assert(false);
 		return "";
 	}
 	const char* GetSemanticName(GPU::InputSemantic semantic) {
 		const char* names[] = {
 			"POSITION", "COLOR", "TEXCOORD", "NORMAL"
 		};
-		CHECK((u32)semantic < ArraySize(names));
+		Assert((u32)semantic < ArraySize(names));
 		return names[(u32)semantic];
 	}
 	DXGI_FORMAT GetStreamElementFormat(GPU::StreamElementDesc desc) {

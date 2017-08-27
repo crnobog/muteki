@@ -7,6 +7,6 @@ u32 GPU::GetStreamElementSize(const StreamElementDesc& element) {
 	case ScalarType::U8:
 		return (element.CountMinusOne + 1);
 	}
-	CHECK(false);
+	Assert(false);
 	return 0;
 }

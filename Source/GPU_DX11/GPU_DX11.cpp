@@ -172,7 +172,7 @@ struct GPU_DX11 : public GPUInterface {
 	void OnSwapChainUpdated();
 
 	ID3D11RenderTargetView* GetRenderTargetView(RenderTargetID id) {
-		CHECK(id == RenderTargetID{});
+		Assert(id == RenderTargetID{});
 		return m_back_buffer_rtv;
 	}
 };
@@ -266,7 +266,7 @@ GPUFrameInterface* GPU_DX11::BeginFrame() {
 	return &m_frame_data;
 }
 void GPU_DX11::EndFrame(GPUFrameInterface* frame) {
-	CHECK(frame == &m_frame_data);
+	Assert(frame == &m_frame_data);
 	EnsureHR(m_swap_chain->Present(0, 0));
 
 	for (ConstantBufferID cbuffer : m_frame_data.m_temp_cbuffers) {
@@ -288,7 +288,7 @@ void GPU_DX11::SubmitPass(const RenderPass& pass) {
 	COMPtr<ID3D11DeviceContext> context{ m_immediate_context };
 
 	ID3D11RenderTargetView* rtvs[GPU::MaxRenderTargets];
-	CHECK(pass.RenderTargets.Num() <= GPU::MaxRenderTargets);
+	Assert(pass.RenderTargets.Num() <= GPU::MaxRenderTargets);
 	for (tuple<ID3D11RenderTargetView*&, RenderTargetID> it : Zip(rtvs, pass.RenderTargets)) {
 		get<0>(it) = GetRenderTargetView(get<1>(it));
 	}
@@ -371,7 +371,7 @@ VertexShaderID GPU_DX11::CompileVertexShaderHLSL(const char* entry_point, mu::Po
 	VertexShaderID id = m_vertex_shaders.AddDefaulted();
 	COMPtr<ID3DBlob> compiled_shader;
 	DX::CompileShaderHLSL(compiled_shader.Replace(), "vs_5_0", entry_point, code);
-	CHECK(compiled_shader.Get());
+	Assert(compiled_shader.Get());
 	
 	EnsureHR(m_device->CreateVertexShader(compiled_shader->GetBufferPointer(), compiled_shader->GetBufferSize(), nullptr, m_vertex_shaders[id].CompiledShader.Replace()));
 	VertexShaderInputs& inputs = m_vertex_shaders[id].Inputs;
@@ -385,7 +385,7 @@ VertexShaderID GPU_DX11::CompileVertexShaderHLSL(const char* entry_point, mu::Po
 	D3D11_SHADER_DESC desc;
 	EnsureHR(reflector->GetDesc(&desc));
 	FixedArray<D3D11_SIGNATURE_PARAMETER_DESC, VertexShaderInputs::MaxInputElements> input_params;
-	CHECK(desc.InputParameters < VertexShaderInputs::MaxInputElements);
+	Assert(desc.InputParameters < VertexShaderInputs::MaxInputElements);
 	input_params.AddZeroed(desc.InputParameters);
 	inputs.InputElements.AddZeroed(desc.InputParameters);
 	for (tuple<u32, DX::VertexShaderInputElement&> it : Zip(Iota<u32>(), inputs.InputElements)) {
@@ -401,7 +401,7 @@ PixelShaderID GPU_DX11::CompilePixelShaderHLSL(const char* entry_point, mu::Poin
 	PixelShaderID id = m_pixel_shaders.AddDefaulted();
 	COMPtr<ID3DBlob> compiled_shader;
 	DX::CompileShaderHLSL(compiled_shader.Replace(), "ps_5_0", entry_point, code);
-	CHECK(compiled_shader.Get());
+	Assert(compiled_shader.Get());
 	EnsureHR(m_device->CreatePixelShader(compiled_shader->GetBufferPointer(), compiled_shader->GetBufferSize(), nullptr, m_pixel_shaders[id].Replace()));
 	return id;
 }

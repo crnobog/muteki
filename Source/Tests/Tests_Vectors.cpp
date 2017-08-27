@@ -38,6 +38,7 @@ namespace Microsoft {
 // These tests mostly exist to ensure all the templates are expanded and compiled
 namespace mu_core_tests_vectors {
 	using namespace mu;
+	using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 	TEST_CLASS(VectorConstructTests) {
 		TEST_METHOD(Vec2Construct) {

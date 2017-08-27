@@ -89,7 +89,7 @@ namespace DX12Util {
 		case GPU::TextureFormat::RGBA8:
 			return DXGI_FORMAT_R8G8B8A8_UNORM;
 		}
-		CHECK(false);
+		Assert(false);
 		return DXGI_FORMAT_UNKNOWN;
 	}
 
@@ -101,7 +101,7 @@ namespace DX12Util {
 		case GPU::BlendOp::Min:				return D3D12_BLEND_OP_MIN;
 		case GPU::BlendOp::Max:				return D3D12_BLEND_OP_MAX;
 		}
-		CHECK(false);
+		Assert(false);
 		return D3D12_BLEND_OP_ADD;
 	}
 
@@ -118,7 +118,7 @@ namespace DX12Util {
 		case GPU::BlendValue::DestColor:			return D3D12_BLEND_DEST_COLOR;
 		case GPU::BlendValue::InverseDestColor:		return D3D12_BLEND_INV_DEST_COLOR;
 		}
-		CHECK(false);
+		Assert(false);
 		return D3D12_BLEND_ZERO;
 	}
 
@@ -127,7 +127,7 @@ namespace DX12Util {
 		case GPU::FillMode::Wireframe: return D3D12_FILL_MODE_WIREFRAME;
 		case GPU::FillMode::Solid: return D3D12_FILL_MODE_SOLID;
 		}
-		CHECK(false);
+		Assert(false);
 		return D3D12_FILL_MODE_WIREFRAME;
 	}
 
@@ -137,7 +137,7 @@ namespace DX12Util {
 		case GPU::CullMode::Front: return D3D12_CULL_MODE_FRONT;
 		case GPU::CullMode::Back: return D3D12_CULL_MODE_BACK;
 		}
-		CHECK(false);
+		Assert(false);
 		return D3D12_CULL_MODE_NONE;
 	}
 

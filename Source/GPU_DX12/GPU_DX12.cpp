@@ -489,7 +489,7 @@ GPUFrameInterface* GPU_DX12::BeginFrame() {
 
 void GPU_DX12::EndFrame(GPUFrameInterface* frame_interface) {
 	auto frame = m_frame_data[m_frame_index];
-	CHECK(frame == frame_interface);
+	Assert(frame == frame_interface);
 
 	ID3D12CommandAllocator* command_allocator = frame->GetCommandAllocator();
 	EnsureHR(m_command_list->Reset(command_allocator, nullptr));
@@ -520,7 +520,7 @@ VertexShaderID GPU_DX12::CompileVertexShaderHLSL(const char* entry_point, Pointe
 	VertexShaderID id = m_registered_vertex_shaders.AddDefaulted();
 	COMPtr<ID3DBlob>& compiled_shader = m_registered_vertex_shaders[id].CompiledShader;
 	DX::CompileShaderHLSL(compiled_shader.Replace(), "vs_5_0", entry_point, code);
-	CHECK(compiled_shader.Get());
+	Assert(compiled_shader.Get());
 
 	VertexShaderInputs& inputs = m_registered_vertex_shaders[id].Inputs;
 
@@ -533,7 +533,7 @@ VertexShaderID GPU_DX12::CompileVertexShaderHLSL(const char* entry_point, Pointe
 	D3D12_SHADER_DESC desc;
 	EnsureHR(reflector->GetDesc(&desc));
 	Array<D3D12_SIGNATURE_PARAMETER_DESC> input_params;
-	CHECK(desc.InputParameters < VertexShaderInputs::MaxInputElements);
+	Assert(desc.InputParameters < VertexShaderInputs::MaxInputElements);
 	input_params.AddZeroed(desc.InputParameters);
 	inputs.InputElements.AddZeroed(desc.InputParameters);
 	for (tuple<u32, DX::VertexShaderInputElement&> it : Zip(Iota<u32>(), inputs.InputElements)) {
@@ -549,7 +549,7 @@ PixelShaderID GPU_DX12::CompilePixelShaderHLSL(const char* entry_point, PointerR
 	PixelShaderID id = m_registered_pixel_shaders.AddDefaulted();
 	ID3DBlob** compiled_shader = m_registered_pixel_shaders[id].Replace();
 	DX::CompileShaderHLSL(compiled_shader, "ps_5_0", entry_point, code);
-	CHECK(*compiled_shader);
+	Assert(*compiled_shader);
 	return id;
 }
 
@@ -626,12 +626,12 @@ ConstantBufferID GPU_DX12::CreateConstantBuffer(PointerRange<const u8> data) {
 }
 
 void GPU_DX12::DestroyConstantBuffer(ConstantBufferID) {
-	CHECKF(false, "Not yet implemented");
+	Assert(false, "Not yet implemented");
 }
 
 VertexBufferID GPU_DX12::CreateVertexBuffer(PointerRange<const u8> data) {
 	VertexBufferID id = m_vertex_buffers.AddDefaulted();
-	CHECK(m_vertex_buffers[id].Resource.Get() == nullptr);
+	Assert(m_vertex_buffers[id].Resource.Get() == nullptr);
 	m_vertex_buffers[id].Size = (u32)data.Size();
 
 	auto vbuffer_desc = BufferDesc{ (u32)data.Size() };
@@ -654,7 +654,7 @@ VertexBufferID GPU_DX12::CreateVertexBuffer(PointerRange<const u8> data) {
 }
 
 void GPU_DX12::DestroyVertexBuffer(GPU::VertexBufferID) {
-	CHECKF(false, "Not yet implemented");
+	Assert(false, "Not yet implemented");
 }
 
 IndexBufferID GPU_DX12::CreateIndexBuffer(mu::PointerRange<const u8> data) {
@@ -681,7 +681,7 @@ IndexBufferID GPU_DX12::CreateIndexBuffer(mu::PointerRange<const u8> data) {
 }
 
 void GPU_DX12::DestroyIndexBuffer(GPU::IndexBufferID) {
-	CHECKF(false, "Not yet implemented");
+	Assert(false, "Not yet implemented");
 }
 
 TextureID GPU_DX12::CreateTexture2D(u32 width, u32 height, GPU::TextureFormat format, PointerRange<const u8> data) {
@@ -752,7 +752,7 @@ ShaderResourceListID GPU_DX12::CreateShaderResourceList(const GPU::ShaderResourc
 
 
 D3D12_CPU_DESCRIPTOR_HANDLE GPU_DX12::GetRenderTargetView(D3D12_CPU_DESCRIPTOR_HANDLE backbuffer, RenderTargetID id) {
-	CHECK(id == RenderTargetID{});
+	Assert(id == RenderTargetID{});
 	return backbuffer; // TODO
 }
 
@@ -805,7 +805,7 @@ void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
 	m_command_list->SetDescriptorHeaps((u32)ArraySize(heaps), heaps);
 
 	// Bind RTs for pass
-	CHECK(pass.RenderTargets.Num() <= GPU::MaxRenderTargets);
+	Assert(pass.RenderTargets.Num() <= GPU::MaxRenderTargets);
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvs[GPU::MaxRenderTargets];
 	for (tuple<D3D12_CPU_DESCRIPTOR_HANDLE&, RenderTargetID> it : Zip(rtvs, pass.RenderTargets)) {
 		get<0>(it) = GetRenderTargetView(frame->m_render_target_view, get<1>(it));
@@ -821,7 +821,7 @@ void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
 	for (const GPU::DrawItem& item : pass.DrawItems) {
 		const PipelineState& pipeline_state = m_pipeline_states[item.PipelineState];
 		ID3D12PipelineState* pso = pipeline_state.PSO;
-		CHECK(pso);
+		Assert(pso);
 		m_command_list->SetPipelineState(pso);
 		m_command_list->IASetPrimitiveTopology(CommonToDX12(item.Command.PrimTopology));
 
@@ -836,7 +836,7 @@ void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
 		//for (ConstantBufferID id : item.BoundResources.ConstantBuffers) {
 		//	cbs.Add(GetConstantBufferViewDesc(id));
 		//}
-		CHECK(item.BoundResources.ConstantBuffers.Num() <= 1); // TODO: Update root signature
+		Assert(item.BoundResources.ConstantBuffers.Num() <= 1); // TODO: Update root signature
 		if (item.BoundResources.ConstantBuffers.Num() > 0 && item.BoundResources.ConstantBuffers[0] != ConstantBufferID{}) {
 			D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc = GetConstantBufferViewDesc(frame, item.BoundResources.ConstantBuffers[0]);
 			m_command_list->SetGraphicsRootConstantBufferView(0, cbv_desc.BufferLocation);
@@ -907,7 +907,7 @@ DX12LinearAllocator::DX12LinearAllocator(GPU_DX12* gpu) : m_gpu(gpu) {
 
 GPUAllocation DX12LinearAllocator::Allocate(u32 size) {
 	size = AlignPow2(size, 256);
-	CHECKF(m_used + size <= m_max, "Ran out of space trying to allocate ", size, " bytes");
+	Assert(m_used + size <= m_max, "Ran out of space trying to allocate ", size, " bytes");
 
 	D3D12_GPU_VIRTUAL_ADDRESS addr = m_data->GetGPUVirtualAddress() + m_used;
 	void* cpu_addr = m_data_cpu_ptr + m_used;
@@ -969,7 +969,7 @@ DX12DescriptorTableLinearAllocator::DX12DescriptorTableLinearAllocator(GPU_DX12*
 }
 
 DX12DescriptorTable DX12DescriptorTableLinearAllocator::AllocateTable(u32 num_descriptors) {
-	CHECK(m_used_descriptors + num_descriptors <= m_total_descriptors);
+	Assert(m_used_descriptors + num_descriptors <= m_total_descriptors);
 	DX12DescriptorTable table{ 
 		m_heap->GetCPUDescriptorHandleForHeapStart(), 
 		m_heap->GetGPUDescriptorHandleForHeapStart(), 

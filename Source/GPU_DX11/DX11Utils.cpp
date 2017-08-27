@@ -17,7 +17,7 @@ namespace DX11Util {
 		auto found = mu::Find(mu::Range(table), [&](const std::tuple<GPU::InputSemantic, const char*>& sem) {
 			return strcmp(std::get<1>(sem), input_param.SemanticName) == 0;
 		});
-		CHECK(!found.IsEmpty());
+		Assert(!found.IsEmpty());
 		DX::VertexShaderInputElement out_elem;
 		out_elem.Semantic = std::get<0>(found.Front());
 		out_elem.SemanticIndex = input_param.SemanticIndex;

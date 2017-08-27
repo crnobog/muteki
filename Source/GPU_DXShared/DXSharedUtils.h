@@ -12,7 +12,7 @@
 #define EnsureHR(expr) \
 	do { \
 		HRESULT hr =(expr); if(SUCCEEDED(hr)) {break;} \
-		CHECKF(SUCCEEDED(hr), #expr, "failed with error code ", hr); \
+		Assert(SUCCEEDED(hr), #expr, "failed with error code ", hr); \
 	} while(false);
 
 namespace DX {
@@ -42,7 +42,7 @@ namespace DX {
 		case GPU::TextureFormat::RGBA8:
 			return DXGI_FORMAT_R8G8B8A8_UNORM;
 		}
-		CHECK(false);
+		Assert(false);
 		return DXGI_FORMAT_UNKNOWN;
 	}
 
@@ -51,7 +51,7 @@ namespace DX {
 		case GPU::TextureFormat::RGBA8:
 			return 4 * width;
 		}
-		CHECK(false);
+		Assert(false);
 		return 0;
 	}
 
