@@ -10,7 +10,7 @@
 #pragma warning(push) 
 #pragma warning(disable : 4100)
 
-#define DECLARE_HANDLE(NAME, INTERNAL) \
+#define DECLARE_GPU_HANDLE(NAME, INTERNAL) \
 struct NAME { \
 	explicit operator size_t() { return Index; } \
 	constexpr NAME() = default; \
@@ -25,17 +25,17 @@ private: \
 namespace GPU {
 	// Handles to GPU objects
 	// TODO: Reduces sizes - u16 most places?
-	DECLARE_HANDLE(ConstantBufferID, u32);
-	DECLARE_HANDLE(VertexBufferID, u32);
-	DECLARE_HANDLE(IndexBufferID, u32);
-	DECLARE_HANDLE(TextureID, u32);
-	DECLARE_HANDLE(RenderTargetID, u32);
-	DECLARE_HANDLE(VertexShaderID, u32);
-	DECLARE_HANDLE(PixelShaderID, u32);
-	DECLARE_HANDLE(ProgramID, u32);
-	DECLARE_HANDLE(DepthStencilStateID, u32);
-	DECLARE_HANDLE(ShaderResourceListID, u32);
-	DECLARE_HANDLE(PipelineStateID, u32);
+	DECLARE_GPU_HANDLE(ConstantBufferID, u32);
+	DECLARE_GPU_HANDLE(VertexBufferID, u32);
+	DECLARE_GPU_HANDLE(IndexBufferID, u32);
+	DECLARE_GPU_HANDLE(TextureID, u32);
+	DECLARE_GPU_HANDLE(RenderTargetID, u32);
+	DECLARE_GPU_HANDLE(VertexShaderID, u32);
+	DECLARE_GPU_HANDLE(PixelShaderID, u32);
+	DECLARE_GPU_HANDLE(ProgramID, u32);
+	DECLARE_GPU_HANDLE(DepthStencilStateID, u32);
+	DECLARE_GPU_HANDLE(ShaderResourceListID, u32);
+	DECLARE_GPU_HANDLE(PipelineStateID, u32);
 
 
 	enum class ShaderType {
@@ -337,6 +337,6 @@ struct GPUInterface {
 	virtual GPU::ShaderResourceListID CreateShaderResourceList(const GPU::ShaderResourceListDesc& desc) = 0;
 };
 
-#undef DECLARE_HANDLE
+#undef DECLARE_GPU_HANDLE
 
 #pragma warning(pop) 
