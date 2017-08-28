@@ -5,3 +5,6 @@
 [submodule "imgui"]
 	path = Submodules/imgui
 	url = https://github.com/crnobog/imgui.git
+[submodule "doctest"]
+	path = Submodules/doctest
+	url = https://github.com/crnobog/doctest.git

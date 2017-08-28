@@ -108,7 +108,7 @@
     <IntDir>$(SolutionDir)..\Intermediate\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <TargetName>$(ProjectName)-$(Platform)-$(Configuration)</TargetName>
     <LibraryPath>$(SolutionDir)..\Submodules\mu-core\Binaries\;$(LibraryPath)</LibraryPath>
-    <IncludePath>$(SolutionDir)..\Submodules\imgui\;$(SolutionDir)..\Submodules\mu-core\Include;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)..\Submodules\doctest\doctest\;$(SolutionDir)..\Submodules\imgui\;$(SolutionDir)..\Submodules\mu-core\Include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -122,7 +122,7 @@
     <IntDir>$(SolutionDir)..\Intermediate\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <TargetName>$(ProjectName)-$(Platform)-$(Configuration)</TargetName>
     <LibraryPath>$(SolutionDir)..\Submodules\mu-core\Binaries\;$(LibraryPath)</LibraryPath>
-    <IncludePath>$(SolutionDir)..\Submodules\imgui\;$(SolutionDir)..\Submodules\mu-core\Include;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)..\Submodules\doctest\doctest\;$(SolutionDir)..\Submodules\imgui\;$(SolutionDir)..\Submodules\mu-core\Include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Dev|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -130,7 +130,7 @@
     <IntDir>$(SolutionDir)..\Intermediate\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <TargetName>$(ProjectName)-$(Platform)-$(Configuration)</TargetName>
     <LibraryPath>$(SolutionDir)..\Submodules\mu-core\Binaries\;$(LibraryPath)</LibraryPath>
-    <IncludePath>$(SolutionDir)..\Submodules\imgui\;$(SolutionDir)..\Submodules\mu-core\Include;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)..\Submodules\doctest\doctest\;$(SolutionDir)..\Submodules\imgui\;$(SolutionDir)..\Submodules\mu-core\Include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

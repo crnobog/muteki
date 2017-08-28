@@ -285,4 +285,8 @@ inline bool operator==(Matrix<T, ROWS, COLUMNS> a, Matrix<U, ROWS, COLUMNS> b) {
 template<typename T, typename U, size_t ROWS, size_t COLUMNS>
 inline bool operator!=(Matrix<T, ROWS, COLUMNS> a, Matrix<U, ROWS, COLUMNS> b) { return !(a == b); }
 
+#ifdef DOCTEST_LIBRARY_INCLUDED
+#include "Tests/Tests_Vectors.inl"
+#endif
+
 #pragma warning (pop)
