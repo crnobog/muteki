@@ -12,6 +12,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mu-core", "..\Submodules\mu
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "muteki-tests", "muteki-tests\muteki-tests.vcxproj", "{FB9D420D-9AEF-4483-B6FB-051E6FD3BA89}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "muteki-benchmark", "muteki-benchmark\muteki-benchmark.vcxproj", "{5E5B2F36-CB1F-4085-AB6E-C8171B8D8C0A}"
+EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		..\Submodules\mu-core\Build_VS\mu-core\mu-core.vcxitems*{2aa74ef1-943e-4574-9e69-4f75dbacf3ad}*SharedItemsImports = 4
@@ -61,6 +63,18 @@ Global
 		{FB9D420D-9AEF-4483-B6FB-051E6FD3BA89}.Release|x64.Build.0 = Release|x64
 		{FB9D420D-9AEF-4483-B6FB-051E6FD3BA89}.Release|x86.ActiveCfg = Release|Win32
 		{FB9D420D-9AEF-4483-B6FB-051E6FD3BA89}.Release|x86.Build.0 = Release|Win32
+		{5E5B2F36-CB1F-4085-AB6E-C8171B8D8C0A}.Debug|x64.ActiveCfg = Debug|x64
+		{5E5B2F36-CB1F-4085-AB6E-C8171B8D8C0A}.Debug|x64.Build.0 = Debug|x64
+		{5E5B2F36-CB1F-4085-AB6E-C8171B8D8C0A}.Debug|x86.ActiveCfg = Debug|Win32
+		{5E5B2F36-CB1F-4085-AB6E-C8171B8D8C0A}.Debug|x86.Build.0 = Debug|Win32
+		{5E5B2F36-CB1F-4085-AB6E-C8171B8D8C0A}.Dev|x64.ActiveCfg = Dev|x64
+		{5E5B2F36-CB1F-4085-AB6E-C8171B8D8C0A}.Dev|x64.Build.0 = Dev|x64
+		{5E5B2F36-CB1F-4085-AB6E-C8171B8D8C0A}.Dev|x86.ActiveCfg = Dev|Win32
+		{5E5B2F36-CB1F-4085-AB6E-C8171B8D8C0A}.Dev|x86.Build.0 = Dev|Win32
+		{5E5B2F36-CB1F-4085-AB6E-C8171B8D8C0A}.Release|x64.ActiveCfg = Release|x64
+		{5E5B2F36-CB1F-4085-AB6E-C8171B8D8C0A}.Release|x64.Build.0 = Release|x64
+		{5E5B2F36-CB1F-4085-AB6E-C8171B8D8C0A}.Release|x86.ActiveCfg = Release|Win32
+		{5E5B2F36-CB1F-4085-AB6E-C8171B8D8C0A}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
