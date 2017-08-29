@@ -7,10 +7,12 @@
 #include "../Vectors.h"
 
 #include "mu-core/FixedArray.h"
+#include "mu-core/IotaRange.h"
 #include "mu-core/Pool.h"
 #include "mu-core/Ranges.h"
 #include "mu-core/String.h"
 #include "mu-core/Utils.h"
+#include "mu-core/ZipRange.h"
 
 #include <d3d11.h>
 #include <dxgi1_4.h>

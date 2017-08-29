@@ -6,6 +6,7 @@
 #include "mu-core/Array.h"
 #include "mu-core/FixedArray.h"
 #include "mu-core/HashTable.h"
+#include "mu-core/IotaRange.h"
 #include "mu-core/Pool.h"
 #include "mu-core/Ranges.h"
 #include "mu-core/Utils.h"
