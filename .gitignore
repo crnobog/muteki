@@ -4,3 +4,4 @@ Intermediate/
 *.opensdf
 *.sdf
 .vs/
+*.vcxproj.user
