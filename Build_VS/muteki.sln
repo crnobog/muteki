@@ -13,6 +13,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "muteki-tests", "muteki-tests\muteki-tests.vcxproj", "{FB9D420D-9AEF-4483-B6FB-051E6FD3BA89}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "muteki-benchmark", "muteki-benchmark\muteki-benchmark.vcxproj", "{5E5B2F36-CB1F-4085-AB6E-C8171B8D8C0A}"
+	ProjectSection(ProjectDependencies) = postProject
+		{C034248A-5C76-4FEE-B1B7-8FAEF0DCF217} = {C034248A-5C76-4FEE-B1B7-8FAEF0DCF217}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
