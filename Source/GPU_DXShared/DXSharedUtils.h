@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "mu-core/Debug.h"
 #include "mu-core/PrimitiveTypes.h"
@@ -12,7 +12,7 @@
 #define EnsureHR(expr) \
 	do { \
 		HRESULT hr =(expr); if(SUCCEEDED(hr)) {break;} \
-		Assert(SUCCEEDED(hr), #expr, "failed with error code ", hr); \
+		Assertf(SUCCEEDED(hr), #expr, "failed with error code ", hr); \
 	} while(false);
 
 namespace DX {

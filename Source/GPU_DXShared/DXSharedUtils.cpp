@@ -1,4 +1,4 @@
-#include "mu-core/Utils.h"
+﻿#include "mu-core/Utils.h"
 
 #include "DXSharedUtils.h"
 
@@ -22,7 +22,7 @@ namespace DX {
 			compiled_shader,
 			errors.Replace()))) {
 			const char* error_msg = (const char*)errors->GetBufferPointer();
-			Assert(false, "Compile failed with error: ", error_msg);
+			Assertf(false, "Compile failed with error: {}", error_msg);
 		}
 	}
 
@@ -59,7 +59,7 @@ namespace DX {
 				DXGI_FORMAT_R8_UINT, DXGI_FORMAT_R8G8_UINT, DXGI_FORMAT_R8G8B8A8_UINT, DXGI_FORMAT_R8G8B8A8_UINT,
 			};
 			static const DXGI_FORMAT byte_formats_norm[] = {
-				DXGI_FORMAT_R8_UNORM, DXGI_FORMAT_R8G8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM, 
+				DXGI_FORMAT_R8_UNORM, DXGI_FORMAT_R8G8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM,
 			};
 			return (desc.Normalized ? byte_formats_norm : byte_formats)[desc.CountMinusOne];
 		}

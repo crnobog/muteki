@@ -1,4 +1,4 @@
-// TOOD: unify case for var names by context
+﻿// TOOD: unify case for var names by context
 
 #include "mu-core/Debug.h"
 #include "GPU_DX12.h"
@@ -67,7 +67,7 @@ struct DX12DescriptorTable {
 	u32 m_descriptor_size;
 	u32 m_num_descriptors;
 
-	D3D12_CPU_DESCRIPTOR_HANDLE GetCPUHandle(u32 index) { 
+	D3D12_CPU_DESCRIPTOR_HANDLE GetCPUHandle(u32 index) {
 		return { m_cpu_handle.ptr + index * m_descriptor_size };
 	}
 	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandle(u32 index) {
@@ -92,11 +92,10 @@ struct DX12DescriptorTableLinearAllocator {
 
 struct GPU_DX12_Frame : public GPUFrameInterface {
 	struct GPU_DX12* m_gpu = nullptr;
-	GPU_DX12_Frame(struct GPU_DX12* gpu) 
+	GPU_DX12_Frame(struct GPU_DX12* gpu)
 		: m_gpu(gpu)
 		, m_linear_allocator(gpu)
-		, m_descriptor_table_allocator(gpu) {
-	}
+		, m_descriptor_table_allocator(gpu) {}
 
 	COMPtr<ID3D12Resource>					m_render_target;
 	D3D12_CPU_DESCRIPTOR_HANDLE				m_render_target_view;
@@ -204,7 +203,7 @@ struct GPU_DX12 : public GPUInterface {
 	COMPtr<IDXGISwapChain3>				m_swap_chain;
 	D3D12_VIEWPORT						m_viewport = {};
 	Vector<u32, 2>						m_swap_chain_dimensions;
-	
+
 	COMPtr<ID3D12CommandQueue>			m_copy_command_queue;
 	COMPtr<ID3D12GraphicsCommandList>	m_copy_command_list;
 	COMPtr<ID3D12CommandAllocator>		m_copy_command_allocator;
@@ -221,19 +220,19 @@ struct GPU_DX12 : public GPUInterface {
 	Fence	m_frame_fence;
 	HANDLE	m_frame_fence_event = nullptr;
 
-	Pool<VertexShader,				VertexShaderID> m_registered_vertex_shaders{ 128 };
-	Pool<COMPtr<ID3DBlob>,			PixelShaderID> m_registered_pixel_shaders{ 128 };
-	Pool<LinkedProgram,				ProgramID> m_linked_programs{ 128 };
-	Pool<Texture,					TextureID> m_textures{ 128 };
-	Pool<ShaderResourceList,		ShaderResourceListID> m_shader_resource_lists{ 128 };
+	Pool<VertexShader, VertexShaderID> m_registered_vertex_shaders{ 128 };
+	Pool<COMPtr<ID3DBlob>, PixelShaderID> m_registered_pixel_shaders{ 128 };
+	Pool<LinkedProgram, ProgramID> m_linked_programs{ 128 };
+	Pool<Texture, TextureID> m_textures{ 128 };
+	Pool<ShaderResourceList, ShaderResourceListID> m_shader_resource_lists{ 128 };
 
 	HashTable<GPU::PipelineStateDesc, PipelineStateID> m_cached_pipeline_states;
-	Pool<PipelineState,				PipelineStateID> m_pipeline_states{ 128 };
+	Pool<PipelineState, PipelineStateID> m_pipeline_states{ 128 };
 
 	static constexpr size_t max_persistent_cbs = 128;
 	Pool<ConstantBuffer, ConstantBufferID> m_constant_buffers{ max_persistent_cbs };
 	static constexpr size_t max_persistent_vbs = 128;
-	Pool<VertexBuffer, VertexBufferID> m_vertex_buffers{ max_persistent_vbs};
+	Pool<VertexBuffer, VertexBufferID> m_vertex_buffers{ max_persistent_vbs };
 	static constexpr size_t max_persistent_ibs = 128;
 	Pool<IndexBuffer, IndexBufferID> m_index_buffers{ max_persistent_ibs };
 
@@ -279,8 +278,7 @@ struct GPU_DX12 : public GPUInterface {
 	D3D12_INDEX_BUFFER_VIEW GetIndexBufferView(GPU_DX12_Frame* frame, IndexBufferID id);
 };
 
-GPU_DX12::GPU_DX12() {
-}
+GPU_DX12::GPU_DX12() {}
 
 GPU_DX12::~GPU_DX12() {
 	for (u32 i = 0; i < frame_count; ++i) {
@@ -295,8 +293,7 @@ GPUInterface* CreateGPU_DX12() {
 void GPU_DX12::Init() {
 	UINT dxgiFactoryFlags = 0;
 
-	if( true )
-	{
+	if (true) {
 		COMPtr<ID3D12Debug> debug_interface;
 		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(debug_interface.Replace())))) {
 			debug_interface->EnableDebugLayer();
@@ -336,7 +333,7 @@ void GPU_DX12::Init() {
 	EnsureHR(m_device->CreateDescriptorHeap(&rtv_heap_desc, IID_PPV_ARGS(m_rtv_heap.Replace())));
 
 	m_rtv_descriptor_size = m_device->GetDescriptorHandleIncrementSize(rtv_heap_desc.Type);
-	
+
 	m_frame_fence_event = CreateEvent(nullptr, false, false, L"Frame Fence Event");
 	m_copy_fence_event = CreateEvent(nullptr, false, false, L"Upload Fence Event");
 
@@ -468,7 +465,7 @@ GPUFrameInterface* GPU_DX12::BeginFrame() {
 
 	m_frame_fence.WaitForFence(frame->m_fence_value, m_frame_fence_event);
 	frame->m_used_command_allocators = 0;
-	
+
 	ID3D12CommandAllocator* command_allocator = frame->GetCommandAllocator();
 	EnsureHR(m_command_list->Reset(command_allocator, nullptr));
 
@@ -627,7 +624,7 @@ ConstantBufferID GPU_DX12::CreateConstantBuffer(PointerRange<const u8> data) {
 }
 
 void GPU_DX12::DestroyConstantBuffer(ConstantBufferID) {
-	Assert(false, "Not yet implemented");
+	Assertf(false, "Not yet implemented");
 }
 
 VertexBufferID GPU_DX12::CreateVertexBuffer(PointerRange<const u8> data) {
@@ -655,7 +652,7 @@ VertexBufferID GPU_DX12::CreateVertexBuffer(PointerRange<const u8> data) {
 }
 
 void GPU_DX12::DestroyVertexBuffer(GPU::VertexBufferID) {
-	Assert(false, "Not yet implemented");
+	Assertf(false, "Not yet implemented");
 }
 
 IndexBufferID GPU_DX12::CreateIndexBuffer(mu::PointerRange<const u8> data) {
@@ -670,7 +667,7 @@ IndexBufferID GPU_DX12::CreateIndexBuffer(mu::PointerRange<const u8> data) {
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
 		IID_PPV_ARGS(m_index_buffers[id].Resource.Replace()))
-		);
+	);
 
 	D3D12_RANGE read_range{ 0, 0 };
 	void* mapped = nullptr;
@@ -682,7 +679,7 @@ IndexBufferID GPU_DX12::CreateIndexBuffer(mu::PointerRange<const u8> data) {
 }
 
 void GPU_DX12::DestroyIndexBuffer(GPU::IndexBufferID) {
-	Assert(false, "Not yet implemented");
+	Assertf(false, "Not yet implemented");
 }
 
 TextureID GPU_DX12::CreateTexture2D(u32 width, u32 height, GPU::TextureFormat format, PointerRange<const u8> data) {
@@ -908,7 +905,7 @@ DX12LinearAllocator::DX12LinearAllocator(GPU_DX12* gpu) : m_gpu(gpu) {
 
 GPUAllocation DX12LinearAllocator::Allocate(u32 size) {
 	size = AlignPow2(size, 256);
-	Assert(m_used + size <= m_max, "Ran out of space trying to allocate ", size, " bytes");
+	Assertf(m_used + size <= m_max, "Ran out of space trying to allocate {} bytes", size);
 
 	D3D12_GPU_VIRTUAL_ADDRESS addr = m_data->GetGPUVirtualAddress() + m_used;
 	void* cpu_addr = m_data_cpu_ptr + m_used;
@@ -952,12 +949,12 @@ ID3D12CommandAllocator* GPU_DX12_Frame::GetCommandAllocator() {
 	return alloc;
 }
 
-DX12DescriptorTableLinearAllocator::DX12DescriptorTableLinearAllocator(GPU_DX12* gpu) 
+DX12DescriptorTableLinearAllocator::DX12DescriptorTableLinearAllocator(GPU_DX12* gpu)
 	: m_gpu(gpu) {
 	m_descriptor_size = m_gpu->m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	m_total_descriptors = 2048;
 	m_used_descriptors = 0;
-	
+
 	D3D12_DESCRIPTOR_HEAP_DESC desc{};
 	desc.NodeMask = 0;
 	desc.NumDescriptors = m_total_descriptors;
@@ -971,11 +968,11 @@ DX12DescriptorTableLinearAllocator::DX12DescriptorTableLinearAllocator(GPU_DX12*
 
 DX12DescriptorTable DX12DescriptorTableLinearAllocator::AllocateTable(u32 num_descriptors) {
 	Assert(m_used_descriptors + num_descriptors <= m_total_descriptors);
-	DX12DescriptorTable table{ 
-		m_heap->GetCPUDescriptorHandleForHeapStart(), 
-		m_heap->GetGPUDescriptorHandleForHeapStart(), 
-		m_descriptor_size, 
-		num_descriptors 
+	DX12DescriptorTable table{
+		m_heap->GetCPUDescriptorHandleForHeapStart(),
+		m_heap->GetGPUDescriptorHandleForHeapStart(),
+		m_descriptor_size,
+		num_descriptors
 	};
 	table.m_cpu_handle.ptr += m_used_descriptors * m_descriptor_size;
 	table.m_gpu_handle.ptr += m_used_descriptors * m_descriptor_size;
@@ -983,4 +980,3 @@ DX12DescriptorTable DX12DescriptorTableLinearAllocator::AllocateTable(u32 num_de
 	m_used_descriptors += num_descriptors;
 	return table;
 }
-

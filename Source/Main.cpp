@@ -1,4 +1,4 @@
-#ifdef _MSC_VER
+﻿#ifdef _MSC_VER
 #    pragma comment(linker, "/subsystem:windows /ENTRY:mainCRTStartup")
 #endif
 
@@ -91,12 +91,12 @@ struct ImGuiImpl {
 		pipeline_state_desc.RasterState.ScissorEnable = true;
 
 		m_pipeline_state = gpu->CreatePipelineState(pipeline_state_desc); // TODO: Correct blend state etc
-		
+
 		io.Fonts->AddFontDefault();
 		u8* pixels = nullptr;
-		i32 width=0, height=0;
+		i32 width = 0, height = 0;
 		io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-		m_fonts_tex = gpu->CreateTexture2D(width, height, GPU::TextureFormat::RGBA8, Range(pixels, pixels + width * 4 * height)); 
+		m_fonts_tex = gpu->CreateTexture2D(width, height, GPU::TextureFormat::RGBA8, Range(pixels, pixels + width * 4 * height));
 
 		GPU::ShaderResourceListDesc srl_desc;
 		srl_desc.StartSlot = 0;
@@ -110,7 +110,7 @@ struct ImGuiImpl {
 		ImGui::Shutdown();
 	}
 
-	void BeginFrame( Vector<double, 2> mouse_pos, Vector<bool, 3> mouse_buttons ) {
+	void BeginFrame(Vector<double, 2> mouse_pos, Vector<bool, 3> mouse_buttons) {
 		ImGuiIO& io = ImGui::GetIO();
 
 		Vector<u32, 2> current = m_gpu->GetSwapChainDimensions();
@@ -138,9 +138,9 @@ struct ImGuiImpl {
 		float B = ImGui::GetIO().DisplaySize.y;
 		float T = 0.0f;
 		Mat4x4 orth_proj{
-			2.0f / (R - L),   0.0f,           0.0f,       0.0f, 
+			2.0f / (R - L),   0.0f,           0.0f,       0.0f,
 			0.0f,         2.0f / (T - B),     0.0f,       0.0f ,
-			0.0f,         0.0f,           0.5f,       0.0f, 
+			0.0f,         0.0f,           0.5f,       0.0f,
 			(R + L) / (L - R),  (T + B) / (B - T),    0.5f,       1.0f,
 		};
 		auto cbuffer_id = gpu_frame->GetTemporaryConstantBuffer(ByteRange(orth_proj));
@@ -194,7 +194,7 @@ struct ImGuiImpl {
 
 using Color4 = Vector<u8, 4>;
 
-bool mouse_pressed[3] = {false, };
+bool mouse_pressed[3] = { false, };
 void OnMouseButton(GLFWwindow*, i32 button, i32 action, i32) {
 	if (action == GLFW_PRESS && button >= 0 && button < 3) {
 		mouse_pressed[button] = true;
@@ -221,7 +221,7 @@ void OnKey(GLFWwindow*, i32 key, i32, i32 action, i32) {
 }
 
 int main(int, char**) {
-	dbg::Log("Running from: ", paths::GetExecutableDirectory());
+	dbg::Log("Running from: {}", paths::GetExecutableDirectory());
 
 	if (glfwInit() == GLFW_FALSE) {
 		return 1;
@@ -297,7 +297,7 @@ int main(int, char**) {
 		glfwGetFramebufferSize(win, &fb_width, &fb_height);
 		if ((u32)fb_width != current_size[0] || (u32)fb_height != current_size[1]) {
 			gpu->ResizeSwapChain(hwnd, fb_width, fb_height);
-		}		
+		}
 
 		auto* gpu_frame = gpu->BeginFrame();
 		Vector<double, 2> mouse_pos;
@@ -320,7 +320,7 @@ int main(int, char**) {
 
 		GPU::RenderPass pass;
 		pass.RenderTargets.Add(GPU::BackBufferID);
-		pass.DrawItems = mu::Range(&draw_item, &draw_item+1);
+		pass.DrawItems = mu::Range(&draw_item, &draw_item + 1);
 		pass.ClipRect = { 0, 0, current_size[0], current_size[1] };
 		gpu->SubmitPass(pass);
 
@@ -339,4 +339,3 @@ int main(int, char**) {
 
 	return 0;
 }
-
