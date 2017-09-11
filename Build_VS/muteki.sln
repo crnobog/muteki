@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26730.8
+VisualStudioVersion = 15.0.26730.12
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "muteki", "muteki\muteki.vcxproj", "{2AA74EF1-943E-4574-9E69-4F75DBACF3AD}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -11,6 +11,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mu-core", "..\Submodules\mu-core\Build_VS\mu-core\mu-core.vcxproj", "{C034248A-5C76-4FEE-B1B7-8FAEF0DCF217}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "muteki-tests", "muteki-tests\muteki-tests.vcxproj", "{FB9D420D-9AEF-4483-B6FB-051E6FD3BA89}"
+	ProjectSection(ProjectDependencies) = postProject
+		{C034248A-5C76-4FEE-B1B7-8FAEF0DCF217} = {C034248A-5C76-4FEE-B1B7-8FAEF0DCF217}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "muteki-benchmark", "muteki-benchmark\muteki-benchmark.vcxproj", "{5E5B2F36-CB1F-4085-AB6E-C8171B8D8C0A}"
 	ProjectSection(ProjectDependencies) = postProject
