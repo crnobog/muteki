@@ -1,4 +1,4 @@
-#include "mu-core/Debug.h"
+﻿#include "mu-core/Debug.h"
 
 #include "../GPUInterface.h"
 #include "GPU_DX11.h"
@@ -100,8 +100,7 @@ struct GPU_DX11 : public GPUInterface {
 		COMPtr<ID3D11RasterizerState> RasterState;
 	};
 
-	GPU_DX11() : m_frame_data(this) {
-	}
+	GPU_DX11() : m_frame_data(this) {}
 	~GPU_DX11() = default;
 	GPU_DX11(const GPU_DX11&) = delete;
 	void operator=(const GPU_DX11&) = delete;
@@ -113,7 +112,7 @@ struct GPU_DX11 : public GPUInterface {
 	COMPtr<IDXGIFactory4>		m_dxgi_factory;
 	COMPtr<ID3D11Device>		m_device;
 	COMPtr<ID3D11DeviceContext> m_immediate_context;
-	
+
 	COMPtr<IDXGISwapChain3>				m_swap_chain;
 	COMPtr<ID3D11Texture2D>				m_back_buffer;
 	COMPtr<ID3D11RenderTargetView>		m_back_buffer_rtv;
@@ -224,7 +223,7 @@ void GPU_DX11::CreateSwapChain(void* hwnd, u32 width, u32 height) {
 	swap_chain_desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	swap_chain_desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 	swap_chain_desc.SampleDesc.Count = 1;
-	
+
 	{
 		COMPtr<IDXGISwapChain1> swap_chain_tmp;
 		EnsureHR(m_dxgi_factory->CreateSwapChainForHwnd(
@@ -342,7 +341,7 @@ void GPU_DX11::SubmitPass(const RenderPass& pass) {
 		context->PSSetSamplers(0, 1, samplers);
 
 		FixedArray<ID3D11Buffer*, GPU::MaxStreamSlots> vbs;
-		for (VertexBufferID vb_id : item.StreamSetup.VertexBuffers ) {
+		for (VertexBufferID vb_id : item.StreamSetup.VertexBuffers) {
 			if (vb_id == VertexBufferID{}) {
 				vbs.Add(nullptr);
 			}
@@ -354,7 +353,7 @@ void GPU_DX11::SubmitPass(const RenderPass& pass) {
 		if (item.StreamSetup.IndexBuffer != IndexBufferID{}) {
 			ib = m_index_buffers[item.StreamSetup.IndexBuffer].Get();
 		}
-		
+
 		FixedArray<u32, GPU::MaxStreamSlots> offsets;
 		offsets.AddZeroed(vbs.Num());
 		context->IASetInputLayout(pso.InputLayout);
@@ -374,7 +373,7 @@ VertexShaderID GPU_DX11::CompileVertexShaderHLSL(const char* entry_point, mu::Po
 	COMPtr<ID3DBlob> compiled_shader;
 	DX::CompileShaderHLSL(compiled_shader.Replace(), "vs_5_0", entry_point, code);
 	Assert(compiled_shader.Get());
-	
+
 	EnsureHR(m_device->CreateVertexShader(compiled_shader->GetBufferPointer(), compiled_shader->GetBufferSize(), nullptr, m_vertex_shaders[id].CompiledShader.Replace()));
 	VertexShaderInputs& inputs = m_vertex_shaders[id].Inputs;
 
@@ -407,7 +406,7 @@ PixelShaderID GPU_DX11::CompilePixelShaderHLSL(const char* entry_point, mu::Poin
 	EnsureHR(m_device->CreatePixelShader(compiled_shader->GetBufferPointer(), compiled_shader->GetBufferSize(), nullptr, m_pixel_shaders[id].Replace()));
 	return id;
 }
-ProgramID GPU_DX11::LinkProgram(VertexShaderID vertex_shader, PixelShaderID pixel_shader) { 
+ProgramID GPU_DX11::LinkProgram(VertexShaderID vertex_shader, PixelShaderID pixel_shader) {
 	ProgramID id = m_linked_programs.AddDefaulted();
 	LinkedProgram& prog = m_linked_programs[id];
 	prog.VertexShader = vertex_shader;
@@ -452,7 +451,7 @@ GPU::PipelineStateID GPU_DX11::CreatePipelineState(const GPU::PipelineStateDesc&
 		for (const GPU::StreamElementDesc& elem : slot.Elements) {
 			const char* type = DX::GetHLSLTypeName(elem);
 			const char* semantic = DX::GetSemanticName(elem.Semantic);
-			String elem_s = mu::Format(type, " ", "elem", idx, " : ", semantic, elem.SemanticIndex, ";\n");
+			String elem_s = String::Format("{} {} : {}{};\n", type, idx, semantic, elem.SemanticIndex);
 			shader.Append(elem_s);
 			++idx;
 		}
@@ -494,7 +493,7 @@ void GPU_DX11::DestroyPipelineState(GPU::PipelineStateID id) {
 	m_pipeline_states.Return(id);
 }
 
-ConstantBufferID GPU_DX11::CreateConstantBuffer(mu::PointerRange<const u8> data) { 
+ConstantBufferID GPU_DX11::CreateConstantBuffer(mu::PointerRange<const u8> data) {
 	ConstantBufferID id = m_constant_buffers.AddDefaulted();
 
 	D3D11_BUFFER_DESC buffer_desc = {};
@@ -534,7 +533,7 @@ IndexBufferID GPU_DX11::CreateIndexBuffer(mu::PointerRange<const u8> data) {
 	buffer_desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 	buffer_desc.Usage = D3D11_USAGE_DEFAULT;
 	buffer_desc.ByteWidth = (u32)data.Size();
-	
+
 	D3D11_SUBRESOURCE_DATA initial_data = { &data.Front(), 0, 0 };
 	EnsureHR(m_device->CreateBuffer(&buffer_desc, &initial_data, m_index_buffers[id].Replace()));
 	return id;
@@ -544,7 +543,7 @@ void GPU_DX11::DestroyIndexBuffer(GPU::IndexBufferID id) {
 	m_index_buffers.Return(id);
 }
 
-TextureID GPU_DX11::CreateTexture2D(u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) { 
+TextureID GPU_DX11::CreateTexture2D(u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) {
 	TextureID id = m_textures.AddDefaulted();
 	Texture& texture = m_textures[id];
 
@@ -559,7 +558,7 @@ TextureID GPU_DX11::CreateTexture2D(u32 width, u32 height, GPU::TextureFormat fo
 	desc.Usage = D3D11_USAGE_DEFAULT;
 	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 	desc.CPUAccessFlags = 0;
-	D3D11_SUBRESOURCE_DATA initial_data = { &data.Front(), DX::CalcRowPitch(format, width), 0};
+	D3D11_SUBRESOURCE_DATA initial_data = { &data.Front(), DX::CalcRowPitch(format, width), 0 };
 	EnsureHR(m_device->CreateTexture2D(&desc, &initial_data, texture.Resource.Replace()));
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc = { };
@@ -571,7 +570,7 @@ TextureID GPU_DX11::CreateTexture2D(u32 width, u32 height, GPU::TextureFormat fo
 	return id;
 }
 
-ShaderResourceListID GPU_DX11::CreateShaderResourceList(const GPU::ShaderResourceListDesc& desc) { 
+ShaderResourceListID GPU_DX11::CreateShaderResourceList(const GPU::ShaderResourceListDesc& desc) {
 	ShaderResourceListID id = m_shader_resource_lists.AddDefaulted();
 	m_shader_resource_lists[id].Desc = desc;
 	return id;
