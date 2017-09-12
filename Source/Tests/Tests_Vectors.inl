@@ -1,4 +1,4 @@
-
+﻿
 // These tests mostly exist to ensure all the templates are expanded and compiled
 TEST_SUITE("Vectors") {
 	TEST_CASE("VectorConstruction") {
@@ -153,6 +153,24 @@ TEST_SUITE("Vectors") {
 			CHECK_EQ(-y, xz);
 		}
 	};
+
+	TEST_CASE("MagnitudeTests") {
+		Vec3 x{ 1.0f, 0.0f, 0.0f };
+		Vec3 y{ 0.0f, 1.0f, 0.0f };
+		Vec3 z{ 0.0f, 0.0f, 1.0f };
+
+		CHECK_EQ(1.0f, MagnitudeSq(x));
+		CHECK_EQ(1.0f, MagnitudeSq(y));
+		CHECK_EQ(1.0f, MagnitudeSq(z));
+
+		CHECK_EQ(1.0f, Magnitude(x));
+		CHECK_EQ(1.0f, Magnitude(y));
+		CHECK_EQ(1.0f, Magnitude(z));
+
+		Vec3 a{ 3.0f, 4.0f, 0.0f };
+		CHECK_EQ(25.0f, MagnitudeSq(a));
+		CHECK_EQ(5.0f, Magnitude(a));
+	}
 
 	TEST_CASE("ArithmeticTests") {
 		SUBCASE("AddVectors") {

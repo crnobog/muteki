@@ -1,4 +1,6 @@
-#pragma once
+﻿#pragma once
+
+// 
 
 #include "mu-core/PrimitiveTypes.h"
 #include "mu-core/Utils.h"
@@ -7,17 +9,6 @@
 
 #pragma warning (push)
 #pragma warning (disable : 4201) // Disable warning about nonstandard anonymous structs 
-
-template<typename VEC, typename T>
-inline void VectorInitList(VEC& vec, std::initializer_list<T>) {
-	size_t i = 0;
-	for (auto it = list.begin(); i < ArraySize(vec.Data) && it != list.end(); ++i, ++it) {
-		vec.Data[i] = *it;
-	}
-	for (; i < ArraySize(vec.Data); ++i) {
-		vec.Data[i] = T{};
-	}
-}
 
 template<typename T, size_t N>
 struct Vector {
@@ -253,7 +244,20 @@ inline Vector<T, 3> Cross(Vector<T, 3> a, Vector<T, 3> b) {
 	};
 }
 
-template<typename T, typename U, size_t ROWS, size_t COLUMNS > 
+
+template<typename T, size_t N>
+inline T MagnitudeSq(const Vector<T, N>& v) {
+	T sum{};
+	for (size_t i = 0; i < N; ++i) {
+		sum += v[i] * v[i];
+	}
+	return sum;
+}
+
+template<typename T, size_t N>
+inline T Magnitude(const Vector<T, N>& v) { return sqrt(MagnitudeSq(v)); }
+
+template<typename T, typename U, size_t ROWS, size_t COLUMNS >
 inline Vector<U, ROWS> operator*(const Matrix<T, ROWS, COLUMNS>& m, const Vector<U, COLUMNS>& v) {
 	Vector<U, ROWS> r;
 	for (size_t i = 0; i < ROWS; ++i) {
