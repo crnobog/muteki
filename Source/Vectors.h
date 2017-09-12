@@ -1,6 +1,10 @@
 ﻿#pragma once
 
+// Defines functions for points, vectors and matrices
 // 
+// Conventions
+//	- Column vectors and pre-multiplication are used
+//	 e.g. Translation * Rotation * v
 
 #include "mu-core/PrimitiveTypes.h"
 #include "mu-core/Utils.h"
@@ -212,6 +216,9 @@ inline Vector<T, N> operator*(Vector<T, N> a, SCALAR scalar) {
 	}
 	return r;
 }
+
+template<typename T, size_t N, typename SCALAR>
+inline Vector<T, N> operator*(SCALAR scalar, Vector<T, N> a) { return a * scalar; }
 template<typename T, size_t N, typename OTHER>
 inline Vector<T, N>& operator*=(Vector<T, N>& a, OTHER b) { a = a * b; return a; }
 
@@ -244,9 +251,27 @@ inline Vector<T, 3> Cross(Vector<T, 3> a, Vector<T, 3> b) {
 	};
 }
 
+template<typename T, size_t N>
+inline Vector<T, N> Abs(Vector<T, N> v) {
+	for (size_t i = 0; i < N; ++i) {
+		v[i] = abs(v[i]);
+	}
+	return v;
+}
+
+template<typename T, size_t N>
+inline T MaxAbsComponent(Vector<T, N> v) {
+	v = Abs(v);
+	T max = v[0];
+	for (size_t i = 1; i < N; ++i) {
+		max = Max(max, v[i]);
+	}
+	return max;
+}
 
 template<typename T, size_t N>
 inline T MagnitudeSq(const Vector<T, N>& v) {
+	// TODO: Consider under/overflow?
 	T sum{};
 	for (size_t i = 0; i < N; ++i) {
 		sum += v[i] * v[i];
@@ -255,7 +280,36 @@ inline T MagnitudeSq(const Vector<T, N>& v) {
 }
 
 template<typename T, size_t N>
-inline T Magnitude(const Vector<T, N>& v) { return sqrt(MagnitudeSq(v)); }
+inline T MagnitudeFast(const Vector<T, N>& v) { return sqrt(MagnitudeSq(v)); }
+
+template<typename T, size_t N>
+inline T Magnitude(const Vector<T, N>& v) {
+	// http://d3cw3dd2w32x2b.cloudfront.net/wp-content/uploads/2012/07/Vector-length-and-normalization-difficulties.pdf
+	// Scales components to avoid under/overflow when squaring
+	T max_comp = MaxAbsComponent(v);
+	if (max_comp > 0.0f) {
+		return max_comp * MagnitudeFast(v / max_comp);
+	}
+	else {
+		return 0.0f;
+	}
+}
+
+template<typename T, size_t N>
+inline Vector<T, N> NormalizeFast(const Vector<T, N>& v) {
+	return v / MagnitudeFast(v);
+}
+
+template<typename T, size_t N>
+inline Vector<T, N> Normalize(const Vector<T, N>& v) {
+	T max_comp = MaxAbsComponent(v);
+	if (max_comp > 0.0f) {
+		return NormalizeFast(v / max_comp);
+	}
+	else {
+		return v; // Optionally return an arbitrary unit length vector
+	}
+}
 
 template<typename T, typename U, size_t ROWS, size_t COLUMNS >
 inline Vector<U, ROWS> operator*(const Matrix<T, ROWS, COLUMNS>& m, const Vector<U, COLUMNS>& v) {

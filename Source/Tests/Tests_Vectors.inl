@@ -1,4 +1,15 @@
 ﻿
+template<typename T, size_t N>
+std::ostream& operator<< (std::ostream& os, const Vector<T, N>& value) {
+	os << "(";
+	for (size_t i = 0; i < N; ++i) {
+		if (i != 0) { os << ", "; }
+		os << value[i];
+	}
+	os << ")";
+	return os;
+}
+
 // These tests mostly exist to ensure all the templates are expanded and compiled
 TEST_SUITE("Vectors") {
 	TEST_CASE("VectorConstruction") {
@@ -170,6 +181,25 @@ TEST_SUITE("Vectors") {
 		Vec3 a{ 3.0f, 4.0f, 0.0f };
 		CHECK_EQ(25.0f, MagnitudeSq(a));
 		CHECK_EQ(5.0f, Magnitude(a));
+	}
+
+	TEST_CASE("NormalizeTests") {
+		Vec3 x{ 1.0f, 0.0f, 0.0f };
+		Vec3 y{ 0.0f, 1.0f, 0.0f };
+		Vec3 z{ 0.0f, 0.0f, 1.0f };
+
+		CHECK_EQ(x, Normalize(x));
+		CHECK_EQ(y, Normalize(y));
+		CHECK_EQ(z, Normalize(z));
+
+		Vec3 a{ 3.0f, 4.0f, 0.0f };
+		CHECK_EQ(Vec3{ 0.6f, 0.8f, 0.0f }, Normalize(a));
+
+		Vec3 small{ 3.0e-25f, 4.0e-25f, 0.0f };
+		Vec3 large{ 3.0e25f, 4.0e25f, 0.0f };
+
+		CHECK_EQ(Vec3{ 0.6f, 0.8f, 0.0f }, Normalize(small));
+		CHECK_EQ(Vec3{ 0.6f, 0.8f, 0.0f }, Normalize(large));
 	}
 
 	TEST_CASE("ArithmeticTests") {
