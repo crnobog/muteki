@@ -330,17 +330,77 @@ TEST_SUITE("Vectors") {
 			CHECK_EQ(Vec4{ 3, 2, 1, 5 }, c);
 		}
 	};
+}
 
-	TEST_CASE("MatrixMulTests") {
+TEST_SUITE("Matrices") {
+	TEST_CASE("Construct") {
+		Mat4x4 uninit;
+
+		for (size_t i = 0; i < 16; ++i) {
+			CHECK_EQ(0.0f, uninit.Data[i]);
+		}
+
+		// Storage order is the same order that init lists are used in
+		Matrix<i32, 2, 2> init_list{ 0, 1, 2, 3 };
+		CHECK_EQ(0, init_list.Data[0]);
+		CHECK_EQ(1, init_list.Data[1]);
+		CHECK_EQ(2, init_list.Data[2]);
+		CHECK_EQ(3, init_list.Data[3]);
+
+		// Storage order is row-major
+		CHECK_EQ(0, init_list(0, 0));
+		CHECK_EQ(1, init_list(0, 1));
+		CHECK_EQ(2, init_list(1, 0));
+		CHECK_EQ(3, init_list(1, 1));
+
+		// Array-of-arrays and subscript operator index the same
+		CHECK_EQ(init_list.M[0][0], init_list(0, 0));
+		CHECK_EQ(init_list.M[0][1], init_list(0, 1));
+		CHECK_EQ(init_list.M[1][0], init_list(1, 0));
+		CHECK_EQ(init_list.M[1][1], init_list(1, 1));
+
+		Mat4x4 identity4 = Mat4x4::Identity();
+		for (size_t i = 0; i < 4; ++i) {
+			for (size_t j = 0; j < 4; ++j) {
+				if (i == j) { CHECK_EQ(identity4(i, j), 1.0f); }
+				else { CHECK_EQ(identity4(i, j), 0.0f); }
+			}
+		}
+	}
+	TEST_CASE("Transpose") {
+		Matrix<i32, 4, 2> m{
+			0, 1,
+			2, 3,
+			4, 5,
+			6, 7 };
+		Matrix<i32, 2, 4> t = Transpose(m);
+
+		CHECK_EQ(0, t(0, 0));
+		CHECK_EQ(1, t(1, 0));
+		CHECK_EQ(2, t(0, 1));
+		CHECK_EQ(3, t(1, 1));
+		CHECK_EQ(4, t(0, 2));
+		CHECK_EQ(5, t(1, 2));
+		CHECK_EQ(6, t(0, 3));
+		CHECK_EQ(7, t(1, 3));
+
+		Vector<i32, 3> v{ 4, 5, 6 };
+		Matrix<i32, 1, 3> tv = Transpose(v);
+		CHECK_EQ(4, tv(0, 0));
+		CHECK_EQ(5, tv(0, 1));
+		CHECK_EQ(6, tv(0, 2));
+	}
+	TEST_CASE("Multiply") {
 		SUBCASE("Mat44Vec4Mul") {
 			Vec4 v{ 1, 2, 3, 4 };
 			Mat4x4 m{ 1, 0, 0, 0,
-					 0, 1, 0, 0,
-					 0, 0, 1, 0,
-					 0, 0, 0, 1 };
+				0, 1, 0, 0,
+				0, 0, 1, 0,
+				0, 0, 0, 1 };
 			Vec4 rs = m * v;
 			CHECK_EQ(v, rs);
 		}
+
 		SUBCASE("Mat44Mat44Mul") {
 			Mat4x4 m1{ 1, 0, 0, 0,
 				0, 1, 0, 0,
@@ -353,5 +413,5 @@ TEST_SUITE("Vectors") {
 			CHECK_EQ(m2, m1 * m2);
 			CHECK_EQ(m2, m2 * m1);
 		}
-	};
+	}
 }

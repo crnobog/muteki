@@ -5,6 +5,12 @@
 // Conventions
 //	- Column vectors and pre-multiplication are used
 //	 e.g. Translation * Rotation * v
+//	- Row-major storage order is used
+//	- All objects are default-initialized
+//
+// TODO
+//	- Is there any reason to have element-wise addition and subtraction for Matrices?
+//
 
 #include "mu-core/PrimitiveTypes.h"
 #include "mu-core/Utils.h"
@@ -14,6 +20,7 @@
 #pragma warning (push)
 #pragma warning (disable : 4201) // Disable warning about nonstandard anonymous structs 
 
+// Unspecialized vector template with access only by index
 template<typename T, size_t N>
 struct Vector {
 	T Data[N];
@@ -37,6 +44,7 @@ struct Vector {
 	const T& operator[](size_t i) const { return Data[i]; }
 };
 
+// 2D vector specialization with X and Y members
 template<typename T>
 struct Vector<T, 2> {
 	union {
@@ -52,6 +60,7 @@ struct Vector<T, 2> {
 	const T& operator[](size_t i) const { return Data[i]; }
 };
 
+// 3D vector specialization with X,Y,Z, R,G,B members and XY swizzle.
 template<typename T>
 struct Vector<T, 3> {
 	union {
@@ -71,6 +80,7 @@ struct Vector<T, 3> {
 	const T& operator[](size_t i) const { return Data[i]; }
 };
 
+// 4D vector specialization with X,Y,Z,W, R,G,B,A members, XY, XYZ, RGB swizzles.
 template<typename T>
 struct Vector<T, 4> {
 	union {
@@ -106,6 +116,7 @@ struct Matrix {
 	Matrix(std::initializer_list<T> list) {
 		size_t i = 0;
 		for (T t : list) {
+			if (i >= ROWS * COLUMNS) { break; }
 			Data[i] = t;
 			++i;
 		}
@@ -132,6 +143,15 @@ struct Matrix {
 
 	T& operator()(size_t i, size_t j) { return M[i][j]; }
 	const T& operator()(size_t i, size_t j) const { return M[i][j]; }
+
+	static Matrix Identity() {
+		static_assert(ROWS == COLUMNS, "Identity is only valid for square matrices");
+		Matrix m;
+		for (size_t i = 0; i < ROWS; ++i) {
+			m(i, i) = (T)1;
+		}
+		return m;
+	}
 };
 
 using Vec2 = Vector<f32, 2>;
@@ -342,6 +362,27 @@ inline bool operator==(Matrix<T, ROWS, COLUMNS> a, Matrix<U, ROWS, COLUMNS> b) {
 }
 template<typename T, typename U, size_t ROWS, size_t COLUMNS>
 inline bool operator!=(Matrix<T, ROWS, COLUMNS> a, Matrix<U, ROWS, COLUMNS> b) { return !(a == b); }
+
+template<typename T, size_t ROWS, size_t COLUMNS>
+inline Matrix<T, COLUMNS, ROWS> Transpose(const Matrix<T, ROWS, COLUMNS>& m) {
+	Matrix<T, COLUMNS, ROWS> t;
+	for (size_t i = 0; i < ROWS; ++i) {
+		for (size_t j = 0; j < COLUMNS; ++j) {
+			t(j, i) = m(i, j);
+		}
+	}
+	return t;
+}
+
+// Transpose a column matrix into a 1xN matrix
+template<typename T, size_t N>
+inline Matrix<T, 1, N> Transpose(const Vector<T, N>& v) {
+	Matrix<T, 1, N> m;
+	for (size_t i = 0; i < N; ++i) {
+		m(0, i) = v[i];
+	}
+	return m;
+}
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
 #include "Tests/Tests_Vectors.inl"
