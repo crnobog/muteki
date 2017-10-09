@@ -1,0 +1,170 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="..\..\Include\mu-core\mu-core.h" />
+    <ClInclude Include="..\..\Include\mu-core\Tests\IotaRange_Tests.inl">
+      <Filter>Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\Algorithms.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\Array.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\BitArray.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\Debug.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\FileReader.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\FixedArray.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\Functors.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\HashTable.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\IotaRange.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\Math.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\Metaprogramming.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\Paths.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\PointerRange.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\Pool.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\PrimitiveTypes.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\RangeIteration.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\Ranges.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\RangeWrappers.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\RefCountPtr.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\Scope.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\String.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\StringFormat.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\TransformRange.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\Utils.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\ZipRange.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\SpookyV2.h">
+      <Filter>SpookyV2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\AdaptiveRadixTree.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\TaggedPointer.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\Global.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\Include\mu-core\Tests\Array_Tests.inl">
+      <Filter>Tests</Filter>
+    </None>
+    <None Include="..\..\Include\mu-core\Tests\Algorithms_Tests.inl">
+      <Filter>Tests</Filter>
+    </None>
+    <None Include="..\..\Include\mu-core\Tests\BitArray_Tests.inl">
+      <Filter>Tests</Filter>
+    </None>
+    <None Include="..\..\Include\mu-core\Tests\FixedArray_Tests.inl">
+      <Filter>Tests</Filter>
+    </None>
+    <None Include="..\..\Include\mu-core\Tests\HashTable_Tests.inl">
+      <Filter>Tests</Filter>
+    </None>
+    <None Include="..\..\Include\mu-core\Tests\Paths_Tests.inl">
+      <Filter>Tests</Filter>
+    </None>
+    <None Include="..\..\Include\mu-core\Tests\Pool_Tests.inl">
+      <Filter>Tests</Filter>
+    </None>
+    <None Include="..\..\Include\mu-core\Tests\String_Tests.inl">
+      <Filter>Tests</Filter>
+    </None>
+    <None Include="..\..\Include\mu-core\Tests\PointerRange_Tests.inl">
+      <Filter>Tests</Filter>
+    </None>
+    <None Include="..\..\Include\mu-core\Tests\TransformRange_Tests.inl">
+      <Filter>Tests</Filter>
+    </None>
+    <None Include="..\..\Include\mu-core\Tests\ZipRange_Tests.inl">
+      <Filter>Tests</Filter>
+    </None>
+    <None Include="..\..\Include\mu-core\Tests\RangeWrapper_Tests.inl">
+      <Filter>Tests</Filter>
+    </None>
+    <None Include="..\..\Include\mu-core\Benchmarks\Array_Benchmarks.inl">
+      <Filter>Benchmarks</Filter>
+    </None>
+    <None Include="..\..\Include\mu-core\Benchmarks\HashTable_Benchmarks.inl">
+      <Filter>Benchmarks</Filter>
+    </None>
+    <None Include="..\..\Include\mu-core\Benchmarks\AdaptiveRadixTree_Benchmarks.inl">
+      <Filter>Benchmarks</Filter>
+    </None>
+    <None Include="..\..\Include\mu-core\Tests\AdaptiveRadixTree_Tests.inl">
+      <Filter>Tests</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\Source\mu-core.cpp" />
+    <ClCompile Include="..\..\Source\SpookyV2.cpp">
+      <Filter>SpookyV2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\StringFormat.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Tests">
+      <UniqueIdentifier>{fcf0f09c-66e6-42d5-beeb-a12f0cb60513}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Benchmarks">
+      <UniqueIdentifier>{f3741775-033f-43f9-a9d6-8ab88318b124}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Include">
+      <UniqueIdentifier>{a4d2ad05-7e7c-49fc-8071-3386912408c4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SpookyV2">
+      <UniqueIdentifier>{69ac6f59-0727-4108-a070-fb05aeaff590}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="..\mu-core.natvis" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Dev|x64">
+      <Configuration>Dev</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\Include\mu-core\AdaptiveRadixTree.h" />
+    <ClInclude Include="..\..\Include\mu-core\Algorithms.h" />
+    <ClInclude Include="..\..\Include\mu-core\Array.h" />
+    <ClInclude Include="..\..\Include\mu-core\BitArray.h" />
+    <ClInclude Include="..\..\Include\mu-core\Debug.h" />
+    <ClInclude Include="..\..\Include\mu-core\FileReader.h" />
+    <ClInclude Include="..\..\Include\mu-core\FixedArray.h" />
+    <ClInclude Include="..\..\Include\mu-core\Functors.h" />
+    <ClInclude Include="..\..\Include\mu-core\Global.h" />
+    <ClInclude Include="..\..\Include\mu-core\HashTable.h" />
+    <ClInclude Include="..\..\Include\mu-core\IotaRange.h" />
+    <ClInclude Include="..\..\Include\mu-core\Math.h" />
+    <ClInclude Include="..\..\Include\mu-core\Metaprogramming.h" />
+    <ClInclude Include="..\..\Include\mu-core\mu-core.h" />
+    <ClInclude Include="..\..\Include\mu-core\Paths.h" />
+    <ClInclude Include="..\..\Include\mu-core\PointerRange.h" />
+    <ClInclude Include="..\..\Include\mu-core\Pool.h" />
+    <ClInclude Include="..\..\Include\mu-core\PrimitiveTypes.h" />
+    <ClInclude Include="..\..\Include\mu-core\RangeIteration.h" />
+    <ClInclude Include="..\..\Include\mu-core\Ranges.h" />
+    <ClInclude Include="..\..\Include\mu-core\RangeWrappers.h" />
+    <ClInclude Include="..\..\Include\mu-core\RefCountPtr.h" />
+    <ClInclude Include="..\..\Include\mu-core\Scope.h" />
+    <ClInclude Include="..\..\Include\mu-core\String.h" />
+    <ClInclude Include="..\..\Include\mu-core\StringFormat.h" />
+    <ClInclude Include="..\..\Include\mu-core\TaggedPointer.h" />
+    <ClInclude Include="..\..\Include\mu-core\Tests\IotaRange_Tests.inl" />
+    <ClInclude Include="..\..\Include\mu-core\TransformRange.h" />
+    <ClInclude Include="..\..\Include\mu-core\Utils.h" />
+    <ClInclude Include="..\..\Include\mu-core\ZipRange.h" />
+    <ClInclude Include="..\..\Source\SpookyV2.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\Include\mu-core\Benchmarks\AdaptiveRadixTree_Benchmarks.inl" />
+    <None Include="..\..\Include\mu-core\Benchmarks\Array_Benchmarks.inl" />
+    <None Include="..\..\Include\mu-core\Benchmarks\HashTable_Benchmarks.inl" />
+    <None Include="..\..\Include\mu-core\Tests\AdaptiveRadixTree_Tests.inl" />
+    <None Include="..\..\Include\mu-core\Tests\Algorithms_Tests.inl" />
+    <None Include="..\..\Include\mu-core\Tests\Array_Tests.inl" />
+    <None Include="..\..\Include\mu-core\Tests\BitArray_Tests.inl" />
+    <None Include="..\..\Include\mu-core\Tests\FixedArray_Tests.inl" />
+    <None Include="..\..\Include\mu-core\Tests\HashTable_Tests.inl" />
+    <None Include="..\..\Include\mu-core\Tests\Paths_Tests.inl" />
+    <None Include="..\..\Include\mu-core\Tests\PointerRange_Tests.inl" />
+    <None Include="..\..\Include\mu-core\Tests\Pool_Tests.inl" />
+    <None Include="..\..\Include\mu-core\Tests\RangeWrapper_Tests.inl" />
+    <None Include="..\..\Include\mu-core\Tests\String_Tests.inl" />
+    <None Include="..\..\Include\mu-core\Tests\TransformRange_Tests.inl" />
+    <None Include="..\..\Include\mu-core\Tests\ZipRange_Tests.inl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\Source\mu-core.cpp" />
+    <ClCompile Include="..\..\Source\SpookyV2.cpp" />
+    <ClCompile Include="..\..\Source\StringFormat.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="..\mu-core.natvis" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{C034248A-5C76-4FEE-B1B7-8FAEF0DCF217}</ProjectGuid>
+    <RootNamespace>mucore</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Platform)'=='x64'">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Dev|x64'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Dev|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Platform)'=='x64'">
+    <OutDir>$(SolutionDir)..\Lib\</OutDir>
+    <IntDir>$(SolutionDir)..\Intermediate\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <TargetName>$(ProjectName)-$(Platform)-$(Configuration)</TargetName>
+    <IncludePath>$(ProjectDir)..\..\Include;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Dev|x64'">
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+    <Lib>
+      <LinkTimeCodeGeneration>false</LinkTimeCodeGeneration>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
