@@ -20,9 +20,9 @@
     <ClCompile Include="..\..\Source\GPU_DXShared\DXSharedUtils.cpp">
       <Filter>GPU\DXShared</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Submodules\imgui\imgui.cpp" />
-    <ClCompile Include="..\..\Submodules\imgui\imgui_demo.cpp" />
-    <ClCompile Include="..\..\Submodules\imgui\imgui_draw.cpp" />
+    <ClCompile Include="..\..\External\imgui\imgui.cpp" />
+    <ClCompile Include="..\..\External\imgui\imgui_demo.cpp" />
+    <ClCompile Include="..\..\External\imgui\imgui_draw.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="imgui">
@@ -68,12 +68,12 @@
     </ClInclude>
     <ClInclude Include="..\..\Source\Vectors.h" />
     <ClInclude Include="..\..\Source\Rect.h" />
-    <ClInclude Include="..\..\Submodules\imgui\imconfig.h" />
-    <ClInclude Include="..\..\Submodules\imgui\imgui.h" />
-    <ClInclude Include="..\..\Submodules\imgui\imgui_internal.h" />
-    <ClInclude Include="..\..\Submodules\imgui\stb_rect_pack.h" />
-    <ClInclude Include="..\..\Submodules\imgui\stb_textedit.h" />
-    <ClInclude Include="..\..\Submodules\imgui\stb_truetype.h" />
+    <ClInclude Include="..\..\External\imgui\imconfig.h" />
+    <ClInclude Include="..\..\External\imgui\imgui.h" />
+    <ClInclude Include="..\..\External\imgui\imgui_internal.h" />
+    <ClInclude Include="..\..\External\imgui\stb_rect_pack.h" />
+    <ClInclude Include="..\..\External\imgui\stb_textedit.h" />
+    <ClInclude Include="..\..\External\imgui\stb_truetype.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Shaders\basic_shader.hlsl" />

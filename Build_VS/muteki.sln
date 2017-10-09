@@ -8,7 +8,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "muteki", "muteki\muteki.vcx
 		{C034248A-5C76-4FEE-B1B7-8FAEF0DCF217} = {C034248A-5C76-4FEE-B1B7-8FAEF0DCF217}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mu-core", "..\Submodules\mu-core\Build_VS\mu-core\mu-core.vcxproj", "{C034248A-5C76-4FEE-B1B7-8FAEF0DCF217}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mu-core", "..\External\mu-core\Build_VS\mu-core\mu-core.vcxproj", "{C034248A-5C76-4FEE-B1B7-8FAEF0DCF217}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "muteki-tests", "muteki-tests\muteki-tests.vcxproj", "{FB9D420D-9AEF-4483-B6FB-051E6FD3BA89}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -22,7 +22,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "muteki-benchmark", "muteki-
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
-		..\Submodules\mu-core\Build_VS\mu-core\mu-core.vcxitems*{2aa74ef1-943e-4574-9e69-4f75dbacf3ad}*SharedItemsImports = 4
+		..\External\mu-core\Build_VS\mu-core\mu-core.vcxitems*{2aa74ef1-943e-4574-9e69-4f75dbacf3ad}*SharedItemsImports = 4
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64

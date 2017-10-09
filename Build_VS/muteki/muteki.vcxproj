@@ -62,8 +62,8 @@
     <OutDir>$(SolutionDir)..\Binaries\</OutDir>
     <IntDir>$(SolutionDir)..\Intermediate\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <TargetName>$(ProjectName)-$(Platform)-$(Configuration)</TargetName>
-    <LibraryPath>$(SolutionDir)..\Submodules\mu-core\Binaries\;$(LibraryPath)</LibraryPath>
-    <IncludePath>$(SolutionDir)..\Submodules\doctest\doctest\;$(SolutionDir)..\Submodules\imgui\;$(SolutionDir)..\Submodules\mu-core\Include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)..\Lib\;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)..\External\imgui\;$(SolutionDir)..\External\mu-core\Include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -126,9 +126,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\Submodules\imgui\imgui.cpp" />
-    <ClCompile Include="..\..\Submodules\imgui\imgui_demo.cpp" />
-    <ClCompile Include="..\..\Submodules\imgui\imgui_draw.cpp" />
+    <ClCompile Include="..\..\External\imgui\imgui.cpp" />
+    <ClCompile Include="..\..\External\imgui\imgui_demo.cpp" />
+    <ClCompile Include="..\..\External\imgui\imgui_draw.cpp" />
     <ClCompile Include="..\..\Source\GPUInterface.cpp" />
     <ClCompile Include="..\..\Source\GPU_DX11\GPU_DX11.cpp" />
     <ClCompile Include="..\..\Source\GPU_DX11\DX11Utils.cpp" />
@@ -138,12 +138,12 @@
     <ClCompile Include="..\..\Source\Main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\Submodules\imgui\imconfig.h" />
-    <ClInclude Include="..\..\Submodules\imgui\imgui.h" />
-    <ClInclude Include="..\..\Submodules\imgui\imgui_internal.h" />
-    <ClInclude Include="..\..\Submodules\imgui\stb_rect_pack.h" />
-    <ClInclude Include="..\..\Submodules\imgui\stb_textedit.h" />
-    <ClInclude Include="..\..\Submodules\imgui\stb_truetype.h" />
+    <ClInclude Include="..\..\External\imgui\imconfig.h" />
+    <ClInclude Include="..\..\External\imgui\imgui.h" />
+    <ClInclude Include="..\..\External\imgui\imgui_internal.h" />
+    <ClInclude Include="..\..\External\imgui\stb_rect_pack.h" />
+    <ClInclude Include="..\..\External\imgui\stb_textedit.h" />
+    <ClInclude Include="..\..\External\imgui\stb_truetype.h" />
     <ClInclude Include="..\..\Source\GPUInterface.h" />
     <ClInclude Include="..\..\Source\GPU_DX11\GPU_DX11.h" />
     <ClInclude Include="..\..\Source\GPU_DX11\DX11Utils.h" />
