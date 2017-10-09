@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer
+  xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <!-- Array<T> -->
+  <Type Name="mu::Array&lt;*&gt;">
+    <DisplayString>Size = {m_num}</DisplayString>
+    <Expand>
+      <Item Name="Size">m_num</Item>
+      <Item Name="Capacity">m_max</Item>
+      <ArrayItems>
+        <Size>m_num</Size>
+        <ValuePointer>m_data</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+  <!-- FixedArray<T, N> -->
+  <Type Name="mu::FixedArray&lt;*&gt;">
+    <DisplayString>Size = {m_num}</DisplayString>
+    <Expand>
+      <Item Name="Size">m_num</Item>
+      <ArrayItems>
+        <Size>m_num</Size>
+        <ValuePointer>($T1*)m_data</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+  <!-- PointerRange<T> -->
+  <Type Name="mu::PointerRange&lt;*&gt;">
+    <DisplayString>PointerRange Size = {m_end - m_start}</DisplayString>
+    <Expand>
+      <Item Name="Size">m_end - m_start</Item>
+      <ArrayItems>
+        <Size>m_end - m_start</Size>
+        <ValuePointer>m_start</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+  <!-- HashTable<K, V> -->
+  <Type Name="mu::HashTable&lt;*,*&gt;">
+    <DisplayString>Num = { m_used }, Max = {m_size}</DisplayString>
+    <Expand>
+      <Synthetic Name="HashState">
+        <Expand>
+          <ArrayItems>
+            <Size>m_size</Size>
+            <ValuePointer>m_hash_state</ValuePointer>
+          </ArrayItems>
+        </Expand>
+      </Synthetic>
+      <Synthetic Name="Keys">
+        <Expand>
+          <ArrayItems>
+            <Size>m_size</Size>
+            <ValuePointer>m_keys</ValuePointer>
+          </ArrayItems>
+        </Expand>
+      </Synthetic>
+      <Synthetic Name="Values">
+        <Expand>
+          <ArrayItems>
+            <Size>m_size</Size>
+            <ValuePointer>m_values</ValuePointer>
+          </ArrayItems>
+        </Expand>
+      </Synthetic>
+    </Expand>
+  </Type>
+  <!-- TaggedPointer -->
+  <Type Name="mu::TaggedPointer&lt;*,*,*,*&gt;">
+    <Expand>
+      <Item Name="ptr">($T1)(m_value &amp; PointerMask)</Item>
+      <Item Name="int">($T2)(m_value &amp; IntMask)</Item>
+    </Expand>
+  </Type>
+
+  <!-- AdaptiveRadixTree -->
+  <Type Name="mu::AdaptiveRadixTree::NodeBase">
+    <Expand>
+      <ExpandedItem Condition="m_type==0">((Node4*)this)</ExpandedItem>
+      <ExpandedItem Condition="m_type==1">((Node16*)this),!</ExpandedItem>
+      <ExpandedItem Condition="m_type==2">((Node48*)this),!</ExpandedItem>
+      <ExpandedItem Condition="m_type==3">((Node256*)this),!</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="mu::AdaptiveRadixTree::Node4">
+    <Expand>
+      <Item Name="Prefix Len">m_prefix_len</Item>
+      <Synthetic Name="Prefix">
+        <Expand>
+          <ArrayItems>
+            <Size>m_prefix_len</Size>
+            <ValuePointer>(u8*)m_partial_prefix</ValuePointer>
+          </ArrayItems>
+        </Expand>
+      </Synthetic>
+      <Item Name="Num Children">(i32)m_num_children</Item>
+      <Synthetic Name="Key">
+        <Expand>
+          <ArrayItems>
+            <Size>m_num_children</Size>
+            <ValuePointer>m_keys</ValuePointer>
+          </ArrayItems>
+        </Expand>
+      </Synthetic>
+      <Synthetic Name="Children">
+        <Expand>
+          <ArrayItems>
+            <Size>m_num_children</Size>
+            <ValuePointer>m_children</ValuePointer>
+          </ArrayItems>
+        </Expand>
+      </Synthetic>
+    </Expand>
+  </Type>
+
+  <Type Name="mu::AdaptiveRadixTree::ChildPtr">
+    <DisplayString Condition="(m_value &amp; IntMask) == 0">Node Ptr { (i32)((NodeBase*)(m_value &amp; PointerMask))->m_type }</DisplayString>
+    <DisplayString Condition="(m_value &amp; IntMask) == 1">Leaf Ptr</DisplayString>
+    <Expand>
+      <ExpandedItem Condition="(m_value &amp; IntMask) == 0">(NodeBase*)(m_value &amp; PointerMask)</ExpandedItem>
+      <ExpandedItem Condition="(m_value &amp; IntMask) == 1">(Leaf*)(m_value &amp; PointerMask)</ExpandedItem>
+    </Expand>
+  </Type>
+
+</AutoVisualizer>

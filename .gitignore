@@ -1,5 +1,6 @@
 Binaries/
 Intermediate/
+Lib/
 *.suo
 *.opensdf
 *.sdf
