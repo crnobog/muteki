@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "mu-core/Algorithms.h"
 #include "mu-core/Debug.h"
@@ -64,6 +64,10 @@ namespace mu {
 			for (; !r.IsEmpty(); r.Advance()) {
 				Add(r.Front());
 			}
+		}
+		template<typename... TS>
+		void Emplace(TS&&... ts) {
+			new(AddInternal()) T(std::forward<TS>(ts)...);
 		}
 		void Add(const T& element) {
 			Assert(m_num < MAX);
