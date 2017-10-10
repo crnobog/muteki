@@ -99,7 +99,7 @@ namespace mu {
 	FORCEINLINE auto ByteRange(const T* t, size_t num) { return Range((const u8*)t, num * sizeof(T)); }
 
 	template<typename T>
-	FORCEINLINE auto ByteRange(T* t) { return Range((u8*)&t, sizeof(T)); }
+	FORCEINLINE auto ByteRange(T* t) { return Range((u8*)t, sizeof(T)); }
 }
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
