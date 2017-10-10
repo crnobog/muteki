@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <initializer_list>
 
@@ -156,11 +156,10 @@ namespace mu {
 		T* Data() { return m_data; }
 		const T* Data() const { return m_data; }
 
-		u8* Bytes() { return (u8*)m_data; }
-		const u8* Bytes() const { return (const u8*)m_data; }
+		PointerRange<u8> Bytes() { return ByteRange((u8*)m_data, m_num * sizeof(T)); }
+		PointerRange<const u8> Bytes() const { return ByteRange((u8*)m_data, m_num * sizeof(T)); }
 
 		size_t Num() const { return m_num; }
-		size_t NumBytes() const { return m_num * sizeof(T); }
 		size_t Max() const { return m_max; }
 		bool IsEmpty() const { return m_num == 0; }
 
