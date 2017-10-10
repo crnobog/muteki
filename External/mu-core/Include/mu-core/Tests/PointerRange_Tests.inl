@@ -1,4 +1,4 @@
-TEST_SUITE("PointerRange") {
+﻿TEST_SUITE("PointerRange") {
 	using namespace mu;
 
 	TEST_CASE("Size") {
@@ -70,5 +70,22 @@ TEST_SUITE("PointerRange") {
 			++i;
 		}
 	}
-}
 
+	TEST_CASE("ByteRanges") {
+		struct Foo { i32 value1; i32 value2; };
+		Foo f;
+		Foo fs[2];
+
+		auto ref_range = ByteRange(f);
+		CHECK_EQ(&f, (Foo*)&ref_range.Front());
+		CHECK_EQ(sizeof(Foo), ref_range.Size());
+
+		auto array_ref_range = ByteRange(fs);
+		CHECK_EQ(&fs[0], (Foo*)&array_ref_range.Front());
+		CHECK_EQ(sizeof(Foo) * 2, array_ref_range.Size());
+
+		auto ptr_range = ByteRange(fs, 2);
+		CHECK_EQ(&fs[0], (Foo*)&ptr_range.Front());
+		CHECK_EQ(sizeof(Foo) * 2, ptr_range.Size());
+	}
+}

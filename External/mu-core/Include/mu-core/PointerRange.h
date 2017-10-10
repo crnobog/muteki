@@ -90,16 +90,22 @@ namespace mu {
 	FORCEINLINE auto Range(const FixedArray<T, MAX>& arr) { return Range(arr.Data(), arr.Num()); }
 
 	template<typename T>
-	FORCEINLINE auto ByteRange(const T& t) { return Range((const u8*)&t, sizeof(T)); }
-
-	template<typename T>
 	FORCEINLINE auto ByteRange(T* t, size_t num) { return Range((u8*)t, num * sizeof(T)); }
 
 	template<typename T>
 	FORCEINLINE auto ByteRange(const T* t, size_t num) { return Range((const u8*)t, num * sizeof(T)); }
 
 	template<typename T>
-	FORCEINLINE auto ByteRange(T* t) { return Range((u8*)t, sizeof(T)); }
+	FORCEINLINE auto ByteRange(const T& t) { return Range((const u8*)&t, sizeof(T)); }
+
+	template<typename T>
+	FORCEINLINE auto ByteRange(T& t) { return Range((u8*)&t, sizeof(T)); }
+
+	template<typename T, size_t N>
+	FORCEINLINE auto ByteRange(T(&arr)[N]) { return ByteRange((T*)arr, N); }
+
+	template<typename T, size_t N>
+	FORCEINLINE auto ByteRange(const T(&arr)[N]) { return ByteRange((const T*)arr, N); }
 }
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
