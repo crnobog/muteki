@@ -144,9 +144,9 @@ TEST_SUITE("Vectors") {
 
 	TEST_CASE("CrossProductTests") {
 		SUBCASE("CrossBases") {
-			Vec3 x{ 1, 0, 0 };
-			Vec3 y{ 0, 1, 0 };
-			Vec3 z{ 0, 0, 1 };
+			Vec3 x = Vec3::UnitX;
+			Vec3 y = Vec3::UnitY;
+			Vec3 z = Vec3::UnitZ;
 
 			Vec3 xy = Cross(x, y);
 			CHECK_EQ(z, xy);
@@ -166,9 +166,9 @@ TEST_SUITE("Vectors") {
 	};
 
 	TEST_CASE("MagnitudeTests") {
-		Vec3 x{ 1.0f, 0.0f, 0.0f };
-		Vec3 y{ 0.0f, 1.0f, 0.0f };
-		Vec3 z{ 0.0f, 0.0f, 1.0f };
+		Vec3 x = Vec3::UnitX;
+		Vec3 y = Vec3::UnitY;
+		Vec3 z = Vec3::UnitZ;
 
 		CHECK_EQ(1.0f, MagnitudeSq(x));
 		CHECK_EQ(1.0f, MagnitudeSq(y));
@@ -184,9 +184,9 @@ TEST_SUITE("Vectors") {
 	}
 
 	TEST_CASE("NormalizeTests") {
-		Vec3 x{ 1.0f, 0.0f, 0.0f };
-		Vec3 y{ 0.0f, 1.0f, 0.0f };
-		Vec3 z{ 0.0f, 0.0f, 1.0f };
+		Vec3 x = Vec3::UnitX;
+		Vec3 y = Vec3::UnitY;
+		Vec3 z = Vec3::UnitZ;
 
 		CHECK_EQ(x, Normalize(x));
 		CHECK_EQ(y, Normalize(y));

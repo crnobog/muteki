@@ -58,7 +58,13 @@ struct Vector<T, 2> {
 	Vector(T x, T y) { X = x; Y = y; }
 	T& operator[](size_t i) { return Data[i]; }
 	const T& operator[](size_t i) const { return Data[i]; }
+
+	static const Vector UnitX;
+	static const Vector UnitY;
 };
+
+template<typename T> const Vector<T, 2> Vector<T, 2>::UnitX{ 1, 0 };
+template<typename T> const Vector<T, 2> Vector<T, 2>::UnitY{ 0, 1 };
 
 // 3D vector specialization with X,Y,Z, R,G,B members and XY swizzle.
 template<typename T>
@@ -78,7 +84,15 @@ struct Vector<T, 3> {
 	Vector(T x, T y, T z) { X = x; Y = y; Z = z; }
 	T& operator[](size_t i) { return Data[i]; }
 	const T& operator[](size_t i) const { return Data[i]; }
+
+	static const Vector UnitX;
+	static const Vector UnitY;
+	static const Vector UnitZ;
 };
+
+template<typename T> const Vector<T, 3> Vector<T, 3>::UnitX{ 1, 0, 0 };
+template<typename T> const Vector<T, 3> Vector<T, 3>::UnitY{ 0, 1, 0 };
+template<typename T> const Vector<T, 3> Vector<T, 3>::UnitZ{ 0, 0, 1 };
 
 // 4D vector specialization with X,Y,Z,W, R,G,B,A members, XY, XYZ, RGB swizzles.
 template<typename T>
@@ -99,7 +113,17 @@ struct Vector<T, 4> {
 	Vector(T x, T y, T z, T w) { X = x; Y = y; Z = z; W = w; }
 	T& operator[](size_t i) { return Data[i]; }
 	const T& operator[](size_t i) const { return Data[i]; }
+
+	static const Vector UnitX;
+	static const Vector UnitY;
+	static const Vector UnitZ;
+	static const Vector UnitW;
 };
+
+template<typename T> const Vector<T, 4> Vector<T, 4>::UnitX{ 1, 0, 0, 0 };
+template<typename T> const Vector<T, 4> Vector<T, 4>::UnitY{ 0, 1, 0, 0 };
+template<typename T> const Vector<T, 4> Vector<T, 4>::UnitZ{ 0, 0, 1, 0 };
+template<typename T> const Vector<T, 4> Vector<T, 4>::UnitW{ 0, 0, 0, 1 };
 
 template<typename T, size_t ROWS, size_t COLUMNS>
 struct Matrix {
