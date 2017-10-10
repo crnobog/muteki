@@ -270,19 +270,19 @@ int main(int, char**) {
 	triangle_vertices.Add({ { 0.0f, 0.5f, 0.0f } });
 	triangle_vertices.Add({ { 0.5f, -0.5f, 0.0f } });
 	triangle_vertices.Add({ { -0.5f, -0.5f, 0.0f } });
-	GPU::VertexBufferID vbuffer_id = gpu->CreateVertexBuffer(Range(triangle_vertices.Bytes(), triangle_vertices.NumBytes()));
+	GPU::VertexBufferID vbuffer_id = gpu->CreateVertexBuffer(triangle_vertices.Bytes());
 
 	struct CBuffer_Color {
 		Vec4 color;
 	};
 	CBuffer_Color cbuffer = { { 1.0f, 0.5f, 0.0f, 1.0f } };
-	GPU::ConstantBufferID cbuffer_id = gpu->CreateConstantBuffer(Range((u8*)&cbuffer, sizeof(cbuffer)));
+	GPU::ConstantBufferID cbuffer_id = gpu->CreateConstantBuffer(ByteRange(&cbuffer));
 
 	Color4 pixels[] = {
 		{ 255, 0, 0, 255 }, { 0, 255, 0, 255 },
 		{ 0, 255, 0, 255 }, { 255, 0, 0, 255 },
 	};
-	GPU::TextureID texture_id = gpu->CreateTexture2D(2, 2, GPU::TextureFormat::RGBA8, Range((u8*)pixels, sizeof(pixels)));
+	GPU::TextureID texture_id = gpu->CreateTexture2D(2, 2, GPU::TextureFormat::RGBA8, ByteRange(pixels));
 	GPU::ShaderResourceListDesc resource_list_desc = {};
 	resource_list_desc.StartSlot = 0;
 	resource_list_desc.Textures.Add(texture_id);
