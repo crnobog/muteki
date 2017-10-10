@@ -139,10 +139,10 @@ struct ImGuiImpl {
 		float B = ImGui::GetIO().DisplaySize.y;
 		float T = 0.0f;
 		Mat4x4 orth_proj{
-			2.0f / (R - L),   0.0f,           0.0f,       0.0f,
-			0.0f,         2.0f / (T - B),     0.0f,       0.0f ,
-			0.0f,         0.0f,           0.5f,       0.0f,
-			(R + L) / (L - R),  (T + B) / (B - T),    0.5f,       1.0f,
+			2.0f / (R - L),		0.0f,				0.0f,       (R + L) / (L - R),
+			0.0f,				2.0f / (T - B),		0.0f,		(T + B) / (B - T),
+			0.0f,				0.0f,				0.5f,       0.5f,
+			0.0f,				0.0f,				0.0f,		1.0f,
 		};
 		auto cbuffer_id = gpu_frame->GetTemporaryConstantBuffer(ByteRange(orth_proj));
 

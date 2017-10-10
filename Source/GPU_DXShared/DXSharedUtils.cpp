@@ -17,7 +17,7 @@ namespace DX {
 			nullptr,
 			entry_point,
 			shader_model,
-			0,
+			D3DCOMPILE_PACK_MATRIX_ROW_MAJOR | D3DCOMPILE_WARNINGS_ARE_ERRORS,
 			0,
 			compiled_shader,
 			errors.Replace()))) {
