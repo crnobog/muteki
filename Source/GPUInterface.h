@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "mu-core/PrimitiveTypes.h"
 #include "mu-core/PointerRange.h"
@@ -97,23 +97,25 @@ namespace GPU {
 	struct StreamSlotDesc {
 		mu::FixedArray<StreamElementDesc, MaxStreamElements> Elements;
 
-		void Set(StreamElementDesc elem) {
-			Elements.Empty();
+		StreamSlotDesc(StreamElementDesc elem) {
 			Elements.Add(elem);
 		}
-
-		StreamSlotDesc& Add(StreamElementDesc elem) {
-			Elements.Add(elem);
-			return *this;
+		StreamSlotDesc(std::initializer_list<StreamElementDesc> in_elems) {
+			for (auto& elem : in_elems) { Elements.Add(elem); }
 		}
 	};
 
 	struct StreamFormatDesc {
 		mu::FixedArray<StreamSlotDesc, MaxStreamSlots> Slots;
 
-		StreamSlotDesc& AddSlot() {
-			Slots.Add({});
-			return Slots[Slots.Num() - 1];
+		StreamFormatDesc& AddSlot(StreamElementDesc elem) {
+			Slots.Emplace(elem);
+			return *this;
+		}
+
+		StreamFormatDesc& AddSlot(std::initializer_list<StreamElementDesc> elems) {
+			Slots.Emplace(elems);
+			return *this;
 		}
 	};
 
@@ -135,7 +137,7 @@ namespace GPU {
 		Clockwise,
 		CounterClockwise,
 	};
-	
+
 	struct RasterStateDesc {
 		FillMode FillMode = FillMode::Solid;
 		CullMode CullMode = CullMode::None;
@@ -214,7 +216,7 @@ namespace GPU {
 	static constexpr RenderTargetID BackBufferID = RenderTargetID{ u32_max };
 	static constexpr u8 MaxRenderTargets = 16;
 	struct RenderPass {
-		Rect<u32> ClipRect = { 0, 0, 0, 0}; // TODO: Document clip space?
+		Rect<u32> ClipRect = { 0, 0, 0, 0 }; // TODO: Document clip space?
 		mu::FixedArray<RenderTargetID, MaxRenderTargets> RenderTargets;
 		mu::PointerRange<const DrawItem> DrawItems;
 	};
@@ -280,7 +282,7 @@ namespace GPU {
 	inline bool operator!=(const GPU::BlendStateDesc& a, const GPU::BlendStateDesc& b) {
 		return !(a == b);
 	}
-	
+
 	inline bool operator==(const GPU::PipelineStateDesc& a, const GPU::PipelineStateDesc& b) {
 		return a.BlendState == b.BlendState
 			&& a.DepthStencilState == b.DepthStencilState

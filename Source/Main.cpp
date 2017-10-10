@@ -73,15 +73,16 @@ struct ImGuiImpl {
 		GPU::PipelineStateDesc pipeline_state_desc = {};
 
 		String shader_filename{ GetShaderDirectory(), "imgui.hlsl" };
-		Array<u8> shader_txt_code = LoadFileToArray(shader_filename.GetRaw(), FileReadType::Text);
+		Array<u8> shader_txt_code = LoadFileToArray(shader_filename.GetRaw(), FileReadType::Text); // TODO: Handle unicode BOM/other encodings
 		GPU::VertexShaderID vshader_id = gpu->CompileVertexShaderHLSL("vs_main", Range(shader_txt_code));
 		GPU::PixelShaderID pshader_id = gpu->CompilePixelShaderHLSL("ps_main", Range(shader_txt_code));
 		pipeline_state_desc.Program = gpu->LinkProgram(vshader_id, pshader_id);
 
-		pipeline_state_desc.StreamFormat.AddSlot()
-			.Add({ GPU::ScalarType::Float, 2, GPU::InputSemantic::Position, 0 })
-			.Add({ GPU::ScalarType::Float, 2, GPU::InputSemantic::Texcoord, 0 })
-			.Add({ GPU::ScalarType::U8,	   4, GPU::InputSemantic::Color, 0, true });
+		pipeline_state_desc.StreamFormat.AddSlot({
+			{ GPU::ScalarType::Float,	2, GPU::InputSemantic::Position,	0 },
+			{ GPU::ScalarType::Float,	2, GPU::InputSemantic::Texcoord,	0 },
+			{ GPU::ScalarType::U8,		4, GPU::InputSemantic::Color,		0, true }
+		});
 
 		pipeline_state_desc.BlendState.BlendEnable = true;
 		pipeline_state_desc.BlendState.ColorBlend = { GPU::BlendValue::SourceAlpha, GPU::BlendOp::Add, GPU::BlendValue::InverseSourceAlpha };
@@ -250,14 +251,14 @@ int main(int, char**) {
 	glfwSetKeyCallback(win, OnKey);
 
 	String shader_filename{ GetShaderDirectory(), "basic_shader.hlsl" };
-	Array<u8> shader_txt_code = LoadFileToArray(shader_filename.GetRaw(), FileReadType::Text);
+	Array<u8> shader_txt_code = LoadFileToArray(shader_filename.GetRaw(), FileReadType::Text); // TODO: Handle unicode BOM/other encodings
 	GPU::VertexShaderID vshader_id = gpu->CompileVertexShaderHLSL("vs_main", Range(shader_txt_code));
 	GPU::PixelShaderID pshader_id = gpu->CompilePixelShaderHLSL("ps_main", Range(shader_txt_code));
 	GPU::ProgramID program_id = gpu->LinkProgram(vshader_id, pshader_id);
 
 	GPU::PipelineStateDesc pipeline_state_desc{};
 	pipeline_state_desc.Program = program_id;
-	pipeline_state_desc.StreamFormat.AddSlot().Set({ GPU::ScalarType::Float, 3, GPU::InputSemantic::Position, 0 });
+	pipeline_state_desc.StreamFormat.AddSlot({ GPU::ScalarType::Float, 3, GPU::InputSemantic::Position, 0 });
 	pipeline_state_desc.BlendState.BlendEnable = false;
 	pipeline_state_desc.RasterState.ScissorEnable = true;
 	pipeline_state_desc.RasterState.CullMode = GPU::CullMode::Back;
