@@ -73,6 +73,13 @@ namespace mu {
 			return EmplaceSafe(std::forward<T>(item));
 		}
 
+		void Add(std::initializer_list<T> elems) {
+			EnsureSpace(m_num + elems.size());
+			for (const T& elem : elems) {
+				new(&AddSafe()) T(elem);
+			}
+		}
+
 		T& AddZeroed() {
 			EnsureSpace(m_num + 1);
 			T* t = m_data + m_num++;

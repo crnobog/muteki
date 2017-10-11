@@ -65,6 +65,11 @@ namespace mu {
 				Add(r.Front());
 			}
 		}
+		void Add(std::initializer_list<T> elems) {
+			for (const T& elem : elems) {
+				Add(elem);
+			}
+		}
 		template<typename... TS>
 		void Emplace(TS&&... ts) {
 			new(AddInternal()) T(std::forward<TS>(ts)...);
