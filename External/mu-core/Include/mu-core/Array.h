@@ -88,6 +88,13 @@ namespace mu {
 		}
 
 		// Returns the range of new items
+		PointerRange<T> AddDefaulted(size_t count) {
+			EnsureSpace(m_num + count);
+			T* first = m_data + m_num; // After growing, pointer is valid
+			for (size_t i = 0; i < count; ++i) { EmplaceSafe(T{}); }
+			return PointerRange<T>{first, first + count};
+		}
+
 		PointerRange<T> AddZeroed(size_t count) {
 			EnsureSpace(m_num + count);
 			T* first = m_data + m_num; // After growing, pointer is valid
