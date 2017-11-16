@@ -5,6 +5,8 @@
 #include "GPU_DX12/GPU_DX12.h"
 #include "GPU_DX11/GPU_DX11.h"
 #include "Vectors.h"
+#include "TransformMatrices.h"
+#include "CoreMath.h"
 
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include "GLFW/glfw3.h"
@@ -17,7 +19,10 @@
 
 #include "imgui.h"
 
+#include <memory>
+
 using namespace mu;
+using std::unique_ptr;
 
 PointerRange<const char> GetShaderDirectory() {
 	struct Initializer {
@@ -138,12 +143,7 @@ struct ImGuiImpl {
 		float R = ImGui::GetIO().DisplaySize.x;
 		float B = ImGui::GetIO().DisplaySize.y;
 		float T = 0.0f;
-		Mat4x4 orth_proj{
-			2.0f / (R - L),		0.0f,				0.0f,       (R + L) / (L - R),
-			0.0f,				2.0f / (T - B),		0.0f,		(T + B) / (B - T),
-			0.0f,				0.0f,				0.5f,       0.5f,
-			0.0f,				0.0f,				0.0f,		1.0f,
-		};
+		Mat4x4 orth_proj = CreateOrthographicProjection(L, R, T, B, -1, 1);
 		auto cbuffer_id = gpu_frame->GetTemporaryConstantBuffer(ByteRange(orth_proj));
 
 		for (const ImDrawList* draw_list : Range(draw_data->CmdLists, draw_data->CmdListsCount)) {
@@ -168,6 +168,7 @@ struct ImGuiImpl {
 					// TODO: Reconsider where clip rect fits into api
 					last_clip_rect = draw_cmd.ClipRect;
 					current_pass = &passes.AddZeroed();
+					// left top right bottom
 					current_pass->ClipRect = { (u32)last_clip_rect.X, (u32)last_clip_rect.Y, (u32)last_clip_rect.Z, (u32)last_clip_rect.W };
 					current_pass->DrawItems = { gpu_cmd_cursor.m_start, 0 };
 					current_pass->RenderTargets.Add(GPU::RenderTargetID{});
@@ -234,7 +235,7 @@ int main(int, char**) {
 		return 1;
 	}
 
-	GPUInterface* gpu = CreateGPU_DX12();
+	std::unique_ptr<GPUInterface> gpu{ CreateGPU_DX12() };
 	gpu->Init();
 	HWND hwnd = glfwGetWin32Window(win);
 	{
@@ -244,7 +245,7 @@ int main(int, char**) {
 	}
 
 	ImGuiImpl imgui;
-	imgui.Init(hwnd, gpu);
+	imgui.Init(hwnd, gpu.get());
 
 	glfwSetMouseButtonCallback(win, OnMouseButton);
 	glfwSetCharCallback(win, OnChar);
@@ -258,30 +259,175 @@ int main(int, char**) {
 
 	GPU::PipelineStateDesc pipeline_state_desc{};
 	pipeline_state_desc.Program = program_id;
-	pipeline_state_desc.StreamFormat.AddSlot({ GPU::ScalarType::Float, 3, GPU::InputSemantic::Position, 0 });
+	pipeline_state_desc.StreamFormat
+		.AddSlot({ GPU::ScalarType::Float, 3, GPU::InputSemantic::Position, 0 })
+		.AddSlot({ GPU::ScalarType::Float, 3, GPU::InputSemantic::Normal, 0 })
+		.AddSlot({ GPU::ScalarType::Float, 2, GPU::InputSemantic::Texcoord, 0 })
+		;
 	pipeline_state_desc.BlendState.BlendEnable = false;
 	pipeline_state_desc.RasterState.ScissorEnable = true;
 	pipeline_state_desc.RasterState.CullMode = GPU::CullMode::Back;
+	pipeline_state_desc.RasterState.FrontFace = GPU::FrontFace::Clockwise;
 	GPU::PipelineStateID pipeline_state = gpu->CreatePipelineState(pipeline_state_desc);
 
-	struct Vertex {
-		Vec3 position;
-	};
-	Array<Vertex> triangle_vertices;
-	triangle_vertices.Add({ { 0.0f, 0.5f, 0.0f } });
-	triangle_vertices.Add({ { 0.5f, -0.5f, 0.0f } });
-	triangle_vertices.Add({ { -0.5f, -0.5f, 0.0f } });
-	GPU::VertexBufferID vbuffer_id = gpu->CreateVertexBuffer(triangle_vertices.Bytes());
+	// Unit cube centered around the origin
+	Vec3 cube_positions[] = {
+		// Top face
+		{ -0.5, +0.5, -0.5 }, // Back left		0
+		{ +0.5, +0.5, -0.5 }, // Back right		1
+		{ -0.5, +0.5, +0.5 }, // Front left		2
+		{ +0.5, +0.5, +0.5 }, // Front right	3
 
-	struct CBuffer_Color {
-		Vec4 color;
+		// Bottom face
+		{ -0.5, -0.5, +0.5 }, // Front left		4
+		{ +0.5, -0.5, +0.5 }, // Front right	5
+		{ -0.5, -0.5, -0.5 }, // Back left		6
+		{ +0.5, -0.5, -0.5 }, // Back right		7
+
+		// Front face
+		{ -0.5, +0.5, +0.5 }, // Top left		8
+		{ +0.5, +0.5, +0.5 }, // Top right		9
+		{ -0.5, -0.5, +0.5 }, // Bottom left	10	
+		{ +0.5, -0.5, +0.5 }, // Bottom right	11
+
+		// Back face
+		{ +0.5, +0.5, -0.5 }, // Top right		12
+		{ -0.5, +0.5, -0.5 }, // Top left		13
+		{ +0.5, -0.5, -0.5 }, // Bottom right	14
+		{ -0.5, -0.5, -0.5 }, // Bottom left	15
+
+		// Right face
+		{ +0.5, +0.5, +0.5 }, // Top front		16
+		{ +0.5, +0.5, -0.5 }, // Top back		17
+		{ +0.5, -0.5, +0.5 }, // Bottom front	18
+		{ +0.5, -0.5, -0.5 }, // Bottom back	19
+
+		// Left face
+		{ -0.5, +0.5, -0.5 }, // Top back		20
+		{ -0.5, +0.5, +0.5 }, // Top front		21
+		{ -0.5, -0.5, -0.5 }, // Bottom back	22
+		{ -0.5, -0.5, +0.5 }, // Bottom front	23
 	};
-	CBuffer_Color cbuffer = { { 1.0f, 0.5f, 0.0f, 1.0f } };
-	GPU::ConstantBufferID cbuffer_id = gpu->CreateConstantBuffer(ByteRange(&cbuffer));
+	Vec3 cube_normals[] = {
+		// Top face
+		Vec3::UnitY,
+		Vec3::UnitY,
+		Vec3::UnitY,
+		Vec3::UnitY,
+
+		// Bottom face
+		-Vec3::UnitY,
+		-Vec3::UnitY,
+		-Vec3::UnitY,
+		-Vec3::UnitY,
+
+		// Front face
+		Vec3::UnitZ,
+		Vec3::UnitZ,
+		Vec3::UnitZ,
+		Vec3::UnitZ,
+
+		// Back face
+		-Vec3::UnitZ,
+		-Vec3::UnitZ,
+		-Vec3::UnitZ,
+		-Vec3::UnitZ,
+
+		// Right face
+		Vec3::UnitX,
+		Vec3::UnitX,
+		Vec3::UnitX,
+		Vec3::UnitX,
+
+		// Left face
+		-Vec3::UnitX,
+		-Vec3::UnitX,
+		-Vec3::UnitX,
+		-Vec3::UnitX
+	};
+	Vec2 cube_texcoords[] = {
+		// Top face
+		{0, 0},
+		{1, 0},
+		{0, 1},
+		{1, 1},
+
+		// Bottom face
+		{ 0, 0 },
+		{ 1, 0 },
+		{ 0, 1 },
+		{ 1, 1 },
+
+		// Front face
+		{ 0, 0 },
+		{ 1, 0 },
+		{ 0, 1 },
+		{ 1, 1 },
+
+		// Back face
+		{ 0, 0 },
+		{ 1, 0 },
+		{ 0, 1 },
+		{ 1, 1 },
+
+		// Right face
+		{ 0, 0 },
+		{ 1, 0 },
+		{ 0, 1 },
+		{ 1, 1 },
+
+		// Left face
+		{ 0, 0 },
+		{ 1, 0 },
+		{ 0, 1 },
+		{ 1, 1 },
+	};
+	GPU::VertexBufferID vbuffer_id_pos = gpu->CreateVertexBuffer(ByteRange(cube_positions));
+	GPU::VertexBufferID vbuffer_id_normals = gpu->CreateVertexBuffer(ByteRange(cube_normals));
+	GPU::VertexBufferID vbuffer_id_texcoord = gpu->CreateVertexBuffer(ByteRange(cube_texcoords));
+
+	u16 cube_indices[] = {
+		// Top face
+		//0, 1, 3,
+		//0, 3, 2,
+		2, 1, 0,
+		2, 3, 1,
+
+		// Bottom face
+		//4, 5, 7,
+		//4, 7, 6,
+		6, 5, 4,
+		5, 6, 7,
+
+		// Front face
+		//8, 9, 11,
+		//8, 11, 10,
+		9, 8, 10,
+		9, 10, 11,
+
+		// Back face
+		//12, 13, 15,
+		//12, 15, 14,
+		13, 12, 14,
+		13, 14, 15,
+
+		// Right face
+		//16, 17, 19,
+		//16, 19, 18,
+		17, 16, 18,
+		17, 18, 19,
+
+		// Left face
+		//20, 21, 23,
+		//20, 23, 22,
+		21, 20, 22,
+		21, 22, 23
+	};
+	GPU::IndexBufferID ibuffer_id = gpu->CreateIndexBuffer(ByteRange(cube_indices));
 
 	Color4 pixels[] = {
-		{ 255, 0, 0, 255 }, { 0, 255, 0, 255 },
-		{ 0, 255, 0, 255 }, { 255, 0, 0, 255 },
+		{ 128, 128, 128, 255 }, { 255, 255, 255, 255 },
+		{ 255, 255, 255, 255 }, { 128, 128, 128, 255 },
 	};
 	GPU::TextureID texture_id = gpu->CreateTexture2D(2, 2, GPU::TextureFormat::RGBA8, ByteRange(pixels));
 	GPU::ShaderResourceListDesc resource_list_desc = {};
@@ -289,7 +435,10 @@ int main(int, char**) {
 	resource_list_desc.Textures.Add(texture_id);
 	GPU::ShaderResourceListID resource_list_id = gpu->CreateShaderResourceList(resource_list_desc);
 
-	bool show_test_window = true;
+	i64 frame_num = 0;
+	bool show_test_window = false;
+	bool pause_anim = false;
+	float proj_params[] = { 0.3f, 0.2f };
 	while (glfwWindowShouldClose(win) == false) {
 		glfwPollEvents();
 
@@ -310,14 +459,32 @@ int main(int, char**) {
 		}
 		imgui.BeginFrame(mouse_pos, mouse_buttons);
 
+		if (ImGui::Begin("muteki")) {
+			ImGui::InputFloat2("Projection Dimensions", proj_params);
+			ImGui::Checkbox("Pause", &pause_anim);
+			ImGui::End();
+		}
+
+		struct ViewData {
+			Mat4x4 world_to_view = Mat4x4::Identity();
+			Mat4x4 view_to_clip = Mat4x4::Identity(); // TODO: Nomenclature?
+			Mat4x4 rotation = Mat4x4::Identity();
+		};
+		ViewData view_data;
+		view_data.rotation = CreateTranslation({ 0, Sin(frame_num / 1600.0f), 0.95f }) * CreateRotationY(frame_num / 1600.0);
+		view_data.view_to_clip = CreatePerspectiveProjection(proj_params[0], proj_params[1], 0.1f, 10);
+		GPU::ConstantBufferID cbuffer_id_viewdata = gpu_frame->GetTemporaryConstantBuffer(ByteRange(view_data));
+
+
 		GPU::DrawItem draw_item = {};
-		// default raster state, blend state, depth stenci state
+		// default raster state, blend state, depth stencil state
 		draw_item.PipelineState = pipeline_state;
-		draw_item.BoundResources.ConstantBuffers.Add(cbuffer_id);
+		draw_item.BoundResources.ConstantBuffers.Add(cbuffer_id_viewdata);
 		draw_item.BoundResources.ResourceLists.Add(resource_list_id);
-		draw_item.Command.VertexOrIndexCount = 3;
+		draw_item.Command.VertexOrIndexCount = (u32)ArraySize(cube_indices);
 		draw_item.Command.PrimTopology = GPU::PrimitiveTopology::TriangleList;
-		draw_item.StreamSetup.VertexBuffers.Add(vbuffer_id);
+		draw_item.StreamSetup.VertexBuffers.Add({ vbuffer_id_pos, vbuffer_id_normals, vbuffer_id_texcoord });
+		draw_item.StreamSetup.IndexBuffer = ibuffer_id;
 
 		GPU::RenderPass pass;
 		pass.RenderTargets.Add(GPU::BackBufferID);
@@ -326,17 +493,20 @@ int main(int, char**) {
 		gpu->SubmitPass(pass);
 
 		if (show_test_window) {
-			ImGui::SetNextWindowPos(ImVec2(400, 20), ImGuiSetCond_FirstUseEver);
+			ImGui::SetNextWindowPos(ImVec2(400, 100), ImGuiSetCond_FirstUseEver);
 			ImGui::ShowTestWindow(&show_test_window);
 		}
 		imgui.Render(gpu_frame);
 
 		gpu->EndFrame(gpu_frame);
+
+		if (!pause_anim) {
+			++frame_num;
+		}
 	}
 
 	imgui.Shutdown();
 	gpu->Shutdown();
-	delete gpu;
 
 	return 0;
 }
