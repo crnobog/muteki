@@ -3,6 +3,8 @@
   <ItemGroup>
     <ClCompile Include="..\..\Source\Tests\Tests_Main.cpp" />
     <ClCompile Include="..\..\Source\Tests\Tests_Doctest_Impl.cpp" />
+    <ClCompile Include="..\..\Source\CoreMath.cpp" />
+    <ClCompile Include="..\..\Source\MathImpl.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Source\Tests\Tests_Vectors.inl" />

@@ -10,6 +10,7 @@
 //
 // TODO
 //	- Is there any reason to have element-wise addition and subtraction for Matrices?
+//	- Separate notion of points and vectors. Only for 3d vectors and associated matrices?
 //
 
 #include "mu-core/PrimitiveTypes.h"
@@ -148,6 +149,9 @@ struct Matrix {
 			Data[i] = T{};
 		}
 	}
+
+	Matrix(const Matrix&) = default;
+	Matrix& operator=(const Matrix& other) = default;
 
 	Vector<T, COLUMNS> Row(size_t row) const {
 		Vector<T, COLUMNS> v;

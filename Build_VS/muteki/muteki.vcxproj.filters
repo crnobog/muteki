@@ -23,6 +23,12 @@
     <ClCompile Include="..\..\External\imgui\imgui.cpp" />
     <ClCompile Include="..\..\External\imgui\imgui_demo.cpp" />
     <ClCompile Include="..\..\External\imgui\imgui_draw.cpp" />
+    <ClCompile Include="..\..\Source\MathImpl.cpp">
+      <Filter>Math</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\CoreMath.cpp">
+      <Filter>Math</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="imgui">
@@ -42,6 +48,9 @@
     </Filter>
     <Filter Include="GPU\DXShared">
       <UniqueIdentifier>{63b4fb84-776c-469a-8ede-48f3a8bd83ca}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Math">
+      <UniqueIdentifier>{043ebf2e-bec0-4c27-a72a-35af01c9c3d1}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -66,14 +75,24 @@
     <ClInclude Include="..\..\Source\GPU_DX11\DX11Utils.h">
       <Filter>GPU\DX11</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Source\Vectors.h" />
-    <ClInclude Include="..\..\Source\Rect.h" />
     <ClInclude Include="..\..\External\imgui\imconfig.h" />
     <ClInclude Include="..\..\External\imgui\imgui.h" />
     <ClInclude Include="..\..\External\imgui\imgui_internal.h" />
     <ClInclude Include="..\..\External\imgui\stb_rect_pack.h" />
     <ClInclude Include="..\..\External\imgui\stb_textedit.h" />
     <ClInclude Include="..\..\External\imgui\stb_truetype.h" />
+    <ClInclude Include="..\..\Source\Vectors.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\TransformMatrices.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\Rect.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\CoreMath.h">
+      <Filter>Math</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Shaders\basic_shader.hlsl" />

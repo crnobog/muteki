@@ -79,7 +79,6 @@
       <WarningLevel>Level4</WarningLevel>
       <TreatWarningAsError>true</TreatWarningAsError>
       <MinimalRebuild>false</MinimalRebuild>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -129,6 +128,7 @@
     <ClCompile Include="..\..\External\imgui\imgui.cpp" />
     <ClCompile Include="..\..\External\imgui\imgui_demo.cpp" />
     <ClCompile Include="..\..\External\imgui\imgui_draw.cpp" />
+    <ClCompile Include="..\..\Source\CoreMath.cpp" />
     <ClCompile Include="..\..\Source\GPUInterface.cpp" />
     <ClCompile Include="..\..\Source\GPU_DX11\GPU_DX11.cpp" />
     <ClCompile Include="..\..\Source\GPU_DX11\DX11Utils.cpp" />
@@ -136,6 +136,7 @@
     <ClCompile Include="..\..\Source\GPU_DX12\DX12Utils.cpp" />
     <ClCompile Include="..\..\Source\GPU_DXShared\DXSharedUtils.cpp" />
     <ClCompile Include="..\..\Source\Main.cpp" />
+    <ClCompile Include="..\..\Source\MathImpl.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\External\imgui\imconfig.h" />
@@ -144,6 +145,7 @@
     <ClInclude Include="..\..\External\imgui\stb_rect_pack.h" />
     <ClInclude Include="..\..\External\imgui\stb_textedit.h" />
     <ClInclude Include="..\..\External\imgui\stb_truetype.h" />
+    <ClInclude Include="..\..\Source\CoreMath.h" />
     <ClInclude Include="..\..\Source\GPUInterface.h" />
     <ClInclude Include="..\..\Source\GPU_DX11\GPU_DX11.h" />
     <ClInclude Include="..\..\Source\GPU_DX11\DX11Utils.h" />
@@ -152,6 +154,7 @@
     <ClInclude Include="..\..\Source\GPU_DX12\DX12Utils.h" />
     <ClInclude Include="..\..\Source\GPU_DXShared\DXSharedUtils.h" />
     <ClInclude Include="..\..\Source\Rect.h" />
+    <ClInclude Include="..\..\Source\TransformMatrices.h" />
     <ClInclude Include="..\..\Source\Vectors.h" />
   </ItemGroup>
   <ItemGroup>

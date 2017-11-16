@@ -1,4 +1,7 @@
 ﻿
+#include "CoreMath.h"
+#include "TransformMatrices.h"
+
 template<typename T, size_t N>
 std::ostream& operator<< (std::ostream& os, const Vector<T, N>& value) {
 	os << "(";
@@ -7,6 +10,20 @@ std::ostream& operator<< (std::ostream& os, const Vector<T, N>& value) {
 		os << value[i];
 	}
 	os << ")";
+	return os;
+}
+
+template<typename T, size_t ROWS, size_t COLUMNS>
+std::ostream& operator<< (std::ostream& os, const Matrix<T, ROWS, COLUMNS>& value) {
+	os << "[";
+	for (size_t i = 0; i < ROWS; ++i) {
+		for (size_t j = 0; j < COLUMNS; ++j) {
+			if (j != 0) { os << ", "; }
+			os << value(i, j);
+		}
+		if (i != ROWS - 1) { os << "\n"; }
+	}
+	os << "]";
 	return os;
 }
 
@@ -412,6 +429,17 @@ TEST_SUITE("Matrices") {
 				13, 14, 15, 16 };
 			CHECK_EQ(m2, m1 * m2);
 			CHECK_EQ(m2, m2 * m1);
+		}
+	}
+	TEST_CASE("MultiplyRotationX") {
+		SUBCASE("Concat45") {
+			Mat4x4 m45 = CreateRotationX(PiOver4);
+			Mat4x4 m90 = CreateRotationX(PiOver2);
+			Mat4x4 concat = m45 * m45;
+
+			for (size_t i = 0; i < 16; ++i) {
+				CHECK_EQ(concat.Data[i], doctest::Approx(m90.Data[i]));
+			}
 		}
 	}
 }

@@ -105,6 +105,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\Source\CoreMath.cpp" />
+    <ClCompile Include="..\..\Source\MathImpl.cpp" />
     <ClCompile Include="..\..\Source\Tests\Tests_Doctest_Impl.cpp" />
     <ClCompile Include="..\..\Source\Tests\Tests_Main.cpp" />
   </ItemGroup>
