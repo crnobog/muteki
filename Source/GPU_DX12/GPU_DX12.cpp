@@ -315,8 +315,8 @@ void GPU_DX12::Init() {
 
 		EnsureHR(m_device->CreateCommandQueue(&queue_desc, IID_PPV_ARGS(m_command_queue.Replace())));
 		for (u32 i = 0; i < frame_count; ++i) {
-			m_frame_data[i]->m_command_allocators.Add({});
-			EnsureHR(m_device->CreateCommandAllocator(queue_desc.Type, IID_PPV_ARGS(m_frame_data[i]->m_command_allocators[0].Replace())));
+			COMPtr<ID3D12CommandAllocator>& slot = m_frame_data[i]->m_command_allocators.AddDefaulted(1).Front();
+			EnsureHR(m_device->CreateCommandAllocator(queue_desc.Type, IID_PPV_ARGS(slot.Replace())));
 		}
 	}
 
@@ -936,12 +936,15 @@ IndexBufferID GPU_DX12_Frame::GetTemporaryIndexBuffer(mu::PointerRange<const u8>
 
 ID3D12CommandAllocator* GPU_DX12_Frame::GetCommandAllocator() {
 	if (m_used_command_allocators >= m_command_allocators.Num()) {
-		size_t index = m_command_allocators.Add({});
+		COMPtr<ID3D12CommandAllocator>& slot = m_command_allocators.AddDefaulted(1).Front();
 
 		D3D12_COMMAND_QUEUE_DESC queue_desc = {};
 		queue_desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 		queue_desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-		EnsureHR(m_gpu->m_device->CreateCommandAllocator(queue_desc.Type, IID_PPV_ARGS(m_command_allocators[index].Replace())));
+		EnsureHR(m_gpu->m_device->CreateCommandAllocator(
+			queue_desc.Type,
+			IID_PPV_ARGS(slot.Replace()))
+		);
 	}
 	ID3D12CommandAllocator* alloc = m_command_allocators[m_used_command_allocators];
 	alloc->Reset();
