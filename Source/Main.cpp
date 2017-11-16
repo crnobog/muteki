@@ -459,7 +459,7 @@ int main(int, char**) {
 		}
 		imgui.BeginFrame(mouse_pos, mouse_buttons);
 
-		if (ImGui::Begin("muteki")) {
+		if (ImGui::Begin("muteki", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
 			ImGui::InputFloat2("Projection Dimensions", proj_params);
 			ImGui::Checkbox("Pause", &pause_anim);
 			ImGui::End();
