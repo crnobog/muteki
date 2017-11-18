@@ -52,6 +52,17 @@ namespace mu {
 			return { start, start + count };
 		}
 
+		PointerRange<T> AddDefaulted(size_t count) {
+			Assert(GetSlack() >= count);
+			T* start = Data() + m_num;
+			m_num += count;
+			PointerRange<T> r{ start, start + count };
+			for (T& t : r) {
+				new(&t) T{};
+			}
+			return r;
+		}
+
 		PointerRange<T> AddUninitialized(size_t count) {
 			Assert(GetSlack() >= count);
 			T* start = Data() + m_num;
