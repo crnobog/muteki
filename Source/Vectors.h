@@ -112,6 +112,7 @@ struct Vector<T, 4> {
 	};
 	Vector() { X = Y = Z = W = T{}; }
 	Vector(T x, T y, T z, T w) { X = x; Y = y; Z = z; W = w; }
+	Vector(Vector<T, 3> xyz, T w) { XYZ = xyz; W = w; }
 	T& operator[](size_t i) { return Data[i]; }
 	const T& operator[](size_t i) const { return Data[i]; }
 
