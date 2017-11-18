@@ -1,4 +1,4 @@
-#include "DX12Utils.h"
+﻿#include "DX12Utils.h"
 
 #include <d3dcompiler.h>
 #pragma comment(lib, "d3dcompiler.lib")
@@ -45,7 +45,7 @@ namespace DX12Util {
 		Format = format;
 		ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		Texture2D = D3D12_TEX2D_SRV{0, 1, 0, 0};
+		Texture2D = D3D12_TEX2D_SRV{ 0, 1, 0, 0 };
 	}
 
 	GraphicsPipelineStateDesc::GraphicsPipelineStateDesc(ID3D12RootSignature* root_signature) {
@@ -86,8 +86,8 @@ namespace DX12Util {
 		Base::DepthStencilState.DepthEnable = enable;
 		return *this;
 	}
-	GraphicsPipelineStateDesc& GraphicsPipelineStateDesc::PrimType(DX12Util::PrimType type) {
-		Base::PrimitiveTopologyType = (D3D12_PRIMITIVE_TOPOLOGY_TYPE)type;
+	GraphicsPipelineStateDesc& GraphicsPipelineStateDesc::PrimType(GPU::PrimitiveType type) {
+		Base::PrimitiveTopologyType = CommonToDX12(type);
 		return *this;
 	}
 	GraphicsPipelineStateDesc& GraphicsPipelineStateDesc::RenderTargets(DXGI_FORMAT format) {
@@ -214,7 +214,17 @@ namespace DX12Util {
 	};
 
 
-	DX::VertexShaderInputElement ParseInputParameter(D3D12_SIGNATURE_PARAMETER_DESC& input_param) {
+	bool ParseInputParameter(const D3D12_SIGNATURE_PARAMETER_DESC& input_param, DX::VertexShaderInputElement& out_elem) {
+		const char* skip_table[] = {
+			"SV_VertexID",
+		};
+		auto found_skip = mu::Find(mu::Range(skip_table), [&](const char* sem) {
+			return strcmp(sem, input_param.SemanticName) == 0;
+		});
+		if (!found_skip.IsEmpty()) {
+			return false;
+		}
+
 		std::tuple<GPU::InputSemantic, const char*> table[] = {
 			{ GPU::InputSemantic::Position, "POSITION" },
 			{ GPU::InputSemantic::Color, "COLOR" },
@@ -225,11 +235,11 @@ namespace DX12Util {
 			return strcmp(std::get<1>(sem), input_param.SemanticName) == 0;
 		});
 		Assert(!found.IsEmpty());
-		DX::VertexShaderInputElement out_elem;
+		out_elem = DX::VertexShaderInputElement{};
 		out_elem.Semantic = std::get<0>(found.Front());
 		out_elem.SemanticIndex = input_param.SemanticIndex;
 		out_elem.Type = GPU::ScalarType::Float;
 		out_elem.CountMinusOne = 3;
-		return out_elem;
+		return true;
 	}
 }

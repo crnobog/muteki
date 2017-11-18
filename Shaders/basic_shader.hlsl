@@ -1,6 +1,9 @@
 cbuffer cb_viewdata : register(b0) {
 	float4x4 world_to_view;
 	float4x4 view_to_clip;
+};
+
+cbuffer cb_instancedata : register(b1) {
 	float4x4 model_to_world;
 };
 

@@ -349,25 +349,34 @@ void GPU_DX12::Init() {
 
 	EnsureHR(m_copy_command_list->Close());
 
-	// Empty root signature
 	{
 		Array<D3D12_ROOT_PARAMETER> root_parameters;
 
 		{
-			auto r = root_parameters.AddZeroed(2);
-			D3D12_ROOT_PARAMETER* param = &r.Front();
-			param->ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-			param->ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-			param->Descriptor.ShaderRegister = 0;
-			param->Descriptor.RegisterSpace = 0;
-
-			r.Advance(); param = &r.Front();
-			static const D3D12_DESCRIPTOR_RANGE table = { D3D12_DESCRIPTOR_RANGE_TYPE_SRV, GPU::MaxBoundShaderResources, 0, 0, 0 }; // Make sure pointer is valid outside this block
-			param->ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-			param->ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-			param->DescriptorTable.NumDescriptorRanges = 1;
-			param->DescriptorTable.pDescriptorRanges = &table;
+			D3D12_ROOT_PARAMETER& param = root_parameters.AddZeroed(1).Front();
+			param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+			param.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+			param.Descriptor.ShaderRegister = 0;
+			param.Descriptor.RegisterSpace = 0;
 		}
+
+		{
+			D3D12_ROOT_PARAMETER& param = root_parameters.AddZeroed(1).Front();
+			param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+			param.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+			param.Descriptor.ShaderRegister = 1;
+			param.Descriptor.RegisterSpace = 0;
+		}
+
+		{
+			D3D12_ROOT_PARAMETER& param = root_parameters.AddZeroed(1).Front();
+			static const D3D12_DESCRIPTOR_RANGE table = { D3D12_DESCRIPTOR_RANGE_TYPE_SRV, GPU::MaxBoundShaderResources, 0, 0, 0 }; // Make sure pointer is valid outside this block
+			param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+			param.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+			param.DescriptorTable.NumDescriptorRanges = 1;
+			param.DescriptorTable.pDescriptorRanges = &table;
+		}
+
 		Array<D3D12_STATIC_SAMPLER_DESC> static_samplers;
 		static_samplers.Add({
 			D3D12_FILTER_MIN_MAG_MIP_POINT,
@@ -475,7 +484,7 @@ GPUFrameInterface* GPU_DX12::BeginFrame() {
 	m_command_list->ResourceBarrier(1, &present_to_rt);
 
 	m_command_list->OMSetRenderTargets(1, &frame->m_render_target_view, false, nullptr);
-	float clear_color[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
+	float clear_color[4] = { 0.2f, 0.2f, 0.2f, 1.0f };
 	m_command_list->ClearRenderTargetView(frame->m_render_target_view, clear_color, 0, nullptr);
 
 	EnsureHR(m_command_list->Close());
@@ -530,15 +539,15 @@ VertexShaderID GPU_DX12::CompileVertexShaderHLSL(const char* entry_point, Pointe
 	));
 	D3D12_SHADER_DESC desc;
 	EnsureHR(reflector->GetDesc(&desc));
-	Array<D3D12_SIGNATURE_PARAMETER_DESC> input_params;
 	Assert(desc.InputParameters < VertexShaderInputs::MaxInputElements);
-	input_params.AddZeroed(desc.InputParameters);
-	inputs.InputElements.AddZeroed(desc.InputParameters);
-	for (tuple<u32, DX::VertexShaderInputElement&> it : Zip(Iota<u32>(), inputs.InputElements)) {
+	for (u32 i = 0; i < desc.InputParameters; ++i) {
 		D3D12_SIGNATURE_PARAMETER_DESC input_param;
-		reflector->GetInputParameterDesc(get<0>(it), &input_param);
+		reflector->GetInputParameterDesc(i, &input_param);
 
-		get<1>(it) = ParseInputParameter(input_param);
+		DX::VertexShaderInputElement parsed_param;
+		if (ParseInputParameter(input_param, parsed_param)) {
+			inputs.InputElements.Add(parsed_param);
+		}
 	}
 
 	return id;
@@ -592,7 +601,7 @@ GPU::PipelineStateID GPU_DX12::CreatePipelineState(const GPU::PipelineStateDesc&
 		.DepthEnable(false)
 		.BlendState(desc.BlendState)
 		.RasterState(desc.RasterState)
-		.PrimType(PrimType::Triangle)
+		.PrimType(desc.PrimitiveType)
 		.RenderTargets(DXGI_FORMAT_R8G8B8A8_UNORM)
 		.InputLayout(input_layout.Data(), (u32)input_layout.Num());
 	EnsureHR(m_device->CreateGraphicsPipelineState(&pipeline_desc, IID_PPV_ARGS(ps.PSO.Replace())));
@@ -834,10 +843,14 @@ void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
 		//for (ConstantBufferID id : item.BoundResources.ConstantBuffers) {
 		//	cbs.Add(GetConstantBufferViewDesc(id));
 		//}
-		Assert(item.BoundResources.ConstantBuffers.Num() <= 1); // TODO: Update root signature
+		Assert(item.BoundResources.ConstantBuffers.Num() <= 2); // TODO: Update root signature
 		if (item.BoundResources.ConstantBuffers.Num() > 0 && item.BoundResources.ConstantBuffers[0] != ConstantBufferID{}) {
 			D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc = GetConstantBufferViewDesc(frame, item.BoundResources.ConstantBuffers[0]);
 			m_command_list->SetGraphicsRootConstantBufferView(0, cbv_desc.BufferLocation);
+		}
+		if (item.BoundResources.ConstantBuffers.Num() > 1 && item.BoundResources.ConstantBuffers[1] != ConstantBufferID{}) {
+			D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc = GetConstantBufferViewDesc(frame, item.BoundResources.ConstantBuffers[1]);
+			m_command_list->SetGraphicsRootConstantBufferView(1, cbv_desc.BufferLocation);
 		}
 
 		FixedArray<TextureID, GPU::MaxBoundShaderResources> bound_resources;
@@ -857,7 +870,7 @@ void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
 			m_device->CreateShaderResourceView(texture.Resource.Get(), &texture.SRVDesc, srv_table.GetCPUHandle(i)); // TODO: Copy descriptors instead of recreating them
 		}
 
-		m_command_list->SetGraphicsRootDescriptorTable(1, srv_table.GetGPUHandle(0));
+		m_command_list->SetGraphicsRootDescriptorTable(2, srv_table.GetGPUHandle(0));
 
 		const GPU::StreamSetup& stream_setup = item.StreamSetup;
 		FixedArray<D3D12_VERTEX_BUFFER_VIEW, GPU::MaxStreamSlots> vbs;

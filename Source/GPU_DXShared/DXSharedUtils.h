@@ -12,7 +12,7 @@
 #define EnsureHR(expr) \
 	do { \
 		HRESULT hr =(expr); if(SUCCEEDED(hr)) {break;} \
-		Assertf(SUCCEEDED(hr), #expr, "failed with error code ", hr); \
+		Assertf(SUCCEEDED(hr),"{} failed with error code {}", #expr, hr); \
 	} while(false);
 
 namespace DX {

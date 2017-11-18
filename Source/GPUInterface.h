@@ -60,6 +60,7 @@ namespace GPU {
 	enum class PrimitiveTopology : u8 {
 		TriangleList,
 		TriangleStrip,
+		LineList,
 	};
 
 	enum class InputSemantic : u8 {
@@ -184,12 +185,18 @@ namespace GPU {
 		BlendEquation AlphaBlend;
 	};
 
+	enum class PrimitiveType : u8 {
+		Triangle,
+		Line
+	};
+
 	struct PipelineStateDesc {
 		ProgramID				Program;
 		RasterStateDesc			RasterState;
 		BlendStateDesc			BlendState;
 		DepthStencilStateID		DepthStencilState;
 		StreamFormatDesc		StreamFormat;
+		PrimitiveType			PrimitiveType = PrimitiveType::Triangle;
 	};
 
 	// Draw commands

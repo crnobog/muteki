@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "mu-core/Debug.h"
 #include "mu-core/PrimitiveTypes.h"
@@ -22,10 +22,6 @@ namespace DX12Util {
 		CopySource = D3D12_RESOURCE_STATE_COPY_SOURCE,
 		PixelShaderResource = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 		Common = D3D12_RESOURCE_STATE_COMMON,
-	};
-
-	enum class PrimType {
-		Triangle = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
 	};
 
 	struct ResourceBarrier : D3D12_RESOURCE_BARRIER {
@@ -68,7 +64,7 @@ namespace DX12Util {
 		GraphicsPipelineStateDesc& VS(ID3DBlob* blob);
 		GraphicsPipelineStateDesc& PS(ID3DBlob* blob);
 		GraphicsPipelineStateDesc& DepthEnable(bool enable);
-		GraphicsPipelineStateDesc& PrimType(PrimType type);
+		GraphicsPipelineStateDesc& PrimType(GPU::PrimitiveType type);
 		GraphicsPipelineStateDesc& RenderTargets(DXGI_FORMAT format);
 		GraphicsPipelineStateDesc& InputLayout(const D3D12_INPUT_ELEMENT_DESC* elements, u32 num_elements);
 		GraphicsPipelineStateDesc& BlendState(const GPU::BlendStateDesc& desc);
@@ -80,6 +76,15 @@ namespace DX12Util {
 		static D3D12_PRIMITIVE_TOPOLOGY list[] = {
 			D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
 			D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
+			D3D_PRIMITIVE_TOPOLOGY_LINELIST,
+		};
+		return list[(i32)pt];
+	}
+
+	inline D3D12_PRIMITIVE_TOPOLOGY_TYPE CommonToDX12(GPU::PrimitiveType pt) {
+		static D3D12_PRIMITIVE_TOPOLOGY_TYPE list[] = {
+			D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
+			D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE,
 		};
 		return list[(i32)pt];
 	}
@@ -159,5 +164,5 @@ namespace DX12Util {
 	}
 
 
-	DX::VertexShaderInputElement ParseInputParameter(D3D12_SIGNATURE_PARAMETER_DESC& input_param);
+	bool ParseInputParameter(const D3D12_SIGNATURE_PARAMETER_DESC& input_param, DX::VertexShaderInputElement& out_elem);
 }
