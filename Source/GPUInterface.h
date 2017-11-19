@@ -31,10 +31,10 @@ namespace GPU {
 	DECLARE_GPU_HANDLE(IndexBufferID, u32);
 	DECLARE_GPU_HANDLE(TextureID, u32);
 	DECLARE_GPU_HANDLE(RenderTargetID, u32);
+	DECLARE_GPU_HANDLE(DepthTargetID, u32);
 	DECLARE_GPU_HANDLE(VertexShaderID, u32);
 	DECLARE_GPU_HANDLE(PixelShaderID, u32);
 	DECLARE_GPU_HANDLE(ProgramID, u32);
-	DECLARE_GPU_HANDLE(DepthStencilStateID, u32);
 	DECLARE_GPU_HANDLE(ShaderResourceListID, u32);
 	DECLARE_GPU_HANDLE(PipelineStateID, u32);
 
@@ -185,6 +185,46 @@ namespace GPU {
 		BlendEquation AlphaBlend;
 	};
 
+	enum class ComparisonFunc {
+		Never,
+		Less,
+		Equal,
+		LessThanOrEqual,
+		Greater,
+		NotEqual,
+		GreaterThanOrEqual,
+		Always
+	};
+
+	enum class StencilOp {
+		Keep,
+		Zero,
+		Replace,
+		IncrementSaturated,
+		DecrementSaturated,
+		Invert,
+		Increment,
+		Decrement,
+	};
+
+	struct StencilOpDesc {
+		StencilOp StencilFailOp = StencilOp::Keep;
+		StencilOp StencilDepthFailOp = StencilOp::Keep;
+		StencilOp StencilPassOp = StencilOp::Keep;
+		ComparisonFunc StencilFunc = ComparisonFunc::Never;
+	};
+
+	struct DepthStencilStateDesc {
+		bool DepthEnable = false;
+		bool DepthWriteEnable = false;
+		ComparisonFunc DepthComparisonFunc = ComparisonFunc::Never;
+		bool StencilEnable = false;
+		u8 StencilReadMask = 0;
+		u8 StencilWriteMask = 0;
+		StencilOpDesc StencilFrontFace = {};
+		StencilOpDesc StencilBackFace = {};
+	};
+
 	enum class PrimitiveType : u8 {
 		Triangle,
 		Line
@@ -194,7 +234,7 @@ namespace GPU {
 		ProgramID				Program;
 		RasterStateDesc			RasterState;
 		BlendStateDesc			BlendState;
-		DepthStencilStateID		DepthStencilState;
+		DepthStencilStateDesc	DepthStencilState;
 		StreamFormatDesc		StreamFormat;
 		PrimitiveType			PrimitiveType = PrimitiveType::Triangle;
 	};
@@ -225,10 +265,12 @@ namespace GPU {
 	struct RenderPass {
 		Rect<u32> ClipRect = { 0, 0, 0, 0 }; // TODO: Document clip space?
 		mu::FixedArray<RenderTargetID, MaxRenderTargets> RenderTargets;
+		DepthTargetID DepthBuffer = {};
 		mu::PointerRange<const DrawItem> DrawItems;
+		const float* DepthClearValue = nullptr;
 	};
 
-	static_assert(std::is_trivially_destructible_v<DrawItem>, "RenderPass should be trivially destructible");
+	static_assert(std::is_trivially_destructible_v<DrawItem>, "DrawItem should be trivially destructible");
 	static_assert(std::is_trivially_destructible_v<RenderPass>, "RenderPass should be trivially destructible");
 
 	inline bool operator==(const GPU::StreamElementDesc& a, const GPU::StreamElementDesc& b) {
@@ -290,6 +332,13 @@ namespace GPU {
 		return !(a == b);
 	}
 
+	inline bool operator==(const GPU::DepthStencilStateDesc& a, const GPU::DepthStencilStateDesc& b) {
+		return true;
+	}
+	inline bool operator!=(const GPU::DepthStencilStateDesc& a, const GPU::DepthStencilStateDesc& b) {
+		return !(a == b);
+	}
+
 	inline bool operator==(const GPU::PipelineStateDesc& a, const GPU::PipelineStateDesc& b) {
 		return a.BlendState == b.BlendState
 			&& a.DepthStencilState == b.DepthStencilState
@@ -343,6 +392,8 @@ struct GPUInterface {
 	virtual void DestroyIndexBuffer(GPU::IndexBufferID id) = 0;
 
 	virtual GPU::TextureID CreateTexture2D(u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) = 0;
+
+	virtual GPU::DepthTargetID CreateDepthTarget(u32 width, u32 height) = 0;
 
 	virtual GPU::ShaderResourceListID CreateShaderResourceList(const GPU::ShaderResourceListDesc& desc) = 0;
 };

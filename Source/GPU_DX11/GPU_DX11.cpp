@@ -33,6 +33,7 @@ using ProgramID = GPU::ProgramID;
 using PipelineStateID = GPU::PipelineStateID;
 using ConstantBufferID = GPU::ConstantBufferID;
 using RenderTargetID = GPU::RenderTargetID;
+using DepthTargetID = GPU::DepthTargetID;
 using TextureID = GPU::TextureID;
 using ShaderResourceListID = GPU::ShaderResourceListID;
 using RenderPass = GPU::RenderPass;
@@ -166,6 +167,8 @@ struct GPU_DX11 : public GPUInterface {
 	virtual void DestroyIndexBuffer(GPU::IndexBufferID id) override;
 
 	virtual TextureID CreateTexture2D(u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) override;
+
+	virtual DepthTargetID CreateDepthTarget(u32 width, u32 height) override;
 
 	virtual ShaderResourceListID CreateShaderResourceList(const GPU::ShaderResourceListDesc& desc) override;
 	// END GPUInterface functions
@@ -568,6 +571,10 @@ TextureID GPU_DX11::CreateTexture2D(u32 width, u32 height, GPU::TextureFormat fo
 	srv_desc.Texture2D.MostDetailedMip = 0;
 	EnsureHR(m_device->CreateShaderResourceView(texture.Resource, &srv_desc, texture.SRV.Replace()));
 	return id;
+}
+
+DepthTargetID GPU_DX11::CreateDepthTarget(u32, u32) {
+	return {};
 }
 
 ShaderResourceListID GPU_DX11::CreateShaderResourceList(const GPU::ShaderResourceListDesc& desc) {

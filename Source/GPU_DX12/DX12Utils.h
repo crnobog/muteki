@@ -36,6 +36,10 @@ namespace DX12Util {
 		TextureDesc2D(u32 width, u32 height, DXGI_FORMAT format);
 	};
 
+	struct DepthBufferDesc : D3D12_RESOURCE_DESC {
+		DepthBufferDesc(u32 width, u32 height, DXGI_FORMAT format);
+	};
+
 	struct TextureViewDesc2D : D3D12_SHADER_RESOURCE_VIEW_DESC {
 		TextureViewDesc2D(DXGI_FORMAT format);
 	};
@@ -63,7 +67,8 @@ namespace DX12Util {
 		GraphicsPipelineStateDesc(ID3D12RootSignature* root_signature);
 		GraphicsPipelineStateDesc& VS(ID3DBlob* blob);
 		GraphicsPipelineStateDesc& PS(ID3DBlob* blob);
-		GraphicsPipelineStateDesc& DepthEnable(bool enable);
+		GraphicsPipelineStateDesc& DepthStencilState(const GPU::DepthStencilStateDesc& desc);
+		GraphicsPipelineStateDesc& DepthStencilFormat(DXGI_FORMAT format);
 		GraphicsPipelineStateDesc& PrimType(GPU::PrimitiveType type);
 		GraphicsPipelineStateDesc& RenderTargets(DXGI_FORMAT format);
 		GraphicsPipelineStateDesc& InputLayout(const D3D12_INPUT_ELEMENT_DESC* elements, u32 num_elements);
@@ -71,6 +76,42 @@ namespace DX12Util {
 		GraphicsPipelineStateDesc& RasterState(const GPU::RasterStateDesc& desc);
 	};
 
+	inline D3D12_COMPARISON_FUNC CommonToDX12(GPU::ComparisonFunc func) {
+		static D3D12_COMPARISON_FUNC list[] = {
+			D3D12_COMPARISON_FUNC_NEVER,
+			D3D12_COMPARISON_FUNC_LESS,
+			D3D12_COMPARISON_FUNC_EQUAL,
+			D3D12_COMPARISON_FUNC_LESS_EQUAL,
+			D3D12_COMPARISON_FUNC_GREATER,
+			D3D12_COMPARISON_FUNC_NOT_EQUAL,
+			D3D12_COMPARISON_FUNC_GREATER_EQUAL,
+			D3D12_COMPARISON_FUNC_ALWAYS
+		};
+		return list[(i32)func];
+	}
+
+	inline D3D12_STENCIL_OP CommonToDX12(GPU::StencilOp op) {
+		static D3D12_STENCIL_OP list[] = {
+			D3D12_STENCIL_OP_KEEP,
+			D3D12_STENCIL_OP_ZERO,
+			D3D12_STENCIL_OP_REPLACE,
+			D3D12_STENCIL_OP_INCR_SAT,
+			D3D12_STENCIL_OP_DECR_SAT,
+			D3D12_STENCIL_OP_INVERT,
+			D3D12_STENCIL_OP_INCR,
+			D3D12_STENCIL_OP_DECR
+		};
+		return list[(i32)op];
+	}
+
+	inline D3D12_DEPTH_STENCILOP_DESC CommonToDX12(GPU::StencilOpDesc desc) {
+		return {
+			CommonToDX12(desc.StencilFailOp),
+			CommonToDX12(desc.StencilDepthFailOp),
+			CommonToDX12(desc.StencilPassOp),
+			CommonToDX12(desc.StencilFunc)
+		};
+	}
 
 	inline D3D12_PRIMITIVE_TOPOLOGY CommonToDX12(GPU::PrimitiveTopology pt) {
 		static D3D12_PRIMITIVE_TOPOLOGY list[] = {

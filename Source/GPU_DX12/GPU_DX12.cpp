@@ -36,6 +36,7 @@ using PixelShaderID = GPU::PixelShaderID;
 using ProgramID = GPU::ProgramID;
 using ConstantBufferID = GPU::ConstantBufferID;
 using RenderTargetID = GPU::RenderTargetID;
+using DepthTargetID = GPU::DepthTargetID;
 using TextureID = GPU::TextureID;
 using ShaderResourceListID = GPU::ShaderResourceListID;
 using RenderPass = GPU::RenderPass;
@@ -183,6 +184,11 @@ struct GPU_DX12 : public GPUInterface {
 		D3D12_CONSTANT_BUFFER_VIEW_DESC ViewDesc = { 0, 0 };
 	};
 
+	struct DepthTarget {
+		COMPtr<ID3D12Resource> Resource;
+		D3D12_CPU_DESCRIPTOR_HANDLE Descriptor;
+	};
+
 	GPU_DX12();
 	~GPU_DX12();
 	GPU_DX12(const GPU_DX12&) = delete;
@@ -213,6 +219,9 @@ struct GPU_DX12 : public GPUInterface {
 	COMPtr<ID3D12DescriptorHeap>		m_rtv_heap;
 	u32									m_rtv_descriptor_size;
 
+	COMPtr<ID3D12DescriptorHeap>		m_dsv_heap;
+	u32									m_dsv_heap_size;
+
 	u32 m_frame_index = 0;
 
 	GPU_DX12_Frame* m_frame_data[frame_count] = { nullptr, };
@@ -235,6 +244,9 @@ struct GPU_DX12 : public GPUInterface {
 	Pool<VertexBuffer, VertexBufferID> m_vertex_buffers{ max_persistent_vbs };
 	static constexpr size_t max_persistent_ibs = 128;
 	Pool<IndexBuffer, IndexBufferID> m_index_buffers{ max_persistent_ibs };
+
+	static constexpr size_t max_depth_targets = 16;
+	Pool<DepthTarget, DepthTargetID> m_depth_targets{ max_depth_targets };
 
 	// BEGIN GPUInterface functions
 	virtual void Init() override;
@@ -266,6 +278,8 @@ struct GPU_DX12 : public GPUInterface {
 	virtual void DestroyIndexBuffer(GPU::IndexBufferID id) override;
 
 	virtual TextureID CreateTexture2D(u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) override;
+
+	virtual GPU::DepthTargetID CreateDepthTarget(u32 width, u32 height) override;
 
 	virtual ShaderResourceListID CreateShaderResourceList(const GPU::ShaderResourceListDesc& desc) override;
 	// END GPUInterface functions
@@ -333,6 +347,14 @@ void GPU_DX12::Init() {
 	EnsureHR(m_device->CreateDescriptorHeap(&rtv_heap_desc, IID_PPV_ARGS(m_rtv_heap.Replace())));
 
 	m_rtv_descriptor_size = m_device->GetDescriptorHandleIncrementSize(rtv_heap_desc.Type);
+
+	D3D12_DESCRIPTOR_HEAP_DESC dsv_heap_desc = {};
+	dsv_heap_desc.NumDescriptors = max_depth_targets;
+	dsv_heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+	dsv_heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	EnsureHR(m_device->CreateDescriptorHeap(&dsv_heap_desc, IID_PPV_ARGS(m_dsv_heap.Replace())));
+
+	m_dsv_heap_size = m_device->GetDescriptorHandleIncrementSize(dsv_heap_desc.Type);
 
 	m_frame_fence_event = CreateEvent(nullptr, false, false, L"Frame Fence Event");
 	m_copy_fence_event = CreateEvent(nullptr, false, false, L"Upload Fence Event");
@@ -598,7 +620,8 @@ GPU::PipelineStateID GPU_DX12::CreatePipelineState(const GPU::PipelineStateDesc&
 	auto pipeline_desc = GraphicsPipelineStateDesc{ m_root_signature.Get() }
 		.VS(m_registered_vertex_shaders[program.VertexShader].CompiledShader)
 		.PS(m_registered_pixel_shaders[program.PixelShader])
-		.DepthEnable(false)
+		.DepthStencilState(desc.DepthStencilState)
+		.DepthStencilFormat(desc.DepthStencilState.DepthEnable ? DXGI_FORMAT_D32_FLOAT : DXGI_FORMAT_UNKNOWN)
 		.BlendState(desc.BlendState)
 		.RasterState(desc.RasterState)
 		.PrimType(desc.PrimitiveType)
@@ -684,6 +707,39 @@ IndexBufferID GPU_DX12::CreateIndexBuffer(mu::PointerRange<const u8> data) {
 	memcpy(mapped, &data.Front(), data.Size());
 	m_index_buffers[id].Resource->Unmap(0, nullptr);
 
+	return id;
+}
+
+DepthTargetID GPU_DX12::CreateDepthTarget(u32 width, u32 height) {
+	DepthTargetID id = m_depth_targets.AddDefaulted();
+
+	DepthTarget& target_info = m_depth_targets[id];
+	target_info.Descriptor = m_dsv_heap->GetCPUDescriptorHandleForHeapStart();
+	target_info.Descriptor.ptr += m_dsv_heap_size * (size_t)id;
+
+	DXGI_FORMAT format = DXGI_FORMAT_D32_FLOAT;
+	D3D12_CLEAR_VALUE clear_value = {};
+	clear_value.Format = format;
+	clear_value.DepthStencil.Depth = 1.0f;
+	clear_value.DepthStencil.Stencil = 0;
+
+	DepthBufferDesc resource_desc(width, height, format);
+
+	EnsureHR(m_device->CreateCommittedResource(
+		&default_heap_properties,
+		D3D12_HEAP_FLAG_NONE,
+		&resource_desc,
+		D3D12_RESOURCE_STATE_DEPTH_WRITE,
+		&clear_value,
+		IID_PPV_ARGS(target_info.Resource.Replace())
+	));
+
+	D3D12_DEPTH_STENCIL_VIEW_DESC view_desc = {};
+	view_desc.Format = format;
+	view_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+	view_desc.Flags = D3D12_DSV_FLAG_NONE;
+
+	m_device->CreateDepthStencilView(target_info.Resource.Get(), &view_desc, target_info.Descriptor);
 	return id;
 }
 
@@ -817,7 +873,16 @@ void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
 	for (tuple<D3D12_CPU_DESCRIPTOR_HANDLE&, RenderTargetID> it : Zip(rtvs, pass.RenderTargets)) {
 		get<0>(it) = GetRenderTargetView(frame->m_render_target_view, get<1>(it));
 	}
-	m_command_list->OMSetRenderTargets((u32)pass.RenderTargets.Num(), rtvs, false, nullptr);
+	const D3D12_CPU_DESCRIPTOR_HANDLE* dsv = nullptr;
+	if (pass.DepthBuffer != DepthTargetID{}) {
+		const DepthTarget& dt = m_depth_targets[pass.DepthBuffer];
+		dsv = &dt.Descriptor;
+	}
+	m_command_list->OMSetRenderTargets((u32)pass.RenderTargets.Num(), rtvs, false, dsv);
+
+	if (dsv && pass.DepthClearValue) {
+		m_command_list->ClearDepthStencilView(*dsv, D3D12_CLEAR_FLAG_DEPTH, *pass.DepthClearValue, 0, 0, nullptr);
+	}
 
 	// TODO: Make part of render pass
 	m_command_list->RSSetViewports(1, &m_viewport);

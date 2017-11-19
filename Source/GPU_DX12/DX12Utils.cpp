@@ -41,6 +41,20 @@ namespace DX12Util {
 		Flags = D3D12_RESOURCE_FLAG_NONE;
 	}
 
+	DepthBufferDesc::DepthBufferDesc(u32 width, u32 height, DXGI_FORMAT format) {
+		Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+		Alignment = 0;
+		Width = width;
+		Height = height;
+		DepthOrArraySize = 1;
+		MipLevels = 1;
+		Format = format;
+		SampleDesc.Count = 1;
+		SampleDesc.Quality = 0;
+		Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+		Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+	}
+
 	TextureViewDesc2D::TextureViewDesc2D(DXGI_FORMAT format) {
 		Format = format;
 		ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
@@ -82,8 +96,19 @@ namespace DX12Util {
 		Base::PS = { blob->GetBufferPointer(), blob->GetBufferSize() };
 		return *this;
 	}
-	GraphicsPipelineStateDesc& GraphicsPipelineStateDesc::DepthEnable(bool enable) {
-		Base::DepthStencilState.DepthEnable = enable;
+	GraphicsPipelineStateDesc& GraphicsPipelineStateDesc::DepthStencilState(const GPU::DepthStencilStateDesc& desc) {
+		Base::DepthStencilState.DepthEnable = desc.DepthEnable;
+		Base::DepthStencilState.DepthWriteMask = desc.DepthWriteEnable ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
+		Base::DepthStencilState.DepthFunc = CommonToDX12(desc.DepthComparisonFunc);
+		Base::DepthStencilState.StencilEnable = desc.StencilEnable;
+		Base::DepthStencilState.StencilReadMask = desc.StencilReadMask;
+		Base::DepthStencilState.StencilWriteMask = desc.StencilWriteMask;
+		Base::DepthStencilState.FrontFace = CommonToDX12(desc.StencilFrontFace);
+		Base::DepthStencilState.BackFace = CommonToDX12(desc.StencilBackFace);
+		return *this;
+	}
+	GraphicsPipelineStateDesc& GraphicsPipelineStateDesc::DepthStencilFormat(DXGI_FORMAT format) {
+		Base::DSVFormat = format;
 		return *this;
 	}
 	GraphicsPipelineStateDesc& GraphicsPipelineStateDesc::PrimType(GPU::PrimitiveType type) {

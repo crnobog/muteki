@@ -168,7 +168,7 @@ struct ImGuiImpl {
 					// Start new pass to change clip rect
 					// TODO: Reconsider where clip rect fits into api
 					last_clip_rect = draw_cmd.ClipRect;
-					current_pass = &passes.AddZeroed();
+					current_pass = &passes.AddDefaulted(1).Front();
 					// left top right bottom
 					current_pass->ClipRect = { (u32)last_clip_rect.X, (u32)last_clip_rect.Y, (u32)last_clip_rect.Z, (u32)last_clip_rect.W };
 					current_pass->DrawItems = { gpu_cmd_cursor.m_start, 0 };
@@ -239,10 +239,12 @@ int main(int, char**) {
 	std::unique_ptr<GPUInterface> gpu{ CreateGPU_DX12() };
 	gpu->Init();
 	HWND hwnd = glfwGetWin32Window(win);
+	GPU::DepthTargetID depthbuffer;
 	{
 		i32 fb_width, fb_height;
 		glfwGetFramebufferSize(win, &fb_width, &fb_height);
 		gpu->CreateSwapChain(hwnd, fb_width, fb_height);
+		depthbuffer = gpu->CreateDepthTarget(fb_width, fb_height);
 	}
 
 	ImGuiImpl imgui;
@@ -251,6 +253,11 @@ int main(int, char**) {
 	glfwSetMouseButtonCallback(win, OnMouseButton);
 	glfwSetCharCallback(win, OnChar);
 	glfwSetKeyCallback(win, OnKey);
+
+	GPU::DepthStencilStateDesc depth_state = {};
+	depth_state.DepthEnable = true;
+	depth_state.DepthWriteEnable = true;
+	depth_state.DepthComparisonFunc = GPU::ComparisonFunc::Less;
 
 	GPU::PipelineStateID cube_pipeline_state;
 	{
@@ -268,6 +275,7 @@ int main(int, char**) {
 			.AddSlot({ GPU::ScalarType::Float, 2, GPU::InputSemantic::Texcoord, 0 })
 			;
 		pipeline_state_desc.BlendState.BlendEnable = false;
+		pipeline_state_desc.DepthStencilState = depth_state;
 		pipeline_state_desc.RasterState.ScissorEnable = true;
 		pipeline_state_desc.RasterState.CullMode = GPU::CullMode::Back;
 		pipeline_state_desc.RasterState.FrontFace = GPU::FrontFace::Clockwise;
@@ -284,6 +292,7 @@ int main(int, char**) {
 		GPU::PipelineStateDesc pipeline_state_desc{};
 		pipeline_state_desc.Program = program_id;
 		pipeline_state_desc.BlendState.BlendEnable = false;
+		pipeline_state_desc.DepthStencilState = depth_state;
 		pipeline_state_desc.RasterState.ScissorEnable = true;
 		pipeline_state_desc.RasterState.FillMode = GPU::FillMode::Wireframe;
 		pipeline_state_desc.RasterState.CullMode = GPU::CullMode::None;
@@ -363,6 +372,22 @@ int main(int, char**) {
 		}
 
 		{
+			// Draw cube
+			Mat4x4 transform = CreateTranslation({ 0, Sin(frame_num / 1600.0f), 2.95f }) * CreateRotationY(frame_num / 1600.0);
+			GPU::ConstantBufferID cbuffer_id_transform = gpu_frame->GetTemporaryConstantBuffer(ByteRange(transform));
+			GPU::DrawItem& draw_item = draw_items.AddDefaulted(1).Front();
+			// default raster state, blend state, depth stencil state
+			draw_item.PipelineState = cube_pipeline_state;
+			draw_item.BoundResources.ConstantBuffers.Add(cbuffer_id_viewdata);
+			draw_item.BoundResources.ConstantBuffers.Add(cbuffer_id_transform);
+			draw_item.BoundResources.ResourceLists.Add(cube_resource_list_id);
+			draw_item.Command.VertexOrIndexCount = (u32)ArraySize(cube_indices);
+			draw_item.Command.PrimTopology = GPU::PrimitiveTopology::TriangleList;
+			draw_item.StreamSetup.VertexBuffers.Add({ cube_vbuffer_id_pos, cube_vbuffer_id_normals, cube_vbuffer_id_texcoord });
+			draw_item.StreamSetup.IndexBuffer = cube_ibuffer_id;
+		}
+
+		{
 			// Draw grid
 			struct {
 				Vec4 axis1 = { Vec3::UnitX, 1.0f };
@@ -384,8 +409,11 @@ int main(int, char**) {
 			draw_item.Command.PrimTopology = GPU::PrimitiveTopology::LineList;
 		}
 
+		float DepthClear = 1.0f;
 		GPU::RenderPass pass;
 		pass.RenderTargets.Add(GPU::BackBufferID);
+		pass.DepthBuffer = depthbuffer;
+		pass.DepthClearValue = &DepthClear;
 		pass.DrawItems = mu::Range(draw_items);
 		pass.ClipRect = { 0, 0, current_size[0], current_size[1] };
 		gpu->SubmitPass(pass);
