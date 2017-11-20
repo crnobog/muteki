@@ -73,18 +73,13 @@ namespace mu {
 			return EmplaceSafe(std::forward<T>(item));
 		}
 
-		void Add(std::initializer_list<T> elems) {
+		PointerRange<T> Add(std::initializer_list<T> elems) {
 			EnsureSpace(m_num + elems.size());
+			PointerRange<T> r{ m_data + m_num, m_data + elems.size() };
 			for (const T& elem : elems) {
 				new(&AddSafe()) T(elem);
 			}
-		}
-
-		T& AddZeroed() {
-			EnsureSpace(m_num + 1);
-			T* t = m_data + m_num++;
-			memset(t, 0, sizeof(T));
-			return *t;
+			return r;
 		}
 
 		// Returns the range of new items
@@ -110,16 +105,16 @@ namespace mu {
 			return PointerRange<T>{first, first + count};
 		}
 
-		void AddUnique(const T& item) {
-			if (!Contains(item)) {
-				Add(item);
-			}
+		size_t AddUnique(const T& item) {
+			size_t idx;
+			if (FindIndex(item, idx)) { return idx; }
+			else return Add(item);
 		}
 
-		void AddUnique(T&& item) {
-			if (!Contains(item)) {
-				Add(std::forward<T>(item));
-			}
+		size_t AddUnique(T&& item) {
+			size_t idx;
+			if (FindIndex(item, idx)) { return idx; }
+			else return Add(std::move(item));
 		}
 
 		template<typename... US>
@@ -177,14 +172,9 @@ namespace mu {
 		size_t Max() const { return m_max; }
 		bool IsEmpty() const { return m_num == 0; }
 
-		// TODO: Remove in favour of algorithms?
 		bool Contains(const T& item) const {
-			for (const T& t : *this) {
-				if (t == item) {
-					return true;
-				}
-			}
-			return false;
+			size_t i;
+			return FindIndex(item, i);
 		}
 
 		auto begin() { return mu::MakeRangeIterator(mu::Range(m_data, m_num)); }
@@ -194,6 +184,16 @@ namespace mu {
 		auto end() const { return mu::MakeRangeSentinel(); }
 
 	private:
+		bool FindIndex(const T& item, size_t& out_idx) const {
+			for (size_t i = 0; i < m_num; ++i) {
+				if (item == m_data[i]) {
+					out_idx = i;
+					return true;
+				}
+			}
+			return false;
+		}
+
 		void InitEmpty(size_t num) {
 			m_data = (T*)malloc(sizeof(T) * num);
 			m_num = 0;

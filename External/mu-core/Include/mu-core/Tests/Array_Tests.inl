@@ -17,6 +17,9 @@ TEST_SUITE("Array") {
 		Element& operator=(const Element& e) { Payload = e.Payload; ++CopyCalls(); return *this; }
 		Element& operator=(Element&& e) { Payload = e.Payload; ++MoveCalls(); return *this; }
 
+		bool operator==(const Element& other) const { return Payload == other.Payload; }
+		bool operator!=(const Element& other) const { return Payload != other.Payload; }
+
 		static i32& ConstructorCalls() {
 			static i32 local = 0; return local;
 		}
@@ -170,6 +173,24 @@ TEST_SUITE("Array") {
 		CHECK_EQ(arr.Num(), ArraySize(src));
 		for (i32 i = 0; i < arr.Num(); ++i) {
 			CHECK_EQ(arr[i].Payload, src[i].Payload);
+		}
+	}
+
+	TEST_CASE("Array Add InitializerList") {
+		mu::Array<Element> arr;
+		mu::PointerRange<Element> r = arr.Add({ {11}, {22}, {33} });
+
+		CHECK_EQ(arr.Num(), 3);
+		CHECK_EQ(arr[0], 11);
+		CHECK_EQ(arr[1], 22);
+		CHECK_EQ(arr[2], 33);
+
+		CHECK_EQ(r.Size(), 3);
+		i32 expected[] = { 11, 22, 33 };
+		i32 i = 0;
+		for (Element e : r) {
+			CHECK_EQ(e, expected[i]);
+			++i;
 		}
 	}
 }

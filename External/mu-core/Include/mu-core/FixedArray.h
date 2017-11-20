@@ -31,6 +31,30 @@ namespace mu {
 
 	public:
 		FixedArray() {}
+		FixedArray(std::initializer_list<T> init) {
+			Add(init);
+		}
+		FixedArray(const FixedArray& other) {
+			AddRange(Range(other));
+		}
+		FixedArray(FixedArray&& other) {
+			for (T& t : other) {
+				Emplace(std::move(t));
+			}
+		}
+
+		FixedArray& operator=(const FixedArray& other) {
+			Empty();
+			AddRange(Range(other));
+			return *this;
+		}
+		FixedArray& operator=(FixedArray&& other) {
+			Empty();
+			for (T& t : other) {
+				Emplace(std::move(t));
+			}
+			return *this;
+		}
 
 		size_t Num() const { return m_num; }
 		T* Data() { return (T*)m_data; }
@@ -85,14 +109,19 @@ namespace mu {
 		void Emplace(TS&&... ts) {
 			new(AddInternal()) T(std::forward<TS>(ts)...);
 		}
-		void Add(const T& element) {
+
+		size_t Add(const T& element) {
 			Assert(m_num < MAX);
 			new(AddInternal()) T(element);
+			return m_num - 1;
 		}
-		void AddMany(size_t count, const T& element) {
+		PointerRange<T> AddMany(size_t count, const T& element) {
+			size_t start = m_num;
 			for (size_t i = 0; i < count; ++i) {
 				Add(element);
 			}
+			T* d = (T*)m_data;
+			return PointerRange<T>{ d + start, d + m_num };
 		}
 		void Empty() {
 			for (size_t i = 0; i < m_num; ++i) {
@@ -100,6 +129,9 @@ namespace mu {
 			}
 			m_num = 0;
 		}
+
+		PointerRange<u8> Bytes() { return ByteRange((u8*)m_data, m_num * sizeof(T)); }
+		PointerRange<const u8> Bytes() const { return ByteRange((u8*)m_data, m_num * sizeof(T)); }
 
 		size_t GetSlack() const { return MAX - m_num; }
 

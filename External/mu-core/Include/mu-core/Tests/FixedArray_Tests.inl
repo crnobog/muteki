@@ -1,4 +1,4 @@
-TEST_SUITE("FixedArray") {
+﻿TEST_SUITE("FixedArray") {
 	using namespace mu;
 
 	struct EmptyElement {};
@@ -16,6 +16,9 @@ TEST_SUITE("FixedArray") {
 		Element& operator=(const Element& e) { CopyCount()++; Data = e.Data; }
 		Element& operator=(Element&& e) { MoveCount()++; Data = e.Data; }
 		~Element() { DestructCount()++; }
+
+		bool operator==(const Element& other) const { return Data == other.Data; }
+		bool operator!=(const Element& other) const { return Data != other.Data; }
 
 		static i32& ConstructCount() { static i32 local = 0; return local; }
 		static i32& CopyCount() { static i32 local = 0; return local; }
@@ -39,6 +42,16 @@ TEST_SUITE("FixedArray") {
 			CHECK_EQ(Element::ConstructCount(), 0);
 		}
 		CHECK_EQ(Element::DestructCount(), 0);
+	}
+
+	TEST_CASE("Create from initializer list") {
+		FixedArray<Element, 10> arr{ {1}, {2}, {3}, {4} };
+
+		CHECK_EQ(arr.Num(), 4);
+		CHECK_EQ(arr[0], 1);
+		CHECK_EQ(arr[1], 2);
+		CHECK_EQ(arr[2], 3);
+		CHECK_EQ(arr[3], 4);
 	}
 
 	TEST_CASE("Add elements") {
@@ -75,5 +88,30 @@ TEST_SUITE("FixedArray") {
 		}
 
 		CHECK_EQ(1, Element::DestructCount());
+	}
+
+	TEST_CASE("Copy FixedArray") {
+		FixedArray<Element, 10> a;
+		a.Add({ 5 });
+		a.Add({ 25 });
+		a.Add({ 125 });
+
+		FixedArray<Element, 10> b = a;
+		CHECK_EQ(b.Num(), a.Num());
+		CHECK_EQ(b[0], a[0]);
+		CHECK_EQ(b[1], a[1]);
+		CHECK_EQ(b[2], a[2]);
+	}
+
+	TEST_CASE("Move FixedArray") {
+		FixedArray<Element, 10> a;
+		a.Add({ 5 });
+		a.Add({ 25 });
+		a.Add({ 125 });
+		Element::Reset();
+
+		FixedArray<Element, 10> b(std::move(a));;
+		CHECK_EQ(b.Num(), 3);
+		CHECK_EQ(Element::MoveCount(), 3);
 	}
 }
