@@ -187,6 +187,7 @@ struct GPU_DX12 : public GPUInterface {
 	struct DepthTarget {
 		COMPtr<ID3D12Resource> Resource;
 		D3D12_CPU_DESCRIPTOR_HANDLE Descriptor;
+		D3D12_CPU_DESCRIPTOR_HANDLE DescriptorReadOnly;
 	};
 
 	GPU_DX12();
@@ -220,7 +221,7 @@ struct GPU_DX12 : public GPUInterface {
 	u32									m_rtv_descriptor_size;
 
 	COMPtr<ID3D12DescriptorHeap>		m_dsv_heap;
-	u32									m_dsv_heap_size;
+	u32									m_dsv_descriptor_size;
 
 	u32 m_frame_index = 0;
 
@@ -349,12 +350,12 @@ void GPU_DX12::Init() {
 	m_rtv_descriptor_size = m_device->GetDescriptorHandleIncrementSize(rtv_heap_desc.Type);
 
 	D3D12_DESCRIPTOR_HEAP_DESC dsv_heap_desc = {};
-	dsv_heap_desc.NumDescriptors = max_depth_targets;
+	dsv_heap_desc.NumDescriptors = max_depth_targets * 2;
 	dsv_heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 	dsv_heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 	EnsureHR(m_device->CreateDescriptorHeap(&dsv_heap_desc, IID_PPV_ARGS(m_dsv_heap.Replace())));
 
-	m_dsv_heap_size = m_device->GetDescriptorHandleIncrementSize(dsv_heap_desc.Type);
+	m_dsv_descriptor_size = m_device->GetDescriptorHandleIncrementSize(dsv_heap_desc.Type);
 
 	m_frame_fence_event = CreateEvent(nullptr, false, false, L"Frame Fence Event");
 	m_copy_fence_event = CreateEvent(nullptr, false, false, L"Upload Fence Event");
@@ -715,7 +716,9 @@ DepthTargetID GPU_DX12::CreateDepthTarget(u32 width, u32 height) {
 
 	DepthTarget& target_info = m_depth_targets[id];
 	target_info.Descriptor = m_dsv_heap->GetCPUDescriptorHandleForHeapStart();
-	target_info.Descriptor.ptr += m_dsv_heap_size * (size_t)id;
+	target_info.Descriptor.ptr += m_dsv_descriptor_size * (size_t)id * 2;
+	target_info.DescriptorReadOnly = m_dsv_heap->GetCPUDescriptorHandleForHeapStart();
+	target_info.DescriptorReadOnly.ptr += m_dsv_descriptor_size * ((size_t)id * 2 + 1);
 
 	DXGI_FORMAT format = DXGI_FORMAT_D32_FLOAT;
 	D3D12_CLEAR_VALUE clear_value = {};
@@ -740,6 +743,9 @@ DepthTargetID GPU_DX12::CreateDepthTarget(u32 width, u32 height) {
 	view_desc.Flags = D3D12_DSV_FLAG_NONE;
 
 	m_device->CreateDepthStencilView(target_info.Resource.Get(), &view_desc, target_info.Descriptor);
+
+	view_desc.Flags = D3D12_DSV_FLAG_READ_ONLY_DEPTH;
+	m_device->CreateDepthStencilView(target_info.Resource.Get(), &view_desc, target_info.DescriptorReadOnly);
 	return id;
 }
 
