@@ -876,8 +876,8 @@ void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
 	// Bind RTs for pass
 	Assert(pass.RenderTargets.Num() <= GPU::MaxRenderTargets);
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvs[GPU::MaxRenderTargets];
-	for (tuple<D3D12_CPU_DESCRIPTOR_HANDLE&, RenderTargetID> it : Zip(rtvs, pass.RenderTargets)) {
-		get<0>(it) = GetRenderTargetView(frame->m_render_target_view, get<1>(it));
+	for (auto[rtv, rt_id] : Zip(rtvs, pass.RenderTargets)) {
+		rtv = GetRenderTargetView(frame->m_render_target_view, rt_id);
 	}
 	const D3D12_CPU_DESCRIPTOR_HANDLE* dsv = nullptr;
 	if (pass.DepthBuffer != DepthTargetID{}) {
@@ -946,9 +946,7 @@ void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
 		const GPU::StreamSetup& stream_setup = item.StreamSetup;
 		FixedArray<D3D12_VERTEX_BUFFER_VIEW, GPU::MaxStreamSlots> vbs;
 
-		for (tuple<VertexBufferID, u32> it : Zip(item.StreamSetup.VertexBuffers, pipeline_state.VBStrides)) {
-			VertexBufferID vb_id = get<0>(it);
-			u32 stride = get<1>(it);
+		for (auto[vb_id, stride] : Zip(item.StreamSetup.VertexBuffers, pipeline_state.VBStrides)) {
 			vbs.Add(GetVertexBufferView(frame, vb_id, stride));
 		}
 

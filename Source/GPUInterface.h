@@ -286,15 +286,11 @@ namespace GPU {
 		if (a.Slots.Num() != b.Slots.Num()) {
 			return false;
 		}
-		for (std::tuple<const StreamSlotDesc&, const StreamSlotDesc&> p : Zip(a.Slots, b.Slots)) {
-			const StreamSlotDesc& slot_a = std::get<0>(p);
-			const StreamSlotDesc& slot_b = std::get<1>(p);
+		for (auto[slot_a, slot_b] : Zip(a.Slots, b.Slots)) {
 			if (slot_a.Elements.Num() != slot_b.Elements.Num()) {
 				return false;
 			}
-			for (std::tuple<const StreamElementDesc&, const StreamElementDesc&> e : Zip(slot_a.Elements, slot_b.Elements)) {
-				const StreamElementDesc& e_a = std::get<0>(e);
-				const StreamElementDesc& e_b = std::get<1>(e);
+			for (auto[e_a, e_b] : Zip(slot_a.Elements, slot_b.Elements)) {
 				if (e_a != e_b) { return false; }
 			}
 		}

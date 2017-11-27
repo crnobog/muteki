@@ -1,4 +1,4 @@
-#include <random>
+﻿#include <random>
 
 // TODO: Test destructors are called
 TEST_SUITE("Hashtable") {
@@ -49,7 +49,7 @@ TEST_SUITE("Hashtable") {
 		Array<Value> values;
 		HashTable<Key, Value> hash;
 		std::mt19937 gen(23526234);
-		for (i32 i=0; keys.Num() < 1000; ) {
+		for (i32 i = 0; keys.Num() < 1000; ) {
 			Key k{ gen() };
 			if (!keys.Contains(k)) {
 				++i;
@@ -69,8 +69,8 @@ TEST_SUITE("Hashtable") {
 				CHECK(hash_contains);
 			}
 
-			for (std::tuple<Key, Value> t : Zip(keys, values)) {
-				CHECK(hash.Find(std::get<0>(t)) == std::get<1>(t));
+			for (auto[key, value] : Zip(keys, values)) {
+				CHECK(hash.Find(key) == value);
 			}
 		}
 

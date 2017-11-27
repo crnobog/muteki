@@ -1,4 +1,4 @@
-#include "Ranges.h"
+﻿#include "Ranges.h"
 #include "PointerRange.h"
 #include "IotaRange.h"
 
@@ -59,4 +59,20 @@ TEST_SUITE("ZipRange") {
 		CHECK(std::is_same<std::tuple<int&, const int&>, decltype(r.Front())>::value);
 	}
 
+	TEST_CASE("Zip with structured bindings in ranged for") {
+		int as[] = { 1, 2, 3, 4 };
+		float bs[] = { 10.0f, 20.0f, 30.0f, 40.0f };
+
+		for (auto[a, b] : Zip(Range(as), Range(bs))) {
+			b *= a;
+			a--;
+		}
+
+		int expected_as[] = { 0, 1, 2, 3 };
+		float expected_bs[] = { 10.0f, 40.0f, 90.0f, 160.0f };
+		for (i32 i = 0; i < ArraySize(as); ++i) {
+			CHECK_EQ(as[i], expected_as[i]);
+			CHECK_EQ(bs[i], expected_bs[i]);
+		}
+	}
 }

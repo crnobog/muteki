@@ -49,8 +49,8 @@ namespace mu {
 		}
 
 		bool operator==(const String_T& other) const {
-			for (auto&& pair : mu::Zip(m_data, other.m_data)) {
-				if (std::get<0>(pair) != std::get<1>(pair)) {
+			for (auto[a, b] : Zip(m_data, other.m_data)) {
+				if (a != b) {
 					return false;
 				}
 			}

@@ -1,4 +1,4 @@
-#include "ZipRange.h"
+﻿#include "ZipRange.h"
 
 TEST_SUITE("BitArray") {
 	using namespace mu;
@@ -85,8 +85,8 @@ TEST_SUITE("BitArray") {
 			b.SetBit(i);
 		}
 
-		for (auto pair : Zip(indices, b.GetSetBits())) {
-			CHECK_EQ(get<0>(pair), get<1>(pair));
+		for (auto[a, b] : Zip(indices, b.GetSetBits())) {
+			CHECK_EQ(a, b);
 		}
 	}
 }

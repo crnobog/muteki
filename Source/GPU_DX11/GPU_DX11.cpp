@@ -293,8 +293,8 @@ void GPU_DX11::SubmitPass(const RenderPass& pass) {
 
 	ID3D11RenderTargetView* rtvs[GPU::MaxRenderTargets];
 	Assert(pass.RenderTargets.Num() <= GPU::MaxRenderTargets);
-	for (tuple<ID3D11RenderTargetView*&, RenderTargetID> it : Zip(rtvs, pass.RenderTargets)) {
-		get<0>(it) = GetRenderTargetView(get<1>(it));
+	for (auto[rtv, rt] : Zip(rtvs, pass.RenderTargets)) {
+		rtv = GetRenderTargetView(rt);
 	}
 	context->OMSetRenderTargets((u32)pass.RenderTargets.Num(), rtvs, nullptr);
 
@@ -392,11 +392,11 @@ VertexShaderID GPU_DX11::CompileVertexShaderHLSL(const char* entry_point, mu::Po
 	Assert(desc.InputParameters < VertexShaderInputs::MaxInputElements);
 	input_params.AddZeroed(desc.InputParameters);
 	inputs.InputElements.AddZeroed(desc.InputParameters);
-	for (tuple<u32, DX::VertexShaderInputElement&> it : Zip(Iota<u32>(), inputs.InputElements)) {
+	for (auto[index, parsed_elem] : Zip(Iota<u32>(), inputs.InputElements)) {
 		D3D11_SIGNATURE_PARAMETER_DESC input_param;
-		reflector->GetInputParameterDesc(get<0>(it), &input_param);
+		reflector->GetInputParameterDesc(index, &input_param);
 
-		get<1>(it) = DX11Util::ParseInputParameter(input_param);
+		parsed_elem = DX11Util::ParseInputParameter(input_param);
 	}
 
 	return id;
