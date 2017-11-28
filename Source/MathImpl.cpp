@@ -22,7 +22,7 @@ Mat4x4 CreatePerspectiveProjectionAsymmetric(
 		0,					0,					1,					0
 	};
 }
-Mat4x4 CreatePerspectiveProjection(
+Mat4x4 CreatePerspectiveProjectionSymmetric(
 	float W, float H, float N, float F) {
 	return Mat4x4{
 		N / W,	0,		0,				0,
@@ -32,6 +32,11 @@ Mat4x4 CreatePerspectiveProjection(
 	};
 }
 
+Mat4x4 CreatePerspectiveProjection(f32 VFOV, f32 AspectRatio, f32 N, f32 F) {
+	float H = 2 * Tan(VFOV / 2.0f) * N;
+	float W = AspectRatio * H;
+	return CreatePerspectiveProjectionSymmetric(W, H, N, F);
+}
 
 Mat4x4 CreateRotationX(float Radians) {
 	float c = Cos(Radians), s = Sin(Radians);

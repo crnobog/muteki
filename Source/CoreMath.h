@@ -8,9 +8,11 @@ constexpr f64 PiOver4 = 0.785398163397448309616;
 
 f32 Cos(f32 radians);
 f32 Sin(f32 radians);
+f32 Tan(f32 radians);
 
 f64 Cos(f64 radians);
 f64 Sin(f64 radians);
+f64 Tan(f64 radians);
 
 inline constexpr f64 DegreesToRadians(f64 radians) { return radians * 180 / Pi; }
 inline constexpr f32 DegreesToRadians(f32 radians) { return f32(radians * 180 / Pi); }

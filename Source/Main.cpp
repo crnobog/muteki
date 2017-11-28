@@ -319,7 +319,9 @@ int main(int, char**) {
 	i64 frame_num = 0;
 	bool show_test_window = false;
 	bool pause_anim = false;
-	float proj_params[] = { 0.3f, 0.2f };
+	float vfov = 0.5f;
+	float near_plane = 0.1f;
+	float far_plane = 10.0f;
 	while (glfwWindowShouldClose(win) == false) {
 		glfwPollEvents();
 
@@ -340,8 +342,14 @@ int main(int, char**) {
 		}
 		imgui.BeginFrame(mouse_pos, mouse_buttons);
 
+
+		const float aspect_ratio = (float)fb_width / (float)fb_height;
+
 		if (ImGui::Begin("muteki", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-			ImGui::InputFloat2("Projection Dimensions", proj_params);
+			ImGui::SliderFloat("VFOV", &vfov, 0.0f, 3.0f);
+			ImGui::SliderFloat("Near Plane", &near_plane, 0.001f, 1.0f);
+			ImGui::SliderFloat("Far Plane", &far_plane, near_plane, 100.0f);
+
 			ImGui::Checkbox("Pause", &pause_anim);
 			ImGui::End();
 		}
@@ -351,7 +359,7 @@ int main(int, char**) {
 			Mat4x4 view_to_clip = Mat4x4::Identity(); // TODO: Nomenclature?
 		};
 		ViewData view_data;
-		view_data.view_to_clip = CreatePerspectiveProjection(proj_params[0], proj_params[1], 0.1f, 10);
+		view_data.view_to_clip = CreatePerspectiveProjection(vfov, aspect_ratio, near_plane, far_plane);
 		GPU::ConstantBufferID cbuffer_id_viewdata = gpu_frame->GetTemporaryConstantBuffer(ByteRange(view_data));
 
 		FixedArray<GPU::DrawItem, 16> draw_items;
