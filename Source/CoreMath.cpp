@@ -9,3 +9,6 @@ f32 Tan(f32 Radians) { return tanf(Radians); }
 f64 Cos(f64 Radians) { return cos(Radians); }
 f64 Sin(f64 Radians) { return sin(Radians); }
 f64 Tan(f64 Radians) { return tan(Radians); }
+
+f32 Sqrt(f32 f) { return f32(sqrt(f)); }
+f64 Sqrt(f64 f) { return sqrt(f); }
