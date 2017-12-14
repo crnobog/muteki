@@ -2,6 +2,7 @@
 
 #include "mu-core/Global.h"
 #include "mu-core/RangeIteration.h"
+#include "mu-core/Metaprogramming.h"
 
 namespace mu {
 
@@ -55,6 +56,11 @@ namespace mu {
 		bool operator!=(const PointerRange<U>& other) const {
 			return m_start != other.m_start
 				|| m_end != other.m_end;
+		}
+
+		PointerRange< CopyCV<T, u8> > Bytes() const {
+			using ByteType = CopyCV<T, u8>;
+			return { reinterpret_cast<ByteType*>(m_start), reinterpret_cast<ByteType*>(m_end) };
 		}
 	};
 
