@@ -79,9 +79,9 @@ struct ImGuiImpl {
 		GPU::PipelineStateDesc pipeline_state_desc = {};
 
 		String shader_filename{ GetShaderDirectory(), "imgui.hlsl" };
-		Array<u8> shader_txt_code = LoadFileToArray(shader_filename.GetRaw(), FileReadType::Text); // TODO: Handle unicode BOM/other encodings
-		GPU::VertexShaderID vshader_id = gpu->CompileVertexShaderHLSL("vs_main", Range(shader_txt_code));
-		GPU::PixelShaderID pshader_id = gpu->CompilePixelShaderHLSL("ps_main", Range(shader_txt_code));
+		String shader_txt_code = LoadFileToString(shader_filename.GetRaw());
+		GPU::VertexShaderID vshader_id = gpu->CompileVertexShaderHLSL("vs_main", shader_txt_code.Bytes());
+		GPU::PixelShaderID pshader_id = gpu->CompilePixelShaderHLSL("ps_main", shader_txt_code.Bytes());
 		pipeline_state_desc.Program = gpu->LinkProgram(vshader_id, pshader_id);
 
 		pipeline_state_desc.StreamFormat.AddSlot({
@@ -262,9 +262,9 @@ int main(int, char**) {
 	GPU::PipelineStateID cube_pipeline_state;
 	{
 		String shader_filename{ GetShaderDirectory(), "basic_shader.hlsl" };
-		Array<u8> shader_txt_code = LoadFileToArray(shader_filename.GetRaw(), FileReadType::Text); // TODO: Handle unicode BOM/other encodings
-		GPU::VertexShaderID vshader_id = gpu->CompileVertexShaderHLSL("vs_main", Range(shader_txt_code));
-		GPU::PixelShaderID pshader_id = gpu->CompilePixelShaderHLSL("ps_main", Range(shader_txt_code));
+		String shader_txt_code = LoadFileToString(shader_filename.GetRaw()); // TODO: Handle unicode BOM/other encodings
+		GPU::VertexShaderID vshader_id = gpu->CompileVertexShaderHLSL("vs_main", shader_txt_code.Bytes());
+		GPU::PixelShaderID pshader_id = gpu->CompilePixelShaderHLSL("ps_main", shader_txt_code.Bytes());
 		GPU::ProgramID program_id = gpu->LinkProgram(vshader_id, pshader_id);
 
 		GPU::PipelineStateDesc pipeline_state_desc{};
@@ -284,9 +284,9 @@ int main(int, char**) {
 	GPU::PipelineStateID grid_pipeline_state;
 	{
 		String shader_filename{ GetShaderDirectory(), "grid_shader.hlsl" };
-		Array<u8> shader_txt_code = LoadFileToArray(shader_filename.GetRaw(), FileReadType::Text); // TODO: Handle unicode BOM/other encodings
-		GPU::VertexShaderID vshader_id = gpu->CompileVertexShaderHLSL("vs_main", Range(shader_txt_code));
-		GPU::PixelShaderID pshader_id = gpu->CompilePixelShaderHLSL("ps_main", Range(shader_txt_code));
+		String shader_txt_code = LoadFileToString(shader_filename.GetRaw());
+		GPU::VertexShaderID vshader_id = gpu->CompileVertexShaderHLSL("vs_main", shader_txt_code.Bytes());
+		GPU::PixelShaderID pshader_id = gpu->CompilePixelShaderHLSL("ps_main", shader_txt_code.Bytes());
 		GPU::ProgramID program_id = gpu->LinkProgram(vshader_id, pshader_id);
 
 		GPU::PipelineStateDesc pipeline_state_desc{};

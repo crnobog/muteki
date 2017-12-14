@@ -43,6 +43,8 @@ namespace mu {
 
 		bool IsEmpty() const { return m_data.Num() <= 1; }
 		const CharType* GetRaw() const { return m_data.Data(); }
+		PointerRange<u8> Bytes() { return m_data.Bytes(); }
+		PointerRange<const u8> Bytes() const { return m_data.Bytes(); }
 		size_t GetLength() const {
 			size_t n = m_data.Num();
 			return n == 0 ? 0 : n - 1;
@@ -105,6 +107,12 @@ namespace mu {
 			}
 		}
 
+		PointerRange<CharType> AddUninitialized(size_t count) {
+			RemoveTrailingNull();
+			auto r = m_data.AddUninitialized(count + 1);
+			m_data[m_data.Num() - 1] = 0;
+			return r;
+		}
 
 		int Compare(const char* c_str) const {
 			return strncmp(m_data.Data(), c_str, m_data.Num());
