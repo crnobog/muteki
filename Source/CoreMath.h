@@ -14,8 +14,8 @@ f64 Cos(f64 radians);
 f64 Sin(f64 radians);
 f64 Tan(f64 radians);
 
-inline constexpr f64 DegreesToRadians(f64 radians) { return radians * 180 / Pi; }
-inline constexpr f32 DegreesToRadians(f32 radians) { return f32(radians * 180 / Pi); }
+inline constexpr f64 DegreesToRadians(f64 radians) { return radians *Pi / 180; }
+inline constexpr f32 DegreesToRadians(f32 radians) { return f32(radians * Pi / 180); }
 
 f32 Sqrt(f32 f);
 f64 Sqrt(f64 f);
