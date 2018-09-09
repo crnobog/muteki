@@ -7,19 +7,107 @@
 namespace mu {
 	template<typename DERIVED, typename FROM_CHAR, typename TO_CHAR>
 	class StringConvRange_UTF8_UTF16_Base {
-		std::codecvt_utf8_utf16<wchar_t> conv;
-		std::mbstate_t mb{};
 		mu::PointerRange<const FROM_CHAR> source;
 		TO_CHAR buffer[256];
 		bool empty = false;
 
-		// Since we use the same converter but a different member function for each direction, we need these overloads but each subclass only uses one
-		std::codecvt_base::result DoConv(const char* in_start, const char* in_end, const char*& in_next, wchar_t* out_start, wchar_t* out_end, wchar_t*& out_next) {
-			return conv.in(mb, in_start, in_end, in_next, out_start, out_end, out_next);
+		// Decode from utf16 to a single unicode code point
+		size_t Decode(u32& code_point, const wchar_t* in_start, size_t in_left) {
+			if (in_start[0] < 0xD800) {
+				code_point = in_start[0];
+				return 1;
+			}
+			else if (in_start[0] < 0xE000) {
+				if (in_left < 2) { return 0; }
+				if ((in_start[0] & 0b1111110000000000) != 0b1101100000000000) { return 0; }
+				if ((in_start[1] & 0b1111110000000000) != 0b1101110000000000) { return 0; }
+
+				code_point = (in_start[0] & 0b0000001111111111) << 10;
+				code_point |= (in_start[1] & 0b0000001111111111);
+				code_point += 0x10000;
+				return 2;
+			}
+			else {
+				code_point = in_start[0];
+				return 1;
+			}
 		}
-		std::codecvt_base::result DoConv(const wchar_t* in_start, const wchar_t* in_end, const wchar_t*& in_next, char* out_start, char* out_end, char*& out_next) {
-			return conv.out(mb, in_start, in_end, in_next, out_start, out_end, out_next);
+		// Decode from utf8 to a single unicode code point
+		size_t Decode(u32& code_point, const char* in_start, size_t in_left) {
+			if ((in_start[0] & 0b10000000) == 0) {
+				code_point = in_start[0] & 0b01111111;
+				return 1;
+			}
+			else if ((in_start[0] & 0b11100000) == 0b11000000) {
+				if (in_left < 2) { return 0; }
+				code_point = (in_start[0] & 0b00011111) << 6;
+				code_point = (in_start[1] | 0b00111111);
+				return 2;
+			}
+			else if ((in_start[0] & 0b11110000) == 0b11100000) {
+				if (in_left < 3) { return 0; }
+				code_point = (in_start[0] & 0b00001111) << 12;
+				code_point |= (in_start[1] | 0b00111111) << 6;
+				code_point |= (in_start[2] | 0b00111111);
+				return 3;
+			}
+			else if ((in_start[0] & 0b11111000) == 0b11110000) {
+				if (in_left < 4) { return 0; }
+				code_point = (in_start[0] & 0b00000111) << 18;
+				code_point |= (in_start[1] | 0b00111111) << 6;
+				code_point |= (in_start[2] | 0b00111111) << 6;
+				code_point |= (in_start[3] | 0b00111111);
+				return 4;
+			}
+			else {
+				return 0; // Invalid
+			}
 		}
+
+		// Encode a single code point to utf16
+		size_t Encode(u32 code_point, wchar_t* in_start) {
+			if (code_point < 0xD800) {
+				in_start[0] = (wchar_t)code_point;
+				return 1;
+			}
+			else if (code_point < 0xE000) {
+				code_point -= 0x10000;
+				in_start[0] = (wchar_t)(code_point >> 10) + 0xD800;
+				in_start[1] = (wchar_t)(code_point & 0b1111111111) + 0xDC00;
+				return 2;
+			}
+			else {
+				in_start[0] = (wchar_t)code_point;
+				return 1;
+			}
+		}
+
+		// Encode a single code point to utf8
+		size_t Encode(u32 code_point, char* in_start) {
+			if (code_point < 0x80) {
+				in_start[0] = (char)code_point;
+				return 1;
+			}
+			else if (code_point < 0x800) {
+				in_start[0] = 0b11000000 | (char)(code_point >> 6);
+				in_start[1] = 0b10000000 | (char)(code_point & 0b00111111);
+				return 2;
+			}
+			else if (code_point < 0x10000) {
+				in_start[0] = 0b11100000 | (char)(code_point >> 12);
+				in_start[1] = 0b10000000 | (char)((code_point >> 6) & 0b00111111);
+				in_start[2] = 0b10000000 | (char)(code_point & 0b00111111);
+				return 3;
+			}
+			else {
+				in_start[0] = 0b11110000 | (char)(code_point >> 18);
+				in_start[1] = 0b10000000 | (char)((code_point >> 12) & 0b00111111);
+				in_start[2] = 0b10000000 | (char)((code_point >> 6) & 0b00111111);
+				in_start[3] = 0b10000000 | (char)(code_point & 0b00111111);
+				return 4;
+			}
+		}
+
 	public:
 		StringConvRange_UTF8_UTF16_Base(mu::PointerRange<const FROM_CHAR> in) : source(in) {
 			Advance();
@@ -31,20 +119,28 @@ namespace mu {
 				empty = true;
 				return;
 			}
-			const FROM_CHAR* in_next = nullptr, *in_start = &source.Front();
-			size_t in_size = source.Size();
-			TO_CHAR* out_next = nullptr;
-			std::codecvt_base::result res = DoConv(in_start, in_start + in_size, in_next,
-												   buffer, buffer + ArraySize(buffer) - 1, out_next);
-			Assert(res != std::codecvt_base::noconv);
 
-			// insert null byte so callers can use Front as a null-terminated c string
+			TO_CHAR* out_next = buffer;
+			size_t out_left = sizeof(buffer) / sizeof(buffer[0]);
+			size_t min_for_decode = 0;
+			bool error = false;
+			do {
+				u32 code_point = 0;
+				const FROM_CHAR* in_start = &source.Front();
+				size_t in_left = source.Size();
+				size_t consumed = Decode(code_point, in_start, in_left);
+				if (consumed == 0) {
+					// Failed to decode a code point
+					error = true;
+					break;
+				}
+				source.AdvanceBy(consumed);
+
+				size_t num_encoded = Encode(code_point, out_next);
+				out_next += num_encoded;
+				out_left -= num_encoded;
+			} while (!source.IsEmpty() && out_left > min_for_decode);
 			*out_next = 0;
-
-			source = { in_next, in_start + in_size };
-			if (res == std::codecvt_base::error) {
-				empty = true;
-			}
 		}
 	};
 
