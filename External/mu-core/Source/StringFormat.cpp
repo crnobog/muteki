@@ -25,11 +25,13 @@ namespace mu {
 	}
 	StringFormatArg::StringFormatArg(const char* c_str)
 		: m_type(StringFormatArgType::C_Str)
-		, m_c_str(c_str, strlen(c_str)) {}
+		, m_c_str(c_str, strlen(c_str)) {
+	}
 
 	StringFormatArg::StringFormatArg(const char* c_str, i64 len)
 		: m_type(StringFormatArgType::C_Str)
-		, m_c_str(c_str, len) {}
+		, m_c_str(c_str, len) {
+	}
 
 	StringFormatArg::StringFormatArg(const String_T<char>& str) {
 		if (str.IsEmpty()) {
@@ -43,23 +45,28 @@ namespace mu {
 
 	StringFormatArg::StringFormatArg(i32 i)
 		: m_type(StringFormatArgType::Unsigned)
-		, m_uint(i) {}
+		, m_uint(i) {
+	}
 
 	StringFormatArg::StringFormatArg(u32 u)
 		: m_type(StringFormatArgType::Unsigned)
-		, m_uint(u) {}
+		, m_uint(u) {
+	}
 
 	StringFormatArg::StringFormatArg(float f)
 		: m_type(StringFormatArgType::Double)
-		, m_double(f) {}
+		, m_double(f) {
+	}
 
 	StringFormatArg::StringFormatArg(double d)
 		: m_type(StringFormatArgType::Double)
-		, m_double(d) {}
+		, m_double(d) {
+	}
 
 	StringFormatArg::StringFormatArg(size_t s)
 		: m_type(StringFormatArgType::Unsigned)
-		, m_uint(s) {}
+		, m_uint(s) {
+	}
 
 	void ValidateFormatString(const char* fmt) {
 		ValidateFormatString(fmt, {});
