@@ -155,6 +155,7 @@
     <ClInclude Include="..\..\Source\GPU_DX12\GPU_DX12.h" />
     <ClInclude Include="..\..\Source\GPU_DX12\DX12Utils.h" />
     <ClInclude Include="..\..\Source\GPU_DXShared\DXSharedUtils.h" />
+    <ClInclude Include="..\..\Source\Quaternion.h" />
     <ClInclude Include="..\..\Source\Rect.h" />
     <ClInclude Include="..\..\Source\TransformMatrices.h" />
     <ClInclude Include="..\..\Source\Vectors.h" />

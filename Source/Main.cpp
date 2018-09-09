@@ -6,6 +6,7 @@
 #include "GPU_DX11/GPU_DX11.h"
 #include "Vectors.h"
 #include "TransformMatrices.h"
+#include "Quaternion.h"
 #include "CoreMath.h"
 #include "CubePrimitive.h"
 
@@ -88,7 +89,7 @@ struct ImGuiImpl {
 			{ GPU::ScalarType::Float,	2, GPU::InputSemantic::Position,	0 },
 			{ GPU::ScalarType::Float,	2, GPU::InputSemantic::Texcoord,	0 },
 			{ GPU::ScalarType::U8,		4, GPU::InputSemantic::Color,		0, true }
-		});
+												 });
 
 		pipeline_state_desc.BlendState.BlendEnable = true;
 		pipeline_state_desc.BlendState.ColorBlend = { GPU::BlendValue::SourceAlpha, GPU::BlendOp::Add, GPU::BlendValue::InverseSourceAlpha };
@@ -322,6 +323,11 @@ int main(int, char**) {
 	float vfov = 0.5f;
 	float near_plane = 0.1f;
 	float far_plane = 10.0f;
+	Vec3 view_pos = { 0, 0, -3 };
+	Vec3 rot_axis = { 0, 1, 0 };
+	float rot_deg = 0;
+	bool bUseQuat = false;
+	float rot_deg_x = 0, rot_deg_y = 0, rot_deg_z = 0;
 	while (glfwWindowShouldClose(win) == false) {
 		glfwPollEvents();
 
@@ -346,42 +352,50 @@ int main(int, char**) {
 		const float aspect_ratio = (float)fb_width / (float)fb_height;
 
 		if (ImGui::Begin("muteki", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+			ImGui::Checkbox("Pause", &pause_anim);
+			ImGui::Checkbox("Use Quat", &bUseQuat);
+			ImGui::Separator();
+
+			if (bUseQuat) {
+				ImGui::InputFloat3("Rot Axis", rot_axis.Data);
+				ImGui::DragFloat("Rot Angle", &rot_deg, 1.0f, 0, 360);
+			}
+			else {
+				ImGui::InputFloat("Angle X", &rot_deg_x);
+				ImGui::InputFloat("Angle Y", &rot_deg_y);
+				ImGui::InputFloat("Angle Z", &rot_deg_z);
+			}
+			ImGui::Separator();
+
+			ImGui::InputFloat3("View Position", view_pos.Data);
 			ImGui::SliderFloat("VFOV", &vfov, 0.0f, 3.0f);
 			ImGui::SliderFloat("Near Plane", &near_plane, 0.001f, 1.0f);
 			ImGui::SliderFloat("Far Plane", &far_plane, near_plane, 100.0f);
 
-			ImGui::Checkbox("Pause", &pause_anim);
 			ImGui::End();
 		}
+
+		Quat q = Quat::FromAxisAngle(Normalize(rot_axis), DegreesToRadians(rot_deg));
 
 		struct ViewData {
 			Mat4x4 world_to_view = Mat4x4::Identity();
 			Mat4x4 view_to_clip = Mat4x4::Identity(); // TODO: Nomenclature?
 		};
 		ViewData view_data;
+		view_data.world_to_view = CreateTranslation(-view_pos);
 		view_data.view_to_clip = CreatePerspectiveProjection(vfov, aspect_ratio, near_plane, far_plane);
 		GPU::ConstantBufferID cbuffer_id_viewdata = gpu_frame->GetTemporaryConstantBuffer(ByteRange(view_data));
 
 		FixedArray<GPU::DrawItem, 16> draw_items;
 		{
 			// Draw cube
-			Mat4x4 transform = CreateTranslation({ 0, Sin(frame_num / 1600.0f), 0.95f }) * CreateRotationY(frame_num / 1600.0);
-			GPU::ConstantBufferID cbuffer_id_transform = gpu_frame->GetTemporaryConstantBuffer(ByteRange(transform));
-			GPU::DrawItem& draw_item = draw_items.AddDefaulted(1).Front();
-			// default raster state, blend state, depth stencil state
-			draw_item.PipelineState = cube_pipeline_state;
-			draw_item.BoundResources.ConstantBuffers.Add(cbuffer_id_viewdata);
-			draw_item.BoundResources.ConstantBuffers.Add(cbuffer_id_transform);
-			draw_item.BoundResources.ResourceLists.Add(cube_resource_list_id);
-			draw_item.Command.VertexOrIndexCount = (u32)ArraySize(cube_indices);
-			draw_item.Command.PrimTopology = GPU::PrimitiveTopology::TriangleList;
-			draw_item.StreamSetup.VertexBuffers.Add({ cube_vbuffer_id_pos, cube_vbuffer_id_normals, cube_vbuffer_id_texcoord });
-			draw_item.StreamSetup.IndexBuffer = cube_ibuffer_id;
-		}
-
-		{
-			// Draw cube
-			Mat4x4 transform = CreateTranslation({ 0, Sin(frame_num / 1600.0f), 2.95f }) * CreateRotationY(frame_num / 1600.0);
+			Mat4x4 transform;
+			if (bUseQuat) {
+				transform = q.ToMatrix4x4();
+			}
+			else {
+				transform = CreateRotationZ(DegreesToRadians(rot_deg_z)) * CreateRotationY(DegreesToRadians(rot_deg_y)) * CreateRotationX(DegreesToRadians(rot_deg_x));
+			}
 			GPU::ConstantBufferID cbuffer_id_transform = gpu_frame->GetTemporaryConstantBuffer(ByteRange(transform));
 			GPU::DrawItem& draw_item = draw_items.AddDefaulted(1).Front();
 			// default raster state, blend state, depth stencil state

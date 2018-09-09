@@ -1,6 +1,7 @@
 ﻿
 #include "CoreMath.h"
 #include "TransformMatrices.h"
+#include "Quaternion.h"
 
 template<typename T, size_t N>
 std::ostream& operator<< (std::ostream& os, const Vector<T, N>& value) {
@@ -441,5 +442,31 @@ TEST_SUITE("Matrices") {
 				CHECK_EQ(concat.Data[i], doctest::Approx(m90.Data[i]));
 			}
 		}
+	}
+}
+
+TEST_SUITE("Quats") {
+	TEST_CASE("Construct") {
+		Quat q1;
+		CHECK_EQ(q1.X, 0.0f);
+		CHECK_EQ(q1.Y, 0.0f);
+		CHECK_EQ(q1.Z, 0.0f);
+		CHECK_EQ(q1.W, 1.0f);
+
+		Quat q2 = Quat::Identity();
+		CHECK_EQ(q2.X, 0.0f);
+		CHECK_EQ(q2.Y, 0.0f);
+		CHECK_EQ(q2.Z, 0.0f);
+		CHECK_EQ(q2.W, 1.0f);
+
+		CHECK_EQ(q1, q2);
+	}
+
+	TEST_CASE("Concat") {
+
+	}
+
+	TEST_CASE("RotateVectors") {
+
 	}
 }
