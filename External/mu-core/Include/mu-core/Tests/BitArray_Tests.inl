@@ -78,14 +78,14 @@ TEST_SUITE("BitArray") {
 	TEST_CASE("IterateSetBits") {
 		size_t indices[] = { 12, 32, 64, 65, 100 };
 
-		BitArray b;
-		b.Init(256, false);
+		BitArray bits;
+		bits.Init(256, false);
 
 		for (size_t i : indices) {
-			b.SetBit(i);
+			bits.SetBit(i);
 		}
 
-		for (auto[a, b] : Zip(indices, b.GetSetBits())) {
+		for (auto[a, b] : Zip(indices, bits.GetSetBits())) {
 			CHECK_EQ(a, b);
 		}
 	}
