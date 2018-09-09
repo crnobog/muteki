@@ -13,6 +13,7 @@
 //	- Separate notion of points and vectors. Only for 3d vectors and associated matrices?
 //
 
+#include "mu-core/Math.h"
 #include "mu-core/PrimitiveTypes.h"
 #include "mu-core/Utils.h"
 
