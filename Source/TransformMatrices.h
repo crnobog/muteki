@@ -2,6 +2,8 @@
 
 #include "Vectors.h"
 
+// All transformations are built for a left handed coordinate system.
+
 // Creates an orthographic projection matrix 
 //	Left handed, F > N.
 //	DirectX clip space:
@@ -25,12 +27,18 @@ Mat4x4 CreatePerspectiveProjectionSymmetric(
 Mat4x4 CreatePerspectiveProjection(
 	f32 VFOV, f32 AspectRatio, f32 N, f32 F);
 
-Mat4x4 CreateRotationX(f32 Radians);
-Mat4x4 CreateRotationY(f32 Radians);
-Mat4x4 CreateRotationZ(f32 Radians);
+// Rotations are counter-clockwise around the axis when looking parallel to that axis
 
+// Rotates from Y to Z
+Mat4x4 CreateRotationX(f32 Radians);
 Mat4x4 CreateRotationX(f64 Radians);
+// Rotates from Z to X
+Mat4x4 CreateRotationY(f32 Radians);
 Mat4x4 CreateRotationY(f64 Radians);
+// Rotates from X to Y
+Mat4x4 CreateRotationZ(f32 Radians);
 Mat4x4 CreateRotationZ(f64 Radians);
+
+Mat4x4 CreateRotationAxisAngle(Vec3 axis, f32 Radians);
 
 Mat4x4 CreateTranslation(Vec3 translation);

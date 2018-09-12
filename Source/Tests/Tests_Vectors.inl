@@ -28,6 +28,35 @@ std::ostream& operator<< (std::ostream& os, const Matrix<T, ROWS, COLUMNS>& valu
 	return os;
 }
 
+
+std::ostream& operator<< (std::ostream& os, Quat value) {
+	os << "(" << value.X << "," << value.Y << "," << value.Z << "," << value.W << ")";
+	return os;
+}
+
+#define CHECK_MATRIX_EQ(m1, m2) \
+	for (size_t i = 0; i < 4; ++i) {\
+		for (size_t j = 0; j < 4; ++j) {\
+			CHECK_EQ(m1(i, j), m2(i, j));\
+		}\
+	}
+
+#define CHECK_MATRIX_EQ_APPROX(m1, m2) \
+	for (size_t i = 0; i < 4; ++i) {\
+		for (size_t j = 0; j < 4; ++j) {\
+			CHECK_EQ(m1(i, j), doctest::Approx(m2(i, j)));\
+		}\
+	}
+
+#define CHECK_VEC3_EQ_APPROX(v1, v2) \
+	CHECK_EQ(v1.X, doctest::Approx(v2.X)); \
+	CHECK_EQ(v1.Y, doctest::Approx(v2.Y)); \
+	CHECK_EQ(v1.Z, doctest::Approx(v2.Z)); \
+
+#define CHECK_VEC4_EQ_APPROX(v1, v2) \
+	CHECK_VEC3_EQ_APPROX(v1, v2); \
+	CHECK_EQ(v1.W, doctest::Approx(v2.W)); \
+
 // These tests mostly exist to ensure all the templates are expanded and compiled
 TEST_SUITE("Vectors") {
 	TEST_CASE("VectorConstruction") {
@@ -445,6 +474,57 @@ TEST_SUITE("Matrices") {
 	}
 }
 
+TEST_SUITE("TransformMatrices") {
+	TEST_CASE("RotateX90") {
+		Mat4x4 m = CreateRotationX(DegreesToRadians(90.0f));
+		Vec4 v = { 0, 1, 0, 1 };
+		Vec4 v_ = m * v;
+
+		Vec4 expected = { 0, 0, 1, 1 };
+		CHECK_VEC4_EQ_APPROX(v_, expected);
+	}
+
+	TEST_CASE("RotateY90") {
+		Mat4x4 m = CreateRotationY(DegreesToRadians(90.0f));
+		Vec4 v = { 0, 0, 1, 1 };
+		Vec4 v_ = m * v;
+
+		Vec4 expected = { 1, 0, 0, 1 };
+		CHECK_VEC4_EQ_APPROX(v_, expected);
+	}
+
+	TEST_CASE("RotateZ90") {
+		Mat4x4 m = CreateRotationZ(DegreesToRadians(90.0f));
+		Vec4 v = { 1, 0, 0, 1 };
+		Vec4 v_ = m * v;
+
+		Vec4 expected = { 0, 1, 0, 1 };
+		CHECK_VEC4_EQ_APPROX(v_, expected);
+	}
+
+	TEST_CASE("AxisAngle_Equivalent_X45") {
+		f32 rads = DegreesToRadians(45.0f);
+		Mat4x4 m1 = CreateRotationAxisAngle({ 1, 0, 0 }, rads);
+		Mat4x4 m2 = CreateRotationX(rads);
+
+		CHECK_MATRIX_EQ_APPROX(m1, m2);
+	}
+	TEST_CASE("AxisAngle_Equivalent_Y60") {
+		f32 rads = DegreesToRadians(60.0f);
+		Mat4x4 m1 = CreateRotationAxisAngle({ 0, 1, 0 }, rads);
+		Mat4x4 m2 = CreateRotationY(rads);
+
+		CHECK_MATRIX_EQ_APPROX(m1, m2);
+	}
+	TEST_CASE("AxisAngle_Equivalent_Z70") {
+		f32 rads = DegreesToRadians(70.0f);
+		Mat4x4 m1 = CreateRotationAxisAngle({ 0, 0, 1 }, rads);
+		Mat4x4 m2 = CreateRotationZ(rads);
+
+		CHECK_MATRIX_EQ_APPROX(m1, m2);
+	}
+}
+
 TEST_SUITE("Quats") {
 	TEST_CASE("Construct") {
 		Quat q1;
@@ -463,10 +543,68 @@ TEST_SUITE("Quats") {
 	}
 
 	TEST_CASE("Concat") {
+		Quat qy45 = Quat::FromAxisAngle({ 0, 1, 0 }, DegreesToRadians(45.0f));
+		Quat qy90 = Quat::FromAxisAngle({ 0, 1, 0 }, DegreesToRadians(90.0f));
 
+		Quat qcomposed = qy45 * qy45;
+
+		CHECK_EQ(qy90.X, doctest::Approx(qcomposed.X));
+		CHECK_EQ(qy90.Y, doctest::Approx(qcomposed.Y));
+		CHECK_EQ(qy90.Z, doctest::Approx(qcomposed.Z));
+		CHECK_EQ(qy90.W, doctest::Approx(qcomposed.W));
 	}
 
-	TEST_CASE("RotateVectors") {
+	TEST_CASE("RotateVectorX90") {
+		Quat q = Quat::FromAxisAngle({ 1, 0, 0 }, DegreesToRadians(90.0f));
+		Vec3 v = { 0, 1, 0 };
+		Vec3 v_ = q.Rotate(v);
 
+		Vec3 expected{ 0, 0, 1 };
+		CHECK_VEC3_EQ_APPROX(v_, expected);
+	}
+
+	TEST_CASE("RotateVectorY90") {
+		Quat q = Quat::FromAxisAngle({ 0, 1, 0 }, DegreesToRadians(90.0f));
+		Vec3 v = { 0, 0, 1 };
+		Vec3 v_ = q.Rotate(v);
+
+		Vec3 expected{ 1, 0, 0 };
+		CHECK_VEC3_EQ_APPROX(v_, expected);
+	}
+
+	TEST_CASE("RotateVectorZ90") {
+		Quat q = Quat::FromAxisAngle({ 0, 0, 1 }, DegreesToRadians(90.0f));
+		Vec3 v = { 1, 0, 0 };
+		Vec3 v_ = q.Rotate(v);
+
+		Vec3 expected{ 0, 1, 0 };
+		CHECK_VEC3_EQ_APPROX(v_, expected);
+	}
+
+	TEST_CASE("ToMatrix_Equivalent_XAxis") {
+		f32 rads = DegreesToRadians(32.0f);
+		Quat q = Quat::FromAxisAngle({ 1, 0, 0 }, rads);
+		Mat4x4 m = CreateRotationX(rads);
+		Mat4x4 mq = q.ToMatrix4x4();
+
+		CHECK_MATRIX_EQ_APPROX(m, mq);
+	}
+
+	TEST_CASE("ToMatrix_Equivalent_YAxis") {
+		f32 rads = DegreesToRadians(74.0f);
+		Quat q = Quat::FromAxisAngle({ 0, 1, 0 }, rads);
+		Mat4x4 m = CreateRotationY(rads);
+		Mat4x4 mq = q.ToMatrix4x4();
+
+		CHECK_MATRIX_EQ_APPROX(m, mq);
+	}
+
+	TEST_CASE("ToMatrix_Equivalent_ZAxis") {
+		f32 rads = DegreesToRadians(100.0f);
+		Quat q = Quat::FromAxisAngle({ 0, 0, 1 }, rads);
+		Mat4x4 m = CreateRotationZ(rads);
+		Mat4x4 mq = q.ToMatrix4x4();
+
+		CHECK_MATRIX_EQ_APPROX(m, mq);
 	}
 }
