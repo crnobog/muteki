@@ -91,10 +91,6 @@ Quat operator*(const Quat& A, const Quat& B) {
 		A.W * B.Z + A.X * B.Y - A.Y * B.X + A.Z * B.W,
 		A.W * B.W - A.X * B.X - A.Y * B.Y - A.Z * B.Z
 	};
-	//return Quat{
-	//	Cross(A.Vector, B.Vector) + (A.Scalar * B.Vector) + (B.Scalar * A.Vector),
-	//	(A.Scalar * B.Scalar) - Dot(A.Vector, B.Vector)
-	//};
 }
 
 #pragma warning (pop)
