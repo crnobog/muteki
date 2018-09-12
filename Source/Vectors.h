@@ -370,6 +370,11 @@ inline Vector<U, ROWS> operator*(const Matrix<T, ROWS, COLUMNS>& m, const Vector
 	return r;
 }
 
+template<typename T, typename U, size_t ROWS, size_t COLUMNS, size_t OTHER_SIZE >
+inline Vector<U, ROWS> operator*(const Matrix<T, ROWS, COLUMNS>& m, const Vector<U, OTHER_SIZE>& v) {
+	static_assert(false, "Vector/matrix dimension mismatch");
+}
+
 template<typename T, typename U, size_t ROWS, size_t COLUMNS, size_t COLUMNS2>
 inline auto operator*(const Matrix<T, ROWS, COLUMNS>& m1, const Matrix<U, COLUMNS, COLUMNS2>& m2) {
 	Matrix<decltype(T{}*U{}), ROWS, COLUMNS2 > m;
