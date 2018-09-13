@@ -38,6 +38,21 @@ Mat4x4 CreatePerspectiveProjection(f32 VFOV, f32 AspectRatio, f32 N, f32 F) {
 	return CreatePerspectiveProjectionSymmetric(W, H, N, F);
 }
 
+Mat4x4 CreateLookAt(Vec3 origin, Vec3 target, Vec3 up) {
+	Vec3 forward = Normalize(target-origin);
+	up = Normalize(up);
+	Vec3 right = Normalize(Cross(up, forward));
+	up = Normalize(Cross(forward, right));
+
+	// Equivalent to multiplying rotation * translation
+	return Mat4x4{
+		right.X,	right.Y,	right.Z,	-Dot(origin, right),
+		up.X,		up.Y,		up.Z,		-Dot(origin, up),
+		forward.X,	forward.Y,	forward.Z,	-Dot(origin, forward),
+		0,			0,			0,			1
+	};
+}
+
 Mat4x4 CreateRotationX(f32 radians) {
 	f32 c = Cos(radians), s = Sin(radians);
 	return Mat4x4{

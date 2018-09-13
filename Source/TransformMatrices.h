@@ -27,6 +27,15 @@ Mat4x4 CreatePerspectiveProjectionSymmetric(
 Mat4x4 CreatePerspectiveProjection(
 	f32 VFOV, f32 AspectRatio, f32 N, f32 F);
 
+// Creates a rotation + translation matrix which moves origin to (0,0,0),
+// origin and target are points, up is a vector which must not be parallel with (target-origin)
+// points +Z parallel with (target-origin)
+// points +X perpendicular to (target-origin) and up
+// points +Y perpendicular to both
+Mat4x4 CreateLookAt(
+	Vec3 origin, Vec3 target, Vec3 up
+);
+
 // Rotations are counter-clockwise around the axis when looking parallel to that axis
 
 // Rotates from Y to Z

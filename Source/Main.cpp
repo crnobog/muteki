@@ -323,11 +323,12 @@ int main(int, char**) {
 	float vfov = 0.5f;
 	float near_plane = 0.1f;
 	float far_plane = 10.0f;
-	Vec3 view_pos = { 0, 0, -3 };
+	Vec3 view_pos = { 0, 0, -3 }, view_target = { 0,0,0 }, view_up = { 0, 1, 0 };
 	Vec3 rot_axis = { 0, 1, 0 };
 	float rot_deg = 0;
 	bool bUseQuat = false;
 	float rot_deg_x = 0, rot_deg_y = 0, rot_deg_z = 0;
+	Vec3 location = { 0, 0, 0 };
 	while (glfwWindowShouldClose(win) == false) {
 		glfwPollEvents();
 
@@ -356,6 +357,7 @@ int main(int, char**) {
 			ImGui::Checkbox("Use Quat", &bUseQuat);
 			ImGui::Separator();
 
+			ImGui::InputFloat3("Location", location.Data);
 			if (bUseQuat) {
 				ImGui::InputFloat3("Rot Axis", rot_axis.Data);
 				ImGui::DragFloat("Rot Angle", &rot_deg, 1.0f, 0, 360);
@@ -368,6 +370,8 @@ int main(int, char**) {
 			ImGui::Separator();
 
 			ImGui::InputFloat3("View Position", view_pos.Data);
+			ImGui::InputFloat3("View Target", view_target.Data);
+			ImGui::InputFloat3("View Up", view_up.Data);
 			ImGui::SliderFloat("VFOV", &vfov, 0.0f, 3.0f);
 			ImGui::SliderFloat("Near Plane", &near_plane, 0.001f, 1.0f);
 			ImGui::SliderFloat("Far Plane", &far_plane, near_plane, 100.0f);
@@ -382,7 +386,7 @@ int main(int, char**) {
 			Mat4x4 view_to_clip = Mat4x4::Identity(); // TODO: Nomenclature?
 		};
 		ViewData view_data;
-		view_data.world_to_view = CreateTranslation(-view_pos);
+		view_data.world_to_view = CreateLookAt(view_pos, view_target, view_up);
 		view_data.view_to_clip = CreatePerspectiveProjection(vfov, aspect_ratio, near_plane, far_plane);
 		GPU::ConstantBufferID cbuffer_id_viewdata = gpu_frame->GetTemporaryConstantBuffer(ByteRange(view_data));
 
@@ -396,6 +400,7 @@ int main(int, char**) {
 			else {
 				transform = CreateRotationZ(DegreesToRadians(rot_deg_z)) * CreateRotationY(DegreesToRadians(rot_deg_y)) * CreateRotationX(DegreesToRadians(rot_deg_x));
 			}
+			transform = CreateTranslation(location) * transform;
 			GPU::ConstantBufferID cbuffer_id_transform = gpu_frame->GetTemporaryConstantBuffer(ByteRange(transform));
 			GPU::DrawItem& draw_item = draw_items.AddDefaulted(1).Front();
 			// default raster state, blend state, depth stencil state
