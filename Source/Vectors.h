@@ -304,7 +304,7 @@ inline Vector<T, 3> Cross(Vector<T, 3> a, Vector<T, 3> b) {
 template<typename T, size_t N>
 inline Vector<T, N> Abs(Vector<T, N> v) {
 	for (size_t i = 0; i < N; ++i) {
-		v[i] = abs(v[i]);
+		v[i] = Abs(v[i]);
 	}
 	return v;
 }
@@ -330,7 +330,7 @@ inline T MagnitudeSq(const Vector<T, N>& v) {
 }
 
 template<typename T, size_t N>
-inline T MagnitudeFast(const Vector<T, N>& v) { return sqrt(MagnitudeSq(v)); }
+inline T MagnitudeFast(const Vector<T, N>& v) { return Sqrt(MagnitudeSq(v)); }
 
 template<typename T, size_t N>
 inline T Magnitude(const Vector<T, N>& v) {
