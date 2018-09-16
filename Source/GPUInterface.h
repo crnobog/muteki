@@ -268,6 +268,7 @@ namespace GPU {
 		DepthTargetID DepthBuffer = {};
 		mu::PointerRange<const DrawItem> DrawItems;
 		const float* DepthClearValue = nullptr;
+		const char* Name = nullptr;
 	};
 
 	static_assert(std::is_trivially_destructible_v<DrawItem>, "DrawItem should be trivially destructible");

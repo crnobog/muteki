@@ -20,6 +20,8 @@
 #include <dxgi1_4.h>
 #include <d3dcompiler.h>
 
+#include "pix.h"
+
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
 
@@ -96,7 +98,8 @@ struct GPU_DX12_Frame : public GPUFrameInterface {
 	GPU_DX12_Frame(struct GPU_DX12* gpu)
 		: m_gpu(gpu)
 		, m_linear_allocator(gpu)
-		, m_descriptor_table_allocator(gpu) {}
+		, m_descriptor_table_allocator(gpu) {
+	}
 
 	COMPtr<ID3D12Resource>					m_render_target;
 	D3D12_CPU_DESCRIPTOR_HANDLE				m_render_target_view;
@@ -415,7 +418,7 @@ void GPU_DX12::Init() {
 			0,
 			0,
 			D3D12_SHADER_VISIBILITY_ALL,
-		});
+							});
 		D3D12_ROOT_SIGNATURE_DESC root_signature_desc = {
 			(u32)root_parameters.Num(), root_parameters.Data(),
 			(u32)static_samplers.Num(), static_samplers.Data(),
@@ -614,7 +617,7 @@ GPU::PipelineStateID GPU_DX12::CreatePipelineState(const GPU::PipelineStateDesc&
 				D3D12_APPEND_ALIGNED_ELEMENT,
 				D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
 				0
-			});
+							 });
 		}
 	}
 
@@ -867,6 +870,7 @@ void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
 	ID3D12CommandAllocator* command_allocator = frame->GetCommandAllocator();
 	EnsureHR(m_command_list->Reset(command_allocator, nullptr));
 
+	PIXBeginEvent(m_command_list, 0, pass.Name ? pass.Name : "Unnamed Pass");
 	m_command_list->SetGraphicsRootSignature(m_root_signature.Get());
 
 	// TODO: Need to handle reallocating new heaps and putting them in the command list. What's the cost of SetDescriptorHeaps?
@@ -964,6 +968,7 @@ void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
 		}
 	}
 
+	PIXEndEvent(m_command_list);
 	EnsureHR(m_command_list->Close());
 
 	ID3D12CommandList* command_lists[] = { m_command_list.Get() };

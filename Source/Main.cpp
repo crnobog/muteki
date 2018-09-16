@@ -23,6 +23,7 @@
 
 #include <memory>
 
+
 using namespace mu;
 using std::unique_ptr;
 
@@ -174,6 +175,7 @@ struct ImGuiImpl {
 					current_pass->ClipRect = { (u32)last_clip_rect.X, (u32)last_clip_rect.Y, (u32)last_clip_rect.Z, (u32)last_clip_rect.W };
 					current_pass->DrawItems = { gpu_cmd_cursor.m_start, 0 };
 					current_pass->RenderTargets.Add(GPU::RenderTargetID{});
+					current_pass->Name = "IMGUI";
 				}
 
 				GPU::DrawItem* new_item = gpu_cmd_cursor.m_start;
@@ -443,6 +445,7 @@ int main(int, char**) {
 		pass.DepthClearValue = &DepthClear;
 		pass.DrawItems = mu::Range(draw_items);
 		pass.ClipRect = { 0, 0, current_size[0], current_size[1] };
+		pass.Name = "Scene";
 		gpu->SubmitPass(pass);
 
 		if (show_test_window) {
