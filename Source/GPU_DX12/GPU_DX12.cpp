@@ -901,6 +901,9 @@ void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
 
 	// Translate draw commands into CommandList calls
 	for (const GPU::DrawItem& item : pass.DrawItems) {
+		if (item.Name) {
+			PIXBeginEvent(m_command_list, 0, item.Name);
+		}
 		const PipelineState& pipeline_state = m_pipeline_states[item.PipelineState];
 		ID3D12PipelineState* pso = pipeline_state.PSO;
 		Assert(pso);
@@ -965,6 +968,10 @@ void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
 		else {
 			m_command_list->IASetIndexBuffer(nullptr);
 			m_command_list->DrawInstanced(item.Command.VertexOrIndexCount, 1, 0, 0);
+		}
+
+		if (item.Name) {
+			PIXEndEvent(m_command_list);
 		}
 	}
 

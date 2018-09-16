@@ -257,6 +257,7 @@ namespace GPU {
 		DrawBoundResources	BoundResources;
 		DrawCommand			Command;
 		StreamSetup			StreamSetup;
+		const char*			Name = nullptr;
 	};
 
 	// Render pass

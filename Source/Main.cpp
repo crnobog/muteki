@@ -414,6 +414,7 @@ int main(int, char**) {
 			draw_item.Command.PrimTopology = GPU::PrimitiveTopology::TriangleList;
 			draw_item.StreamSetup.VertexBuffers.Add({ cube_vbuffer_id_pos, cube_vbuffer_id_normals, cube_vbuffer_id_texcoord });
 			draw_item.StreamSetup.IndexBuffer = cube_ibuffer_id;
+			draw_item.Name = "Cube";
 		}
 
 		{
@@ -436,6 +437,7 @@ int main(int, char**) {
 			draw_item.BoundResources.ConstantBuffers.Add(cbuffer_id_griddata);
 			draw_item.Command.VertexOrIndexCount = grid_data.num_gridlines * 8;
 			draw_item.Command.PrimTopology = GPU::PrimitiveTopology::LineList;
+			draw_item.Name = "Grid";
 		}
 
 		float DepthClear = 1.0f;
