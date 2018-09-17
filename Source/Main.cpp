@@ -40,6 +40,8 @@ PointerRange<const char> GetShaderDirectory() {
 	return Range(init.path);
 }
 
+static bool g_input_to_imgui = false;
+
 struct ImGuiImpl {
 	HWND m_hwnd;
 	GPUInterface* m_gpu = nullptr;
@@ -203,18 +205,21 @@ using Color4 = Vector<u8, 4>;
 
 bool mouse_pressed[3] = { false, };
 void OnMouseButton(GLFWwindow*, i32 button, i32 action, i32) {
+	if (g_input_to_imgui == false) { return; }
 	if (action == GLFW_PRESS && button >= 0 && button < 3) {
 		mouse_pressed[button] = true;
 	}
 }
 
 void OnChar(GLFWwindow*, u32 c) {
+	if (g_input_to_imgui == false) { return; }
 	ImGuiIO& io = ImGui::GetIO();
 	if (c > 0 && c < 0x10000)
 		io.AddInputCharacter((u16)c);
 }
 
 void OnKey(GLFWwindow*, i32 key, i32, i32 action, i32) {
+	if (g_input_to_imgui == false) { return; }
 	ImGuiIO& io = ImGui::GetIO();
 	if (action == GLFW_PRESS)
 		io.KeysDown[key] = true;
@@ -239,6 +244,8 @@ int main(int, char**) {
 	if (!win) {
 		return 1;
 	}
+
+	glfwSetInputMode(win, GLFW_CURSOR, g_input_to_imgui ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED);
 
 	std::unique_ptr<GPUInterface> gpu{ CreateGPU_DX12() };
 	gpu->Init();
@@ -337,8 +344,23 @@ int main(int, char**) {
 	float rot_deg_x = 0, rot_deg_y = 0, rot_deg_z = 0;
 	Vec3 location = { 0, 0, 0 };
 	Quat view_quat = Quat::Identity();
+	Timer t;
+	f64 dt_avg_num = 0, dt_avg = 0;
+	Vector<f64, 2> last_cursor_pos;
+	glfwGetCursorPos(win, &last_cursor_pos.X, &last_cursor_pos.Y);
 	while (glfwWindowShouldClose(win) == false) {
 		glfwPollEvents();
+
+		f64 dt = t.GetElapsedTimeSeconds();
+		t.Reset();
+
+		if (dt_avg_num < 200) {
+			dt_avg = (dt_avg * dt_avg_num + dt) / (dt_avg_num + 1);
+			++dt_avg_num;
+		}
+		else {
+			dt_avg = (dt_avg * (dt_avg_num-1)/ dt_avg_num) + (dt / dt_avg_num);
+		}
 
 		Vector<u32, 2> current_size = gpu->GetSwapChainDimensions();
 		i32 fb_width, fb_height;
@@ -351,18 +373,67 @@ int main(int, char**) {
 		Vector<double, 2> mouse_pos;
 		Vector<bool, 3> mouse_buttons;
 		glfwGetCursorPos(win, &mouse_pos[0], &mouse_pos[1]);
-		for (i32 i = 0; i < 3; ++i) {
-			mouse_buttons[i] = mouse_pressed[i] || glfwGetMouseButton(win, i) != 0;
-			mouse_pressed[i] = false;
-		}
-		imgui.BeginFrame(mouse_pos, mouse_buttons);
+		if (g_input_to_imgui) {
+			for (i32 i = 0; i < 3; ++i) {
+				mouse_buttons[i] = mouse_pressed[i] || glfwGetMouseButton(win, i) != 0;
+				mouse_pressed[i] = false;
+			}
 
+			if (glfwGetKey(win, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+				g_input_to_imgui = false;
+				glfwSetInputMode(win, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+				glfwGetCursorPos(win, &last_cursor_pos.X, &last_cursor_pos.Y);
+			}
+		}
+		else {
+			if (glfwGetKey(win, GLFW_KEY_SPACE) == GLFW_PRESS) {
+				g_input_to_imgui = true;
+				glfwSetInputMode(win, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+			}
+		}
+
+		imgui.BeginFrame(mouse_pos, mouse_buttons);
 
 		const float aspect_ratio = (float)fb_width / (float)fb_height;
 
 		Vec3 view_movement{ 0,0,0 };
 		float view_yaw = 0, view_pitch = 0;
+		if (!g_input_to_imgui) {
+			if (glfwGetKey(win, GLFW_KEY_A) == GLFW_PRESS) {
+				view_movement.X += -1;
+			}
+			if (glfwGetKey(win, GLFW_KEY_D) == GLFW_PRESS) {
+				view_movement.X += 1;
+			}
+			if (glfwGetKey(win, GLFW_KEY_S) == GLFW_PRESS) {
+				view_movement.Z += -1;
+			}
+			if (glfwGetKey(win, GLFW_KEY_W) == GLFW_PRESS) {
+				view_movement.Z += 1;
+			}
+
+			f32 speed = 1;
+			view_movement *= f32(speed * dt);
+
+			Vector<f64, 2> cursor_pos;
+			glfwGetCursorPos(win, &cursor_pos.X, &cursor_pos.Y);
+
+			Vector<f64, 2> delta_cursor = last_cursor_pos - cursor_pos;
+			last_cursor_pos = cursor_pos;
+
+			f32 rot_speed_deg = 100;
+			view_yaw = -f32(delta_cursor.X * rot_speed_deg * dt);
+			view_pitch = -f32(delta_cursor.Y * rot_speed_deg * dt);
+		}
+
 		if (ImGui::Begin("muteki", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+			if (g_input_to_imgui) {
+				ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "ImGUI Input Captured");
+			}
+			else {
+				ImGui::TextColored(ImVec4(0.3f, 0.3f, 0.3f, 1.0f), "ImGUI Input Not Captured");
+			}
+			ImGui::LabelText("dt (ms)", "%.1f", dt_avg * 1000.0);
 			ImGui::Checkbox("Pause", &pause_anim);
 			ImGui::Checkbox("Use Quat", &bUseQuat);
 			ImGui::Separator();
@@ -438,7 +509,6 @@ int main(int, char**) {
 
 			ImGui::End();
 		}
-
 
 		Quat q = Quat::FromAxisAngle(Normalize(rot_axis), DegreesToRadians(rot_deg));
 
