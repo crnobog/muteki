@@ -329,14 +329,14 @@ int main(int, char**) {
 	bool pause_anim = false;
 	float vfov = 0.5f;
 	float near_plane = 0.1f;
-	float far_plane = 10.0f;
-	Vec3 view_pos = { 0, 0, -3 }, view_target = { 0,0,0 }, view_up = { 0, 1, 0 };
+	float far_plane = 20.0f;
+	Vec3 view_pos = { 0, 1, -3 }, view_target = { 0,0,0 }, view_up = { 0, 1, 0 };
 	Vec3 rot_axis = { 0, 1, 0 };
 	float rot_deg = 0;
 	bool bUseQuat = false;
 	float rot_deg_x = 0, rot_deg_y = 0, rot_deg_z = 0;
 	Vec3 location = { 0, 0, 0 };
-	Quat view_quat;
+	Quat view_quat = Quat::Identity();
 	while (glfwWindowShouldClose(win) == false) {
 		glfwPollEvents();
 
@@ -403,7 +403,8 @@ int main(int, char**) {
 				view_movement.Z -= 1.0;
 			}
 
-			view_pos += view_movement;
+			view_pos += view_quat.Rotate(view_movement);
+
 			ImGui::Separator();
 			ImGui::Text("Rotate Camera");
 			if (ImGui::Button("Pitch Up")) {
@@ -483,7 +484,7 @@ int main(int, char**) {
 				Vec4 axis1_color = { 1.0f, 0.0f, 0.0f, 1.0f };
 				Vec4 axis2 = { Vec3::UnitZ, 1.0f };
 				Vec4 axis2_color = { 0.0f, 0.0f, 1.0f, 1.0f };
-				Vec4 base = { 0.0f, -0.5f, 0.0f, 1.0f };
+				Vec4 base = { 0.0f, 0.0f, 0.0f, 1.0f };
 				Vec4 plain_color = { 1.0f, 1.0f, 1.0f, 1.0f };
 				u32 num_gridlines = 10;
 				float spacing = 1.0f;
