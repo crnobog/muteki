@@ -42,6 +42,7 @@
     <ClInclude Include="..\..\Include\mu-core\StringFormat.h" />
     <ClInclude Include="..\..\Include\mu-core\TaggedPointer.h" />
     <ClInclude Include="..\..\Include\mu-core\Tests\IotaRange_Tests.inl" />
+    <ClInclude Include="..\..\Include\mu-core\Timer.h" />
     <ClInclude Include="..\..\Include\mu-core\TransformRange.h" />
     <ClInclude Include="..\..\Include\mu-core\Utils.h" />
     <ClInclude Include="..\..\Include\mu-core\ZipRange.h" />
@@ -69,6 +70,7 @@
     <ClCompile Include="..\..\Source\mu-core.cpp" />
     <ClCompile Include="..\..\Source\SpookyV2.cpp" />
     <ClCompile Include="..\..\Source\StringFormat.cpp" />
+    <ClCompile Include="..\..\Source\Timer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="..\mu-core.natvis" />

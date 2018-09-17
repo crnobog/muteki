@@ -14,10 +14,11 @@
 #include "GLFW/glfw3.h"
 #include "GLFW/glfw3native.h"
 
-#include "mu-core/Paths.h"
 #include "mu-core/Debug.h"
-#include "mu-core/String.h"
 #include "mu-core/FileReader.h"
+#include "mu-core/Paths.h"
+#include "mu-core/String.h"
+#include "mu-core/Timer.h"
 
 #include "imgui.h"
 
@@ -264,11 +265,13 @@ int main(int, char**) {
 
 	GPU::PipelineStateID cube_pipeline_state;
 	{
+		Timer t;
 		String shader_filename{ GetShaderDirectory(), "basic_shader.hlsl" };
 		String shader_txt_code = LoadFileToString(shader_filename.GetRaw()); // TODO: Handle unicode BOM/other encodings
 		GPU::VertexShaderID vshader_id = gpu->CompileVertexShaderHLSL("vs_main", shader_txt_code.Bytes());
 		GPU::PixelShaderID pshader_id = gpu->CompilePixelShaderHLSL("ps_main", shader_txt_code.Bytes());
 		GPU::ProgramID program_id = gpu->LinkProgram(vshader_id, pshader_id);
+		dbg::Log("Loaded and compiled basic shader in {} ms", t.GetElapsedTimeMilliseconds());
 
 		GPU::PipelineStateDesc pipeline_state_desc{};
 		pipeline_state_desc.Program = program_id;
@@ -286,11 +289,13 @@ int main(int, char**) {
 	}
 	GPU::PipelineStateID grid_pipeline_state;
 	{
+		Timer t;
 		String shader_filename{ GetShaderDirectory(), "grid_shader.hlsl" };
 		String shader_txt_code = LoadFileToString(shader_filename.GetRaw());
 		GPU::VertexShaderID vshader_id = gpu->CompileVertexShaderHLSL("vs_main", shader_txt_code.Bytes());
 		GPU::PixelShaderID pshader_id = gpu->CompilePixelShaderHLSL("ps_main", shader_txt_code.Bytes());
 		GPU::ProgramID program_id = gpu->LinkProgram(vshader_id, pshader_id);
+		dbg::Log("Loaded and compiled grid shader in {} ms", t.GetElapsedTimeMilliseconds());
 
 		GPU::PipelineStateDesc pipeline_state_desc{};
 		pipeline_state_desc.Program = program_id;

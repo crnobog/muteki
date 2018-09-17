@@ -92,6 +92,9 @@
     <ClInclude Include="..\..\Include\mu-core\Global.h">
       <Filter>Include</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\Timer.h">
+      <Filter>Include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Include\mu-core\Tests\Array_Tests.inl">
@@ -149,6 +152,7 @@
       <Filter>SpookyV2</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\StringFormat.cpp" />
+    <ClCompile Include="..\..\Source\Timer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Tests">
