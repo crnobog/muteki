@@ -26,23 +26,15 @@ struct Quat {
 		X = Y = Z = 0;
 		W = 1;
 	}
-	Quat(Vec3 in_vector, float in_scalar) {
-		Vector = in_vector; Scalar = in_scalar;
-		Normalize();
-	}
-	Quat(f32 x, f32 y, f32 z, f32 w) {
-		X = x; Y = y; Z = z; W = w;
-		Normalize();
-	}
 
 	Quat Conjugate() const {
 		return { -X, -Y, -Z, W };
 	}
 
 	Vec3 Rotate(Vec3 v) {
-		Quat qv{ v, 0.0f };
-		Quat r = *this * qv * Conjugate();
-		return { r.X, r.Y, r.Z };
+		Vec3 a = { X, Y, Z };
+		f32 mag_sq = MagnitudeSq(a);
+		return (v * (W*W - mag_sq) + a * (Dot(v, a) * 2.0f)) + Cross(a, v) * (W * 2.0f);
 	}
 
 	Mat4x4 ToMatrix4x4() const {
@@ -70,27 +62,43 @@ private:
 		);
 	}
 
-	void Normalize() {
+	Quat& Normalize() {
 		f32 norm = Norm();
 		X /= norm;
 		Y /= norm;
 		Z /= norm;
 		W /= norm;
+		return *this;
 	}
+
+	static Quat PrivateMultiply(const Quat& A, const Quat& B) {
+		return Quat
+		{
+			A.W * B.X + A.X * B.W + A.Y * B.Z - A.Z * B.Y,
+			A.W * B.Y - A.X * B.Z + A.Y * B.W + A.Z * B.X,
+			A.W * B.Z + A.X * B.Y - A.Y * B.X + A.Z * B.W,
+			A.W * B.W - A.X * B.X - A.Y * B.Y - A.Z * B.Z
+		};
+	}
+
+	// Non-normalizing constructors for temporaries
+	Quat(Vec3 in_vector, float in_scalar) {
+		Vector = in_vector; Scalar = in_scalar;
+	}
+	Quat(f32 x, f32 y, f32 z, f32 w) {
+		X = x; Y = y; Z = z; W = w;
+	}
+
+	friend Quat operator*(const Quat& A, const Quat& B);
 };
 
 bool operator==(const Quat& A, const Quat& B) {
 	return A.X == B.X && A.Y == B.Y && A.Z == B.Z && A.W == B.W;
 }
 
+// Normalizing multiply for concatenating rotations
 Quat operator*(const Quat& A, const Quat& B) {
-	return Quat
-	{
-		A.W * B.X + A.X * B.W + A.Y * B.Z - A.Z * B.Y,
-		A.W * B.Y - A.X * B.Z + A.Y * B.W + A.Z * B.X,
-		A.W * B.Z + A.X * B.Y - A.Y * B.X + A.Z * B.W,
-		A.W * B.W - A.X * B.X - A.Y * B.Y - A.Z * B.Z
-	};
+	return Quat::PrivateMultiply(A, B).Normalize();
 }
 
 #pragma warning (pop)
