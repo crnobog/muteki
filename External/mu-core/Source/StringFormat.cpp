@@ -1,5 +1,6 @@
 ﻿#include "mu-core/StringFormat.h"
 #include "mu-core/String.h"
+#include "mu-core/Debug.h"
 #include <stdexcept>
 
 namespace mu {
@@ -7,21 +8,29 @@ namespace mu {
 		switch (m_type) {
 		case StringFormatArgType::C_Str:
 			m_c_str = other.m_c_str;
-			break;
+			return;
 		case StringFormatArgType::Unsigned:
 			m_uint = other.m_uint;
-			break;
+			return;
+		case StringFormatArgType::Double:
+			m_double = other.m_double;
+			return;
 		}
+		Assert(false);
 	}
 	StringFormatArg::StringFormatArg(StringFormatArg&& other) : m_type(other.m_type) {
 		switch (m_type) {
 		case StringFormatArgType::C_Str:
 			m_c_str = other.m_c_str;
-			break;
+			return;
 		case StringFormatArgType::Unsigned:
 			m_uint = other.m_uint;
-			break;
+			return;
+		case StringFormatArgType::Double:
+			m_double = other.m_double;
+			return;
 		}
+		Assert(false);
 	}
 	StringFormatArg::StringFormatArg(const char* c_str)
 		: m_type(StringFormatArgType::C_Str)

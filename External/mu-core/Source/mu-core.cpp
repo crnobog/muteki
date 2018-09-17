@@ -208,6 +208,17 @@ namespace mu {
 				}
 			}
 			break;
+			case StringFormatArgType::Double:
+			{
+				if (RemainingSpace() <= 21) {
+					Flush();
+				}
+				int written = swprintf(m_cursor, RemainingSpace(), L"%f", arg.m_double);
+				if (written >= 0) {
+					m_cursor += written;
+				}
+			}
+			break;
 			default:
 				throw std::runtime_error("Invalid argument type to log");
 			}
