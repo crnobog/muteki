@@ -580,31 +580,56 @@ TEST_SUITE("Quats") {
 		Vec3 expected{ 0, 1, 0 };
 		CHECK_VEC3_EQ_APPROX(v_, expected);
 	}
+}
 
-	TEST_CASE("ToMatrix_Equivalent_XAxis") {
+TEST_SUITE("Quat_Matrix_Equivalence") {
+	TEST_CASE("ToMatrix_Equivalent") {
 		f32 rads = DegreesToRadians(32.0f);
-		Quat q = Quat::FromAxisAngle({ 1, 0, 0 }, rads);
-		Mat4x4 m = CreateRotationX(rads);
-		Mat4x4 mq = q.ToMatrix4x4();
+		Quat q;
+		Mat4x4 m;
 
+		SUBCASE("X") {
+			q = Quat::FromAxisAngle({ 1, 0, 0 }, rads);
+			m = CreateRotationX(rads);
+		}
+
+		SUBCASE("Y") {
+			q = Quat::FromAxisAngle({ 0, 1, 0 }, rads);
+			m = CreateRotationY(rads);
+		}
+
+		SUBCASE("Z") {
+			q = Quat::FromAxisAngle({ 0, 0, 1 }, rads);
+			m = CreateRotationZ(rads);
+		}
+
+		Mat4x4 mq = q.ToMatrix4x4();
 		CHECK_MATRIX_EQ_APPROX(m, mq);
 	}
 
-	TEST_CASE("ToMatrix_Equivalent_YAxis") {
-		f32 rads = DegreesToRadians(74.0f);
-		Quat q = Quat::FromAxisAngle({ 0, 1, 0 }, rads);
-		Mat4x4 m = CreateRotationY(rads);
+	TEST_CASE("Concat_Equivalent") {
+		f32 rads1 = DegreesToRadians(40.0f);
+		f32 rads2 = DegreesToRadians(60.0f);
+
+		Quat q;
+		Mat4x4 m;
+		SUBCASE("X, Y") {
+			q = Quat::FromAxisAngle({ 0, 1, 0 }, rads2) * Quat::FromAxisAngle({ 1, 0, 0 }, rads1);
+			m = CreateRotationY(rads2) * CreateRotationX(rads1);
+		}
+
+		SUBCASE("Z, Y") {
+			q = Quat::FromAxisAngle({ 0, 1, 0 }, rads2) * Quat::FromAxisAngle({ 0, 0, 1 }, rads1);
+			m = CreateRotationY(rads2) * CreateRotationZ(rads1);
+		}
+
+		SUBCASE("Y, X") {
+			q = Quat::FromAxisAngle({ 1, 0, 0 }, rads2) * Quat::FromAxisAngle({ 0, 1, 0 }, rads1);
+			m = CreateRotationX(rads2) * CreateRotationY(rads1);
+		}
+
+
 		Mat4x4 mq = q.ToMatrix4x4();
-
-		CHECK_MATRIX_EQ_APPROX(m, mq);
-	}
-
-	TEST_CASE("ToMatrix_Equivalent_ZAxis") {
-		f32 rads = DegreesToRadians(100.0f);
-		Quat q = Quat::FromAxisAngle({ 0, 0, 1 }, rads);
-		Mat4x4 m = CreateRotationZ(rads);
-		Mat4x4 mq = q.ToMatrix4x4();
-
 		CHECK_MATRIX_EQ_APPROX(m, mq);
 	}
 }
