@@ -1,4 +1,4 @@
-cbuffer cb_viewdata : register(b0) {
+﻿cbuffer cb_viewdata : register(b0) {
 	float4x4 world_to_view;
 	float4x4 view_to_clip;
 };
