@@ -337,7 +337,7 @@ int main(int, char**) {
 	float vfov = 0.5f;
 	float near_plane = 0.1f;
 	float far_plane = 20.0f;
-	Vec3 view_pos = { 0, 1, -3 }, view_target = { 0,0,0 }, view_up = { 0, 1, 0 };
+	Vec3 view_pos = { 0, 1, -3 };
 	Vec3 rot_axis = { 0, 1, 0 };
 	float rot_deg = 0;
 	bool bUseQuat = false;
@@ -449,60 +449,8 @@ int main(int, char**) {
 				ImGui::InputFloat("Angle Z", &rot_deg_z);
 			}
 			ImGui::Separator();
-			ImGui::Text("Move Camera");
-			if (ImGui::Button("Up")) {
-				view_movement.Y += 1.0;
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("Down")) {
-				view_movement.Y -= 1.0;
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("Left")) {
-				view_movement.X -= 1.0;
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("Right")) {
-				view_movement.X += 1.0;
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("Forward")) {
-				view_movement.Z += 1.0;
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("Backward")) {
-				view_movement.Z -= 1.0;
-			}
-
-			view_pos += view_quat.Rotate(view_movement);
-
-			ImGui::Separator();
-			ImGui::Text("Rotate Camera");
-			if (ImGui::Button("Pitch Up")) {
-				view_pitch -= 10.0f;
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("Pitch Down")) {
-				view_pitch += 10.0f;
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("Yaw Left")) {
-				view_yaw -= 10.0f;
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("Yaw Right")) {
-				view_yaw += 10.0f;
-			}
-			ImGui::Separator();
-			Quat delta_pitch = Quat::FromAxisAngle(view_quat.Rotate({ 1, 0, 0 }), DegreesToRadians(view_pitch));
-			Quat delta_yaw = Quat::FromAxisAngle({ 0, 1, 0 }, DegreesToRadians(view_yaw));
-			Quat delta_quat = delta_pitch * delta_yaw;
-			view_quat = delta_quat * view_quat;
-
 			ImGui::LabelText("View Pos", "%.2f, %.2f, %.2f", view_pos.X, view_pos.Y, view_pos.Z);
 			ImGui::LabelText("View Quat", "%.2f, %.2f, %.2f, %.2f", view_quat.X, view_quat.Y, view_quat.Z, view_quat.W);
-			ImGui::InputFloat3("View Target", view_target.Data);
-			ImGui::InputFloat3("View Up", view_up.Data);
 			ImGui::SliderFloat("VFOV", &vfov, 0.0f, 3.0f);
 			ImGui::SliderFloat("Near Plane", &near_plane, 0.001f, 1.0f);
 			ImGui::SliderFloat("Far Plane", &far_plane, near_plane, 100.0f);
@@ -517,7 +465,6 @@ int main(int, char**) {
 			Mat4x4 view_to_clip = Mat4x4::Identity(); // TODO: Nomenclature?
 		};
 		ViewData view_data;
-		//view_data.world_to_view = CreateLookAt(view_pos, view_target, view_up);
 		view_data.world_to_view = view_quat.Conjugate().ToMatrix4x4() * CreateTranslation(-view_pos);
 		view_data.view_to_clip = CreatePerspectiveProjection(vfov, aspect_ratio, near_plane, far_plane);
 		GPU::ConstantBufferID cbuffer_id_viewdata = gpu_frame->GetTemporaryConstantBuffer(ByteRange(view_data));
