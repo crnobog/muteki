@@ -51,13 +51,13 @@ namespace mu {
 		virtual void Close() = 0;
 	};
 
-	void Format(IStringFormatOutput&, const char* fmt, PointerRange<StringFormatArg> args);
+	void FormatRange(IStringFormatOutput&, const char* fmt, PointerRange<StringFormatArg> args);
 
 	template<typename... ARGS>
 	void Format(IStringFormatOutput& output, const char* fmt, ARGS... args) {
 		ValidateFormatString(fmt, args...);
-		StringFormatArg args[] = { StringFormatArg(args)... };
-		Format(output, fmt, Range(args));
+		StringFormatArg wrapped_args[] = { StringFormatArg(args)... };
+		FormatRange(output, fmt, Range(wrapped_args));
 	}
 
 	template<typename T>

@@ -102,7 +102,7 @@ namespace mu {
 		}
 	}
 
-	void Format(IStringFormatOutput& output, const char* fmt, PointerRange<StringFormatArg> args) {
+	void FormatRange(IStringFormatOutput& output, const char* fmt, PointerRange<StringFormatArg> args) {
 		const char* block_begin = fmt;
 		const char* cursor = fmt;
 		for (; *cursor != '\0'; ++cursor) {

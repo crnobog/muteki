@@ -237,7 +237,7 @@ namespace mu {
 
 	void mu::dbg::LogInternal(mu::dbg::details::LogLevel, const char* fmt, PointerRange<StringFormatArg> args) {
 		mu::DebugLogFormatOutput output;
-		Format(output, fmt, args);
+		FormatRange(output, fmt, args);
 	}
 
 
