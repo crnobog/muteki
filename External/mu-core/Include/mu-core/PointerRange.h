@@ -29,6 +29,11 @@ namespace mu {
 			: m_start(start)
 			, m_end(end) {}
 
+		template<typename T, size_t SIZE>
+		FORCEINLINE PointerRange(T(&arr)[SIZE])
+			: m_start(arr)
+			, m_end(arr + SIZE) {}
+
 		template<typename U>
 		FORCEINLINE PointerRange(PointerRange<U> other) {
 			m_start = other.m_start;
