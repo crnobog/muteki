@@ -40,7 +40,6 @@ PointerRange<const char> GetShaderDirectory() {
 	return Range(init.path);
 }
 
-static bool g_input_to_imgui = false;
 
 struct ImGuiImpl {
 	HWND m_hwnd;
@@ -203,23 +202,31 @@ struct ImGuiImpl {
 
 using Color4 = Vector<u8, 4>;
 
-bool mouse_pressed[3] = { false, };
-void OnMouseButton(GLFWwindow*, i32 button, i32 action, i32) {
-	if (g_input_to_imgui == false) { return; }
+struct WindowUserData
+{
+	bool m_input_to_imgui = false;
+	bool m_mouse_pressed[3] = { false, false, false };
+};
+
+void OnMouseButton(GLFWwindow* window, i32 button, i32 action, i32) {
+	WindowUserData& user_data = *(WindowUserData*)glfwGetWindowUserPointer(window);
+	if (user_data.m_input_to_imgui == false) { return; }
 	if (action == GLFW_PRESS && button >= 0 && button < 3) {
-		mouse_pressed[button] = true;
+		user_data.m_mouse_pressed[button] = true;
 	}
 }
 
-void OnChar(GLFWwindow*, u32 c) {
-	if (g_input_to_imgui == false) { return; }
+void OnChar(GLFWwindow* window, u32 c) {
+	WindowUserData& user_data = *(WindowUserData*)glfwGetWindowUserPointer(window);
+	if (user_data.m_input_to_imgui == false) { return; }
 	ImGuiIO& io = ImGui::GetIO();
 	if (c > 0 && c < 0x10000)
 		io.AddInputCharacter((u16)c);
 }
 
-void OnKey(GLFWwindow*, i32 key, i32, i32 action, i32) {
-	if (g_input_to_imgui == false) { return; }
+void OnKey(GLFWwindow* window, i32 key, i32, i32 action, i32) {
+	WindowUserData& user_data = *(WindowUserData*)glfwGetWindowUserPointer(window);
+	if (user_data.m_input_to_imgui == false) { return; }
 	ImGuiIO& io = ImGui::GetIO();
 	if (action == GLFW_PRESS)
 		io.KeysDown[key] = true;
@@ -245,7 +252,8 @@ int main(int, char**) {
 		return 1;
 	}
 
-	glfwSetInputMode(win, GLFW_CURSOR, g_input_to_imgui ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED);
+	WindowUserData win_user_data;
+	glfwSetWindowUserPointer(win, &win_user_data);
 
 	std::unique_ptr<GPUInterface> gpu{ CreateGPU_DX12() };
 	gpu->Init();
@@ -260,6 +268,8 @@ int main(int, char**) {
 
 	ImGuiImpl imgui;
 	imgui.Init(hwnd, gpu.get());
+
+	glfwSetInputMode(win, GLFW_CURSOR, win_user_data.m_input_to_imgui ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED);
 
 	glfwSetMouseButtonCallback(win, OnMouseButton);
 	glfwSetCharCallback(win, OnChar);
@@ -373,21 +383,21 @@ int main(int, char**) {
 		Vector<double, 2> mouse_pos;
 		Vector<bool, 3> mouse_buttons;
 		glfwGetCursorPos(win, &mouse_pos[0], &mouse_pos[1]);
-		if (g_input_to_imgui) {
+		if (win_user_data.m_input_to_imgui) {
 			for (i32 i = 0; i < 3; ++i) {
-				mouse_buttons[i] = mouse_pressed[i] || glfwGetMouseButton(win, i) != 0;
-				mouse_pressed[i] = false;
+				mouse_buttons[i] = win_user_data.m_mouse_pressed[i] || glfwGetMouseButton(win, i) != 0;
+				win_user_data.m_mouse_pressed[i] = false;
 			}
 
 			if (glfwGetKey(win, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-				g_input_to_imgui = false;
+				win_user_data.m_input_to_imgui = false;
 				glfwSetInputMode(win, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 				glfwGetCursorPos(win, &last_cursor_pos.X, &last_cursor_pos.Y);
 			}
 		}
 		else {
 			if (glfwGetKey(win, GLFW_KEY_SPACE) == GLFW_PRESS) {
-				g_input_to_imgui = true;
+				win_user_data.m_input_to_imgui = true;
 				glfwSetInputMode(win, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 			}
 		}
@@ -398,7 +408,7 @@ int main(int, char**) {
 
 		Vec3 view_movement{ 0,0,0 };
 		float view_yaw = 0, view_pitch = 0;
-		if (!g_input_to_imgui) {
+		if (!win_user_data.m_input_to_imgui) {
 			if (glfwGetKey(win, GLFW_KEY_A) == GLFW_PRESS) {
 				view_movement.X += -1;
 			}
@@ -427,7 +437,7 @@ int main(int, char**) {
 		}
 
 		if (ImGui::Begin("muteki", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-			if (g_input_to_imgui) {
+			if (win_user_data.m_input_to_imgui) {
 				ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "ImGUI Input Captured");
 			}
 			else {
