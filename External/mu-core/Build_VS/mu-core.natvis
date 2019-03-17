@@ -35,6 +35,11 @@
       </ArrayItems>
     </Expand>
   </Type>
+  <!-- String_T<char> -->
+  <Type Name="mu::String_T&lt;char&gt;">
+    <DisplayString>{m_data.m_data,s8}</DisplayString>
+    <StringView>m_data.m_data,s8</StringView>
+  </Type>
   <!-- HashTable<K, V> -->
   <Type Name="mu::HashTable&lt;*,*&gt;">
     <DisplayString>Num = { m_used }, Max = {m_size}</DisplayString>
