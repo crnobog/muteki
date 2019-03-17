@@ -33,8 +33,11 @@ namespace DX {
 		static D3D_PRIMITIVE_TOPOLOGY list[] = {
 			D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
 			D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
+			D3D_PRIMITIVE_TOPOLOGY_LINELIST,
 		};
-		return list[(i32)pt];
+		i32 index = (i32)pt;
+		Assert(index >= 0 && index < ArraySize(list));
+		return list[index];
 	}
 
 	inline DXGI_FORMAT CommonToDX(GPU::TextureFormat format) {
