@@ -4,6 +4,7 @@
 #include "mu-core/Ranges.h"
 #include "mu-core/StringFormat.h"
 #include "mu-core/MetaProgramming.h"
+#include "mu-core/ZipRange.h"
 
 #include <array>
 
@@ -180,11 +181,11 @@ namespace mu {
 		}
 	};
 
+	extern template String_T<char>;
 
 	// UTF-8 string
 	using String = String_T<char>;
-	// UTF-32 string
-	using String32 = String_T<char32_t>;
+
 
 	template<typename CharType>
 	PointerRange<const CharType> Range(const String_T<CharType>& s) {

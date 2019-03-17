@@ -117,6 +117,11 @@ namespace mu {
 
 	template<typename T, size_t N>
 	FORCEINLINE auto ByteRange(const T(&arr)[N]) { return ByteRange((const T*)arr, N); }
+
+	extern template PointerRange<char>;
+	extern template PointerRange<const char>;
+	extern template PointerRange<u8>;
+	extern template PointerRange<const u8>;
 }
 
 #ifdef DOCTEST_LIBRARY_INCLUDED

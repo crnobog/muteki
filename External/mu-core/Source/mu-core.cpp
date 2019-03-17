@@ -5,6 +5,13 @@
 #include <codecvt>
 
 namespace mu {
+	template String_T<char>;
+
+	template PointerRange<char>;
+	template PointerRange<const char>;
+	template PointerRange<u8>;
+	template PointerRange<const u8>;
+
 	template<typename DERIVED, typename FROM_CHAR, typename TO_CHAR>
 	class StringConvRange_UTF8_UTF16_Base {
 		mu::PointerRange<const FROM_CHAR> source;
