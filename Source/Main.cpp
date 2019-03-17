@@ -342,7 +342,6 @@ int main(int, char**) {
 	GPU::ShaderResourceListID cube_resource_list_id = gpu->CreateShaderResourceList(resource_list_desc);
 
 	i64 frame_num = 0;
-	bool show_test_window = false;
 	bool pause_anim = false;
 	float vfov = 0.5f;
 	float near_plane = 0.1f;
@@ -537,10 +536,6 @@ int main(int, char**) {
 		pass.Name = "Scene";
 		gpu->SubmitPass(pass);
 
-		if (show_test_window) {
-			ImGui::SetNextWindowPos(ImVec2(400, 100), ImGuiSetCond_FirstUseEver);
-			ImGui::ShowTestWindow(&show_test_window);
-		}
 		imgui.Render(gpu_frame);
 
 		gpu->EndFrame(gpu_frame);
