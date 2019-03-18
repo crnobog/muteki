@@ -247,7 +247,7 @@ int main(int, char**) {
 	}
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	GLFWwindow* win = glfwCreateWindow(1600, 900, "muteki", nullptr, nullptr);
+	GLFWwindow* win = glfwCreateWindow(1600, 900, String::Format("muteki {}", gpu->GetName()).GetRaw(), nullptr, nullptr);
 	if (!win) {
 		return 1;
 	}

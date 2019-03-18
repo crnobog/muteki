@@ -171,6 +171,10 @@ struct GPU_DX11 : public GPUInterface {
 	virtual DepthTargetID CreateDepthTarget(u32 width, u32 height) override;
 
 	virtual ShaderResourceListID CreateShaderResourceList(const GPU::ShaderResourceListDesc& desc) override;
+	virtual const char* GetName() override
+	{
+		return "DX11";
+	}
 	// END GPUInterface functions
 
 	void OnSwapChainUpdated();

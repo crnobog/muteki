@@ -394,6 +394,8 @@ struct GPUInterface {
 	virtual GPU::DepthTargetID CreateDepthTarget(u32 width, u32 height) = 0;
 
 	virtual GPU::ShaderResourceListID CreateShaderResourceList(const GPU::ShaderResourceListDesc& desc) = 0;
+
+	virtual const char* GetName() = 0;
 };
 
 #undef DECLARE_GPU_HANDLE
