@@ -406,7 +406,8 @@ int main(int argc, char** argv) {
 			gpu->ResizeSwapChain(hwnd, fb_width, fb_height);
 		}
 
-		auto* gpu_frame = gpu->BeginFrame();
+		Vec4 clear_color{ 0.2f, 0.2f, 0.2f, 1.0f };
+		auto* gpu_frame = gpu->BeginFrame(clear_color);
 		Vector<double, 2> mouse_pos;
 		Vector<bool, 3> mouse_buttons;
 		glfwGetCursorPos(win, &mouse_pos[0], &mouse_pos[1]);
@@ -542,7 +543,9 @@ int main(int argc, char** argv) {
 				Vec4 plain_color = { 1.0f, 1.0f, 1.0f, 1.0f };
 				u32 num_gridlines = 10;
 				float spacing = 1.0f;
+				float unused[2];
 			} grid_data;
+			static_assert(sizeof(grid_data) % 16 == 0, "Grid data not aligned");
 			GPU::ConstantBufferID cbuffer_id_griddata = gpu_frame->GetTemporaryConstantBuffer(ByteRange(grid_data));
 
 			GPU::DrawItem& draw_item = draw_items.AddDefaulted(1).Front();
