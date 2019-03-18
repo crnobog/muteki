@@ -261,7 +261,7 @@ struct GPU_DX12 : public GPUInterface {
 		return m_swap_chain_dimensions;
 	}
 
-	virtual GPUFrameInterface* BeginFrame() override;
+	virtual GPUFrameInterface* BeginFrame(Vec4 scene_clear_color) override;
 	virtual void EndFrame(GPUFrameInterface* frame) override;
 
 	virtual void SubmitPass(const RenderPass& pass) override;
@@ -499,7 +499,7 @@ void GPU_DX12::OnSwapChainUpdated() {
 	m_viewport = D3D12_VIEWPORT{ 0.0f, 0.0f, (float)width, (float)height, 0.0f, 1.0f };
 }
 
-GPUFrameInterface* GPU_DX12::BeginFrame() {
+GPUFrameInterface* GPU_DX12::BeginFrame(Vec4 scene_clear_color) {
 	auto& frame = m_frame_data[m_frame_index];
 
 	m_frame_fence.WaitForFence(frame->m_fence_value, m_frame_fence_event);
@@ -514,8 +514,7 @@ GPUFrameInterface* GPU_DX12::BeginFrame() {
 	m_command_list->ResourceBarrier(1, &present_to_rt);
 
 	m_command_list->OMSetRenderTargets(1, &frame->m_render_target_view, false, nullptr);
-	float clear_color[4] = { 0.2f, 0.2f, 0.2f, 1.0f };
-	m_command_list->ClearRenderTargetView(frame->m_render_target_view, clear_color, 0, nullptr);
+	m_command_list->ClearRenderTargetView(frame->m_render_target_view, scene_clear_color.Data, 0, nullptr);
 
 	EnsureHR(m_command_list->Close());
 

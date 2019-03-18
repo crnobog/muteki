@@ -366,7 +366,7 @@ struct GPUInterface {
 	virtual void ResizeSwapChain(void* hwnd, u32 width, u32 height) = 0;
 	virtual Vector<u32, 2> GetSwapChainDimensions() = 0;
 
-	virtual GPUFrameInterface* BeginFrame() = 0;
+	virtual GPUFrameInterface* BeginFrame(Vec4 scene_clear_color) = 0;
 	virtual void EndFrame(GPUFrameInterface*) = 0;
 
 	virtual void SubmitPass(const GPU::RenderPass& pass) = 0;

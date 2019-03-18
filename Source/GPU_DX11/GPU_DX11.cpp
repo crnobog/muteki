@@ -143,7 +143,7 @@ struct GPU_DX11 : public GPUInterface {
 	virtual void ResizeSwapChain(void* hwnd, u32 width, u32 height) override;
 	virtual Vector<u32, 2> GetSwapChainDimensions() override { return m_swap_chain_dimensions; }
 
-	virtual GPUFrameInterface* BeginFrame() override;
+	virtual GPUFrameInterface* BeginFrame(Vec4 scene_clear_color) override;
 	virtual void EndFrame(GPUFrameInterface* frame) override;
 
 	virtual void SubmitPass(const RenderPass& pass) override;
@@ -268,9 +268,8 @@ void GPU_DX11::OnSwapChainUpdated() {
 	m_viewport = D3D11_VIEWPORT{ 0.0f, 0.0f, (float)width, (float)height, 0.0f, 1.0f };
 	m_frame_index = m_swap_chain->GetCurrentBackBufferIndex();
 }
-GPUFrameInterface* GPU_DX11::BeginFrame() {
-	float clear_color[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
-	m_immediate_context->ClearRenderTargetView(m_back_buffer_rtv.Get(), clear_color);
+GPUFrameInterface* GPU_DX11::BeginFrame(Vec4 scene_clear_color) {
+	m_immediate_context->ClearRenderTargetView(m_back_buffer_rtv.Get(), scene_clear_color.Data);
 	return &m_frame_data;
 }
 void GPU_DX11::EndFrame(GPUFrameInterface* frame) {
