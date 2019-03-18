@@ -450,29 +450,32 @@ GPU::PipelineStateID GPU_DX11::CreatePipelineState(const GPU::PipelineStateDesc&
 			});
 		}
 	}
-
-	const char* shader_prefix =
-		"struct vs_in {\n";
-	const char* shader_suffix =
-		"};\n"
-		"float4 vs_main(vs_in in_vert) : SV_POSITION\n"
-		"{ return float4(0,0,0,0); }\n";
-	String shader = shader_prefix;
-	u32 idx = 0;
-	for (const GPU::StreamSlotDesc& slot : desc.StreamFormat.Slots) {
-		for (const GPU::StreamElementDesc& elem : slot.Elements) {
-			const char* type = DX::GetHLSLTypeName(elem);
-			const char* semantic = DX::GetSemanticName(elem.Semantic);
-			String elem_s = String::Format("{} {} : {}{};\n", type, idx, semantic, elem.SemanticIndex);
-			shader.Append(elem_s);
-			++idx;
+	
+	if (elems.Num() > 0)
+	{
+		const char* shader_prefix =
+			"struct vs_in {\n";
+		const char* shader_suffix =
+			"};\n"
+			"float4 vs_main(vs_in in_vert) : SV_POSITION\n"
+			"{ return float4(0,0,0,0); }\n";
+		String shader = shader_prefix;
+		u32 idx = 0;
+		for (const GPU::StreamSlotDesc& slot : desc.StreamFormat.Slots) {
+			for (const GPU::StreamElementDesc& elem : slot.Elements) {
+				const char* type = DX::GetHLSLTypeName(elem);
+				const char* semantic = DX::GetSemanticName(elem.Semantic);
+				String elem_s = String::Format("{} elem{} : {}{};\n", type, idx, semantic, elem.SemanticIndex);
+				shader.Append(elem_s);
+				++idx;
+			}
 		}
-	}
-	shader.Append(shader_suffix);
-	COMPtr<ID3D10Blob> compiled;
-	DX::CompileShaderHLSL(compiled.Replace(), "vs_5_0", "vs_main", mu::Range((u8*)shader.GetRaw(), shader.GetLength()));
+		shader.Append(shader_suffix);
+		COMPtr<ID3D10Blob> compiled;
+		DX::CompileShaderHLSL(compiled.Replace(), "vs_5_0", "vs_main", mu::Range((u8*)shader.GetRaw(), shader.GetLength()));
 
-	EnsureHR(m_device->CreateInputLayout(elems.Data(), (u32)elems.Num(), compiled->GetBufferPointer(), compiled->GetBufferSize(), pso.InputLayout.Replace()));
+		EnsureHR(m_device->CreateInputLayout(elems.Data(), (u32)elems.Num(), compiled->GetBufferPointer(), compiled->GetBufferSize(), pso.InputLayout.Replace()));
+	}
 
 	D3D11_BLEND_DESC blend_desc;
 	blend_desc.AlphaToCoverageEnable = desc.BlendState.AlphaToCoverageEnable;
