@@ -15,6 +15,9 @@ namespace mu {
 		case StringFormatArgType::Double:
 			m_double = other.m_double;
 			return;
+		case StringFormatArgType::Signed:
+			m_int = other.m_int;
+			return;
 		}
 		Assert(false);
 	}
@@ -28,6 +31,9 @@ namespace mu {
 			return;
 		case StringFormatArgType::Double:
 			m_double = other.m_double;
+			return;
+		case StringFormatArgType::Signed:
+			m_int = other.m_int;
 			return;
 		}
 		Assert(false);
@@ -53,11 +59,21 @@ namespace mu {
 	}
 
 	StringFormatArg::StringFormatArg(i32 i)
-		: m_type(StringFormatArgType::Unsigned)
-		, m_uint(i) {
+		: m_type(StringFormatArgType::Signed)
+		, m_int(i) {
+	}
+
+	StringFormatArg::StringFormatArg(i64 i)
+		: m_type(StringFormatArgType::Signed)
+		, m_int(i) {
 	}
 
 	StringFormatArg::StringFormatArg(u32 u)
+		: m_type(StringFormatArgType::Unsigned)
+		, m_uint(u) {
+	}
+
+	StringFormatArg::StringFormatArg(u64 u)
 		: m_type(StringFormatArgType::Unsigned)
 		, m_uint(u) {
 	}
@@ -70,11 +86,6 @@ namespace mu {
 	StringFormatArg::StringFormatArg(double d)
 		: m_type(StringFormatArgType::Double)
 		, m_double(d) {
-	}
-
-	StringFormatArg::StringFormatArg(size_t s)
-		: m_type(StringFormatArgType::Unsigned)
-		, m_uint(s) {
 	}
 
 	void ValidateFormatString(const char* fmt) {

@@ -11,6 +11,7 @@ enum class StringFormatArgType {
 	None,
 	C_Str,
 	Unsigned,
+	Signed,
 	Double,
 };
 
@@ -22,6 +23,7 @@ namespace mu {
 		union {
 			std::tuple<const char*, i64> m_c_str;
 			u64 m_uint;
+			i64 m_int;
 			double m_double;
 		};
 		StringFormatArg() {}
@@ -32,10 +34,11 @@ namespace mu {
 		StringFormatArg(const char* c_str);
 		StringFormatArg(const String_T<char>& str);
 		StringFormatArg(i32 i);
-		StringFormatArg(u32 u);
+		StringFormatArg(i64 i);
+		StringFormatArg(u32 u); 
+		StringFormatArg(u64 u);
 		StringFormatArg(float f);
 		StringFormatArg(double d);
-		StringFormatArg(size_t s);
 
 		template<typename RANGE, EnableIf<RANGE::IsContiguous && RANGE::HasSize>...>
 		StringFormatArg(RANGE r)
