@@ -8,7 +8,7 @@
 #include <d3d11shader.h>
 
 namespace DX11Util {
-	DX::VertexShaderInputElement ParseInputParameter(D3D11_SIGNATURE_PARAMETER_DESC& input_param);
+	bool ParseInputParameter(D3D11_SIGNATURE_PARAMETER_DESC& input_param, DX::VertexShaderInputElement& out_parsed_elem);
 
 	inline D3D11_BLEND_OP CommonToDX11(GPU::BlendOp op) {
 		switch (op) {

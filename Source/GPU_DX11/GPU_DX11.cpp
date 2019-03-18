@@ -394,12 +394,18 @@ VertexShaderID GPU_DX11::CompileVertexShaderHLSL(const char* entry_point, mu::Po
 	FixedArray<D3D11_SIGNATURE_PARAMETER_DESC, VertexShaderInputs::MaxInputElements> input_params;
 	Assert(desc.InputParameters < VertexShaderInputs::MaxInputElements);
 	input_params.AddZeroed(desc.InputParameters);
-	inputs.InputElements.AddZeroed(desc.InputParameters);
-	for (auto[index, parsed_elem] : Zip(Iota<u32>(), inputs.InputElements)) {
-		D3D11_SIGNATURE_PARAMETER_DESC input_param;
+	for (auto[index, input_param] : Zip(Iota<u32>(), input_params)) {
 		reflector->GetInputParameterDesc(index, &input_param);
+	}
 
-		parsed_elem = DX11Util::ParseInputParameter(input_param);
+	for (u32 i = 0; i < desc.InputParameters; ++i) {
+		D3D11_SIGNATURE_PARAMETER_DESC& input_param = input_params[i];
+
+		DX::VertexShaderInputElement parsed_elem;
+		if (DX11Util::ParseInputParameter(input_param, parsed_elem))
+		{
+			inputs.InputElements.Add(parsed_elem);
+		}
 	}
 
 	return id;
