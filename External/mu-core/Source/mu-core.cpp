@@ -215,6 +215,17 @@ namespace mu {
 				}
 			}
 			break;
+			case StringFormatArgType::Signed:
+			{
+				if (RemainingSpace() <= 20) {
+					Flush();
+				}
+				int written = swprintf(m_cursor, RemainingSpace(), L"%lld", arg.m_int);
+				if (written >= 0) {
+					m_cursor += written;
+				}
+			}
+			break;
 			case StringFormatArgType::Double:
 			{
 				if (RemainingSpace() <= 21) {
@@ -311,15 +322,16 @@ namespace mu {
 		if (reader.GetFileSize() < 3) {
 			u8 b[3] = { 0, };
 			reader.Read(Range(b));
-			return String(b);
+			return String((char*)b);
 		}
 
-		u8 BOM[3] = { 0, };
-		reader.Read(Range(BOM));
+		char PotentialBOM[3] = { 0, };
+		unsigned char BOMSignature[3] = { 0xEF, 0xBB, 0xBF };
+		reader.Read(ByteRange(PotentialBOM));
 		String s;
-		if (BOM[0] != 0xEF || BOM[1] != 0xBB || BOM[2] != 0xBF) {
+		if (memcmp(PotentialBOM, BOMSignature, 3) != 0) {
 			// Add those 3 bytes to the string if they aren't a byte order mark
-			s = String(BOM);
+			s = String(Range(PotentialBOM));
 		}
 
 		PointerRange<char> c = s.AddUninitialized(reader.Remaining());

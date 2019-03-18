@@ -19,18 +19,18 @@
 			if (*c == '\0')
 				break;
 		}
-		String s{ a };
+		String s = String::FromRanges(a);
 		CHECK_EQ(4, s.GetLength());
 	}
 	TEST_CASE("Construct from range of chars") {
 		const char abc[] = "abc";
-		String s{ Range(abc) };
+		String s = String::FromRanges( Range(abc) );
 		CHECK_EQ(String{ abc }, s);
 	}
 	TEST_CASE("Construct from multiple ranges") {
 		const char abc[] = "abc";
 		const char def[] = "def";
-		String s{ Range(abc), Range(def) };
+		String s = String::FromRanges( Range(abc), Range(def) );
 		CHECK_EQ(String{ "abcdef" }, s);
 	}
 

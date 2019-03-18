@@ -33,7 +33,7 @@ PointerRange<const char> GetShaderDirectory() {
 		String path;
 		Initializer() {
 			auto exe_dir = paths::GetExecutableDirectory();
-			path = String{ exe_dir, Range("../Shaders/") };
+			path = String::FromRanges( exe_dir, Range("../Shaders/"));
 		}
 	};
 	static Initializer init;
@@ -82,7 +82,7 @@ struct ImGuiImpl {
 
 		GPU::PipelineStateDesc pipeline_state_desc = {};
 
-		String shader_filename{ GetShaderDirectory(), "imgui.hlsl" };
+		String shader_filename = String::FromRanges(GetShaderDirectory(), "imgui.hlsl");
 		String shader_txt_code = LoadFileToString(shader_filename.GetRaw());
 		GPU::VertexShaderID vshader_id = gpu->CompileVertexShaderHLSL("vs_main", shader_txt_code.Bytes());
 		GPU::PixelShaderID pshader_id = gpu->CompilePixelShaderHLSL("ps_main", shader_txt_code.Bytes());
@@ -240,7 +240,20 @@ void OnKey(GLFWwindow* window, i32 key, i32, i32 action, i32) {
 }
 
 int main(int, char**) {
+int main(int argc, char** argv) {
+	Array<String> args;
+	args.Append(
+		Transform(
+			Range(argv, argc), 
+			[](const char* arg) { return String(arg); }
+		)
+	);
 	dbg::Log("Running from: {}", paths::GetExecutableDirectory());
+	dbg::Log("Command line arguments: {}", args.Num());
+	for (const String& s : args)
+	{
+		dbg::Log("    {}", s);
+	}
 
 	if (glfwInit() == GLFW_FALSE) {
 		return 1;
@@ -283,7 +296,7 @@ int main(int, char**) {
 	GPU::PipelineStateID cube_pipeline_state;
 	{
 		Timer t;
-		String shader_filename{ GetShaderDirectory(), "basic_shader.hlsl" };
+		String shader_filename = String::FromRanges(GetShaderDirectory(), "basic_shader.hlsl");
 		String shader_txt_code = LoadFileToString(shader_filename.GetRaw()); // TODO: Handle unicode BOM/other encodings
 		GPU::VertexShaderID vshader_id = gpu->CompileVertexShaderHLSL("vs_main", shader_txt_code.Bytes());
 		GPU::PixelShaderID pshader_id = gpu->CompilePixelShaderHLSL("ps_main", shader_txt_code.Bytes());
@@ -307,7 +320,7 @@ int main(int, char**) {
 	GPU::PipelineStateID grid_pipeline_state;
 	{
 		Timer t;
-		String shader_filename{ GetShaderDirectory(), "grid_shader.hlsl" };
+		String shader_filename = String::FromRanges(GetShaderDirectory(), "grid_shader.hlsl");
 		String shader_txt_code = LoadFileToString(shader_filename.GetRaw());
 		GPU::VertexShaderID vshader_id = gpu->CompileVertexShaderHLSL("vs_main", shader_txt_code.Bytes());
 		GPU::PixelShaderID pshader_id = gpu->CompilePixelShaderHLSL("ps_main", shader_txt_code.Bytes());

@@ -37,9 +37,16 @@ namespace mu {
 			AppendRange(Range(str, str + len));
 		}
 
+		String_T(PointerRange<const CharType> range)
+		{
+			AppendRange(range);
+		}
+
 		template<typename... RANGES>
-		explicit String_T(RANGES&&... rs) {
-			AppendRanges(Range(std::forward<RANGES>(rs))...);
+		static String_T FromRanges(RANGES&&... rs) {
+			String_T s;
+			s.AppendRanges(Range(std::forward<RANGES>(rs))...);
+			return s;
 		}
 
 		bool IsEmpty() const { return m_data.Num() <= 1; }
@@ -143,6 +150,7 @@ namespace mu {
 
 	private:
 
+		// TODO: Handle CharType != char in Format
 		struct StringFormatOutput : public IStringFormatOutput {
 			String_T m_string;
 			virtual void Write(StringFormatArg arg) override {
