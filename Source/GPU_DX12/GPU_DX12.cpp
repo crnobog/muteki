@@ -569,9 +569,15 @@ VertexShaderID GPU_DX12::CompileVertexShaderHLSL(const char* entry_point, Pointe
 	D3D12_SHADER_DESC desc;
 	EnsureHR(reflector->GetDesc(&desc));
 	Assert(desc.InputParameters < VertexShaderInputs::MaxInputElements);
+	FixedArray<D3D12_SIGNATURE_PARAMETER_DESC, VertexShaderInputs::MaxInputElements> input_params;
+	input_params.AddZeroed(desc.InputParameters);
 	for (u32 i = 0; i < desc.InputParameters; ++i) {
-		D3D12_SIGNATURE_PARAMETER_DESC input_param;
+		D3D12_SIGNATURE_PARAMETER_DESC& input_param = input_params[i];
 		reflector->GetInputParameterDesc(i, &input_param);
+	}
+
+	for (u32 i = 0; i < desc.InputParameters; ++i) {
+		const D3D12_SIGNATURE_PARAMETER_DESC& input_param = input_params[i];
 
 		DX::VertexShaderInputElement parsed_param;
 		if (ParseInputParameter(input_param, parsed_param)) {
