@@ -19,6 +19,7 @@
 #include "mu-core/Paths.h"
 #include "mu-core/String.h"
 #include "mu-core/Timer.h"
+#include "mu-core/TransformRange.h"
 
 #include "imgui.h"
 
@@ -239,7 +240,20 @@ void OnKey(GLFWwindow* window, i32 key, i32, i32 action, i32) {
 	io.KeySuper = io.KeysDown[GLFW_KEY_LEFT_SUPER] || io.KeysDown[GLFW_KEY_RIGHT_SUPER];
 }
 
-int main(int, char**) {
+std::unique_ptr<GPUInterface> CreateGPU(const Array<String>& args)
+{
+	if (args.Contains("dx12"))
+	{
+		return std::unique_ptr<GPUInterface>(CreateGPU_DX12());
+	}
+	else if (args.Contains("dx11"))
+	{
+		return std::unique_ptr<GPUInterface>(CreateGPU_DX11());
+	}
+
+	return std::unique_ptr<GPUInterface>(CreateGPU_DX12());
+}
+
 int main(int argc, char** argv) {
 	Array<String> args;
 	args.Append(
@@ -259,6 +273,9 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 
+	std::unique_ptr<GPUInterface> gpu = CreateGPU(args);
+	gpu->Init();
+
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	GLFWwindow* win = glfwCreateWindow(1600, 900, String::Format("muteki {}", gpu->GetName()).GetRaw(), nullptr, nullptr);
 	if (!win) {
@@ -268,8 +285,6 @@ int main(int argc, char** argv) {
 	WindowUserData win_user_data;
 	glfwSetWindowUserPointer(win, &win_user_data);
 
-	std::unique_ptr<GPUInterface> gpu{ CreateGPU_DX12() };
-	gpu->Init();
 	HWND hwnd = glfwGetWin32Window(win);
 	GPU::DepthTargetID depthbuffer;
 	{
