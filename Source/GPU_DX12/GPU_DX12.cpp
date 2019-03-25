@@ -443,6 +443,11 @@ void GPU_DX12::Shutdown() {
 		m_frame_fence.WaitForFence(frame->m_fence_value, m_frame_fence_event);
 	}
 
+	CloseHandle(m_frame_fence_event);
+	m_frame_fence_event = nullptr;
+	CloseHandle(m_copy_fence_event);
+	m_copy_fence_event = nullptr;
+
 	// TODO: Empty all pools
 }
 
