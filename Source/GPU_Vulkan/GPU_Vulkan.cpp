@@ -198,6 +198,7 @@ struct GPU_Vulkan : public GPUInterface {
 	VkSwapchainKHR	m_swap_chain	= nullptr;
 	Array<VkImage>	m_swap_chain_images;
 	Array<VkImageView> m_swap_chain_image_views;
+	Vector<u32, 2> m_swap_chain_dimensions;
 
 	GPU_Vulkan_Frame m_frame_data;
 };
@@ -551,6 +552,9 @@ void GPU_Vulkan::CreateSwapChain(u32 width, u32 height)
 
 	EnsureVK(vkCreateSwapchainKHR(m_device, &swap_chain_create_info, m_allocation_callbacks, &m_swap_chain));
 
+	m_swap_chain_dimensions[0] = swap_extent.width;
+	m_swap_chain_dimensions[1] = swap_extent.height;
+
 	u32 num_images = 0;
 	EnsureVK(vkGetSwapchainImagesKHR(m_device, m_swap_chain, &num_images, nullptr));
 	m_swap_chain_images.RemoveAll();
@@ -590,7 +594,7 @@ void GPU_Vulkan::ResizeSwapChain(u32 width, u32 height)
 
 Vector<u32, 2> GPU_Vulkan::GetSwapChainDimensions()
 {
-	return { 0, 0 };
+	return m_swap_chain_dimensions;
 }
 
 GPUFrameInterface* GPU_Vulkan::BeginFrame(Vec4 scene_clear_color)
