@@ -30,19 +30,6 @@
 using namespace mu;
 using std::unique_ptr;
 
-PointerRange<const char> GetShaderDirectory() {
-	struct Initializer {
-		String path;
-		Initializer() {
-			auto exe_dir = paths::GetExecutableDirectory();
-			path = String::FromRanges( exe_dir, Range("../Shaders/"));
-		}
-	};
-	static Initializer init;
-	return Range(init.path);
-}
-
-
 struct ImGuiImpl {
 	HWND m_hwnd;
 	GPUInterface* m_gpu = nullptr;
@@ -84,7 +71,7 @@ struct ImGuiImpl {
 
 		GPU::PipelineStateDesc pipeline_state_desc = {};
 
-		String shader_filename = String::FromRanges(GetShaderDirectory(), "imgui.hlsl");
+		String shader_filename = gpu->GetShaderFilename("imgui"); 
 		String shader_txt_code = LoadFileToString(shader_filename.GetRaw());
 		GPU::VertexShaderID vshader_id = gpu->CompileVertexShaderHLSL("vs_main", shader_txt_code.Bytes());
 		GPU::PixelShaderID pshader_id = gpu->CompilePixelShaderHLSL("ps_main", shader_txt_code.Bytes());
@@ -319,7 +306,7 @@ int main(int argc, char** argv) {
 	GPU::PipelineStateID cube_pipeline_state;
 	{
 		Timer t;
-		String shader_filename = String::FromRanges(GetShaderDirectory(), "basic_shader.hlsl");
+		String shader_filename = gpu->GetShaderFilename("basic_shader");
 		String shader_txt_code = LoadFileToString(shader_filename.GetRaw()); // TODO: Handle unicode BOM/other encodings
 		GPU::VertexShaderID vshader_id = gpu->CompileVertexShaderHLSL("vs_main", shader_txt_code.Bytes());
 		GPU::PixelShaderID pshader_id = gpu->CompilePixelShaderHLSL("ps_main", shader_txt_code.Bytes());
@@ -343,7 +330,7 @@ int main(int argc, char** argv) {
 	GPU::PipelineStateID grid_pipeline_state;
 	{
 		Timer t;
-		String shader_filename = String::FromRanges(GetShaderDirectory(), "grid_shader.hlsl");
+		String shader_filename = gpu->GetShaderFilename("grid_shader");
 		String shader_txt_code = LoadFileToString(shader_filename.GetRaw());
 		GPU::VertexShaderID vshader_id = gpu->CompileVertexShaderHLSL("vs_main", shader_txt_code.Bytes());
 		GPU::PixelShaderID pshader_id = gpu->CompilePixelShaderHLSL("ps_main", shader_txt_code.Bytes());

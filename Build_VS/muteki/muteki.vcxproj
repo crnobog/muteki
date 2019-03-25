@@ -162,19 +162,9 @@
     <ClInclude Include="..\..\Source\Vectors.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\Shaders\basic_shader.hlsl">
-      <FileType>Document</FileType>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\..\Shaders\imgui.hlsl">
-      <FileType>Document</FileType>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\..\Shaders\grid_shader.hlsl">
-      <FileType>Document</FileType>
-    </None>
+    <FxCompile Include="..\..\Shaders\DX\basic_shader.hlsl" />
+    <FxCompile Include="..\..\Shaders\DX\grid_shader.hlsl" />
+    <FxCompile Include="..\..\Shaders\DX\imgui.hlsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

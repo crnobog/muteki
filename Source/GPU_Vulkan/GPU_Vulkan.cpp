@@ -2,6 +2,7 @@
 
 #include "mu-core/Array.h"
 #include "mu-core/Debug.h"
+#include "mu-core/Paths.h"
 
 
 #ifndef VC_EXTRALEAN
@@ -99,6 +100,7 @@ struct GPU_Vulkan : public GPUInterface {
 
 	virtual void SubmitPass(const RenderPass& pass) override;
 
+	virtual mu::String GetShaderFilename(mu::PointerRange<const char> name) override;
 	virtual VertexShaderID CompileVertexShaderHLSL(const char* entry_point, mu::PointerRange<const u8> code) override;
 	virtual PixelShaderID CompilePixelShaderHLSL(const char* entry_point, mu::PointerRange<const u8> code) override;
 	virtual ProgramID LinkProgram(VertexShaderID vertex_shader, PixelShaderID pixel_shader) override;
@@ -603,6 +605,24 @@ void GPU_Vulkan::EndFrame(GPUFrameInterface* frame)
 
 void GPU_Vulkan::SubmitPass(const RenderPass& pass)
 {
+}
+
+
+static PointerRange<const char> GetShaderDirectory() {
+	struct Initializer {
+		String path;
+		Initializer() {
+			auto exe_dir = mu::paths::GetExecutableDirectory();
+			path = String::FromRanges(exe_dir, mu::Range("../Shaders/Vulkan/"));
+		}
+	};
+	static Initializer init;
+	return Range(init.path);
+}
+
+String GPU_Vulkan::GetShaderFilename(mu::PointerRange<const char> name)
+{
+	return String::FromRanges(GetShaderDirectory(), name, ".glsl");
 }
 
 VertexShaderID GPU_Vulkan::CompileVertexShaderHLSL(const char* entry_point, mu::PointerRange<const u8> code)

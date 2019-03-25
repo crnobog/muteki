@@ -108,14 +108,14 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\Shaders\basic_shader.hlsl">
+    <FxCompile Include="..\..\Shaders\DX\basic_shader.hlsl">
       <Filter>Shaders_DX12</Filter>
-    </None>
-    <None Include="..\..\Shaders\imgui.hlsl">
+    </FxCompile>
+    <FxCompile Include="..\..\Shaders\DX\grid_shader.hlsl">
       <Filter>Shaders_DX12</Filter>
-    </None>
-    <None Include="..\..\Shaders\grid_shader.hlsl">
+    </FxCompile>
+    <FxCompile Include="..\..\Shaders\DX\imgui.hlsl">
       <Filter>Shaders_DX12</Filter>
-    </None>
+    </FxCompile>
   </ItemGroup>
 </Project>

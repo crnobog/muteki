@@ -7,6 +7,7 @@
 #include "mu-core/FixedArray.h"
 #include "mu-core/HashTable.h"
 #include "mu-core/IotaRange.h"
+#include "mu-core/Paths.h"
 #include "mu-core/Pool.h"
 #include "mu-core/Ranges.h"
 #include "mu-core/Utils.h"
@@ -268,6 +269,7 @@ struct GPU_DX12 : public GPUInterface {
 
 	virtual void SubmitPass(const RenderPass& pass) override;
 
+	virtual String GetShaderFilename(mu::PointerRange<const char> name) override;
 	virtual VertexShaderID CompileVertexShaderHLSL(const char* entry_point, mu::PointerRange<const u8> code) override;
 	virtual PixelShaderID CompilePixelShaderHLSL(const char* entry_point, mu::PointerRange<const u8> code) override;
 	virtual ProgramID LinkProgram(VertexShaderID vertex_shader, PixelShaderID pixel_shader) override;
@@ -559,6 +561,22 @@ void GPU_DX12::EndFrame(GPUFrameInterface* frame_interface) {
 
 
 
+static PointerRange<const char> GetShaderDirectory() {
+	struct Initializer {
+		String path;
+		Initializer() {
+			auto exe_dir = mu::paths::GetExecutableDirectory();
+			path = String::FromRanges(exe_dir, mu::Range("../Shaders/DX/"));
+		}
+	};
+	static Initializer init;
+	return Range(init.path);
+}
+
+String GPU_DX12::GetShaderFilename(mu::PointerRange<const char> name)
+{
+	return String::FromRanges(GetShaderDirectory(), name, ".hlsl");
+}
 
 VertexShaderID GPU_DX12::CompileVertexShaderHLSL(const char* entry_point, PointerRange<const u8> code) {
 	VertexShaderID id = m_registered_vertex_shaders.AddDefaulted();
