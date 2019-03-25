@@ -269,6 +269,10 @@ namespace mu {
 		auto wide_path = mu::UTF8StringToWide(mu::Range(path, path + strlen(path) + 1));
 
 		HANDLE handle = CreateFile(wide_path.GetRaw(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
+		if (handle == INVALID_HANDLE_VALUE)
+		{
+			return FileReader(nullptr);
+		}
 		return FileReader(handle);
 	}
 
@@ -310,6 +314,9 @@ namespace mu {
 
 	mu::Array<u8> LoadFileToArray(const char* path) {
 		FileReader reader = FileReader::Open(path);
+		if (!reader.IsValidFile()) {
+			return {};
+		}
 		mu::Array<u8> arr;
 		size_t size = reader.GetFileSize();
 		arr.Reserve(size);
@@ -319,6 +326,9 @@ namespace mu {
 
 	String LoadFileToString(const char* path) {
 		FileReader reader = FileReader::Open(path);
+		if (!reader.IsValidFile()) {
+			return {};
+		}
 		if (reader.GetFileSize() < 3) {
 			u8 b[3] = { 0, };
 			reader.Read(Range(b));
