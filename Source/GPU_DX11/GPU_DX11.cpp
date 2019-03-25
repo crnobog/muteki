@@ -110,6 +110,8 @@ struct GPU_DX11 : public GPUInterface {
 
 	static constexpr u32 frame_count = 2;
 
+	void*						m_hwnd;
+
 	COMPtr<IDXGIFactory4>		m_dxgi_factory;
 	COMPtr<ID3D11Device>		m_device;
 	COMPtr<ID3D11DeviceContext> m_immediate_context;
@@ -137,10 +139,10 @@ struct GPU_DX11 : public GPUInterface {
 	GPU_DX11_Frame m_frame_data;
 
 	// BEGIN GPUInterface functions
-	virtual void Init() override;
+	virtual void Init(void* hwnd) override;
 	virtual void Shutdown() override;
-	virtual void CreateSwapChain(void* hwnd, u32 width, u32 height) override;
-	virtual void ResizeSwapChain(void* hwnd, u32 width, u32 height) override;
+	virtual void CreateSwapChain(u32 width, u32 height) override;
+	virtual void ResizeSwapChain(u32 width, u32 height) override;
 	virtual Vector<u32, 2> GetSwapChainDimensions() override { return m_swap_chain_dimensions; }
 
 	virtual GPUFrameInterface* BeginFrame(Vec4 scene_clear_color) override;
@@ -190,7 +192,9 @@ GPUInterface* CreateGPU_DX11() {
 }
 
 
-void GPU_DX11::Init() {
+void GPU_DX11::Init(void* hwnd) {
+	m_hwnd = hwnd;
+
 	UINT dxgiFactoryFlags = 0;
 
 	EnsureHR(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(m_dxgi_factory.Replace())));
@@ -220,7 +224,7 @@ void GPU_DX11::Shutdown() {
 	m_device.Clear();
 	m_immediate_context.Clear();
 }
-void GPU_DX11::CreateSwapChain(void* hwnd, u32 width, u32 height) {
+void GPU_DX11::CreateSwapChain(u32 width, u32 height) {
 	m_swap_chain_dimensions = { width, height };
 	DXGI_SWAP_CHAIN_DESC1 swap_chain_desc = {};
 	swap_chain_desc.BufferCount = frame_count;
@@ -235,19 +239,19 @@ void GPU_DX11::CreateSwapChain(void* hwnd, u32 width, u32 height) {
 		COMPtr<IDXGISwapChain1> swap_chain_tmp;
 		EnsureHR(m_dxgi_factory->CreateSwapChainForHwnd(
 			m_device.Get(),
-			(HWND)hwnd,
+			(HWND)m_hwnd,
 			&swap_chain_desc,
 			nullptr, // fullscreen desc
 			nullptr, // restrict output
 			swap_chain_tmp.Replace()));
-		EnsureHR(m_dxgi_factory->MakeWindowAssociation((HWND)hwnd, DXGI_MWA_NO_ALT_ENTER));
+		EnsureHR(m_dxgi_factory->MakeWindowAssociation((HWND)m_hwnd, DXGI_MWA_NO_ALT_ENTER));
 
 		EnsureHR(swap_chain_tmp->QueryInterface(m_swap_chain.Replace()));
 	}
 
 	OnSwapChainUpdated();
 }
-void GPU_DX11::ResizeSwapChain(void* hwnd, u32 width, u32 height) {
+void GPU_DX11::ResizeSwapChain(u32 width, u32 height) {
 	m_back_buffer.Clear();
 	m_back_buffer_rtv.Clear();
 	m_swap_chain_dimensions = { width, height };

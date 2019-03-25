@@ -351,6 +351,7 @@ namespace GPU {
 }
 
 struct GPUFrameInterface {
+	virtual ~GPUFrameInterface() {}
 	// Returns a constant buffer that is only valid for the current frame
 	//	e.g. may use a per-frame linear allocator on DX12
 	virtual GPU::ConstantBufferID GetTemporaryConstantBuffer(mu::PointerRange<const u8> data) = 0;
@@ -360,10 +361,10 @@ struct GPUFrameInterface {
 
 struct GPUInterface {
 	virtual ~GPUInterface() {}
-	virtual void Init() = 0;
+	virtual void Init(void* hwnd) = 0;
 	virtual void Shutdown() = 0;
-	virtual void CreateSwapChain(void* hwnd, u32 width, u32 height) = 0;
-	virtual void ResizeSwapChain(void* hwnd, u32 width, u32 height) = 0;
+	virtual void CreateSwapChain(u32 width, u32 height) = 0;
+	virtual void ResizeSwapChain(u32 width, u32 height) = 0;
 	virtual Vector<u32, 2> GetSwapChainDimensions() = 0;
 
 	virtual GPUFrameInterface* BeginFrame(Vec4 scene_clear_color) = 0;

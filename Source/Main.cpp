@@ -273,11 +273,8 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 
-	std::unique_ptr<GPUInterface> gpu = CreateGPU(args);
-	gpu->Init();
-
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	GLFWwindow* win = glfwCreateWindow(1600, 900, String::Format("muteki {}", gpu->GetName()).GetRaw(), nullptr, nullptr);
+	GLFWwindow* win = glfwCreateWindow(1600, 900, "muteki", nullptr, nullptr);
 	if (!win) {
 		return 1;
 	}
@@ -286,11 +283,17 @@ int main(int argc, char** argv) {
 	glfwSetWindowUserPointer(win, &win_user_data);
 
 	HWND hwnd = glfwGetWin32Window(win);
+
+	std::unique_ptr<GPUInterface> gpu = CreateGPU(args);
+	gpu->Init(hwnd);
+
+	glfwSetWindowTitle(win, String::Format("muteki {}", gpu->GetName()).GetRaw());
+
 	GPU::DepthTargetID depthbuffer;
 	{
 		i32 fb_width, fb_height;
 		glfwGetFramebufferSize(win, &fb_width, &fb_height);
-		gpu->CreateSwapChain(hwnd, fb_width, fb_height);
+		gpu->CreateSwapChain(fb_width, fb_height);
 		depthbuffer = gpu->CreateDepthTarget(fb_width, fb_height);
 	}
 
@@ -403,7 +406,7 @@ int main(int argc, char** argv) {
 		i32 fb_width, fb_height;
 		glfwGetFramebufferSize(win, &fb_width, &fb_height);
 		if ((u32)fb_width != current_size[0] || (u32)fb_height != current_size[1]) {
-			gpu->ResizeSwapChain(hwnd, fb_width, fb_height);
+			gpu->ResizeSwapChain(fb_width, fb_height);
 		}
 
 		Vec4 clear_color{ 0.2f, 0.2f, 0.2f, 1.0f };
