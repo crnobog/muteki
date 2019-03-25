@@ -4,6 +4,7 @@
 
 #include "GPU_DX12/GPU_DX12.h"
 #include "GPU_DX11/GPU_DX11.h"
+#include "GPU_Vulkan/GPU_Vulkan.h"
 #include "Vectors.h"
 #include "TransformMatrices.h"
 #include "Quaternion.h"
@@ -250,8 +251,12 @@ std::unique_ptr<GPUInterface> CreateGPU(const Array<String>& args)
 	{
 		return std::unique_ptr<GPUInterface>(CreateGPU_DX11());
 	}
+	else if (args.Contains("vulkan"))
+	{
+		return std::unique_ptr<GPUInterface>(CreateGPU_Vulkan());
+	}
 
-	return std::unique_ptr<GPUInterface>(CreateGPU_DX12());
+	return std::unique_ptr<GPUInterface>(CreateGPU_Vulkan());
 }
 
 int main(int argc, char** argv) {

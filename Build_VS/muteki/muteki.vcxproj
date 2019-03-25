@@ -62,8 +62,8 @@
     <OutDir>$(SolutionDir)..\Binaries\</OutDir>
     <IntDir>$(SolutionDir)..\Intermediate\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <TargetName>$(ProjectName)-$(Platform)-$(Configuration)</TargetName>
-    <LibraryPath>$(SolutionDir)..\Lib\;$(LibraryPath)</LibraryPath>
-    <IncludePath>$(SolutionDir)..\External\imgui\;$(SolutionDir)..\External\mu-core\Include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)..\Lib\;$(VULKAN_SDK)\Lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)..\External\imgui\;$(SolutionDir)..\External\mu-core\Include;$(VULKAN_SDK)\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -135,6 +135,7 @@
     <ClCompile Include="..\..\Source\GPU_DX12\GPU_DX12.cpp" />
     <ClCompile Include="..\..\Source\GPU_DX12\DX12Utils.cpp" />
     <ClCompile Include="..\..\Source\GPU_DXShared\DXSharedUtils.cpp" />
+    <ClCompile Include="..\..\Source\GPU_Vulkan\GPU_Vulkan.cpp" />
     <ClCompile Include="..\..\Source\Main.cpp" />
     <ClCompile Include="..\..\Source\MathImpl.cpp" />
   </ItemGroup>
@@ -154,6 +155,7 @@
     <ClInclude Include="..\..\Source\GPU_DX12\GPU_DX12.h" />
     <ClInclude Include="..\..\Source\GPU_DX12\DX12Utils.h" />
     <ClInclude Include="..\..\Source\GPU_DXShared\DXSharedUtils.h" />
+    <ClInclude Include="..\..\Source\GPU_Vulkan\GPU_Vulkan.h" />
     <ClInclude Include="..\..\Source\Quaternion.h" />
     <ClInclude Include="..\..\Source\Rect.h" />
     <ClInclude Include="..\..\Source\TransformMatrices.h" />
