@@ -42,13 +42,7 @@ using RenderPass = GPU::RenderPass;
 
 using DX::COMPtr;
 
-using mu::Array;
-using mu::FixedArray;
-using mu::Iota;
-using mu::PointerRange;
-using mu::Pool;
-using mu::String;
-using mu::Zip;
+using namespace mu;
 
 using std::tuple;
 using std::get;
