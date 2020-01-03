@@ -1,7 +1,7 @@
 ﻿#include "CubePrimitive.h"
 
 // Unit cube centered around the origin
-Vec3 cube_positions[] = {
+const Vec3 cube_positions[] = {
 	// Top face
 	{ -0.5, +0.5, -0.5 }, // Back left		0
 	{ +0.5, +0.5, -0.5 }, // Back right		1
@@ -39,7 +39,7 @@ Vec3 cube_positions[] = {
 	{ -0.5, -0.5, +0.5 }, // Bottom front	23
 };
 
-Vec3 cube_normals[] = {
+const Vec3 cube_normals[] = {
 	// Top face
 	Vec3::UnitY,
 	Vec3::UnitY,
@@ -76,7 +76,8 @@ Vec3 cube_normals[] = {
 	-Vec3::UnitX,
 	-Vec3::UnitX
 };
-Vec2 cube_texcoords[] = {
+
+const Vec2 cube_texcoords[] = {
 	// Top face
 	{ 0, 0 },
 	{ 1, 0 },
@@ -114,7 +115,7 @@ Vec2 cube_texcoords[] = {
 	{ 1, 1 },
 };
 
-u16 cube_indices[] = {
+const u16 cube_indices[] = {
 	// Top face
 	2, 1, 0,
 	2, 3, 1,
