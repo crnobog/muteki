@@ -82,8 +82,8 @@ struct Vector<T, 3> {
 		Vector<T, 2> XY;
 	};
 
-	Vector() { X = Y = Z = T{}; }
-	Vector(T x, T y, T z) { X = x; Y = y; Z = z; }
+	constexpr Vector() { X = Y = Z = T{}; }
+	constexpr Vector(T x, T y, T z) { X = x; Y = y; Z = z; }
 	T& operator[](size_t i) { return Data[i]; }
 	const T& operator[](size_t i) const { return Data[i]; }
 
