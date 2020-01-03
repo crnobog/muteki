@@ -2,8 +2,8 @@ cbuffer cb_proj : register(b0) {
 	float4x4 proj_matrix;
 };
 
-sampler sampler0;
-Texture2D texture0;
+sampler sampler0 : register(s0);
+Texture2D texture0 : register(t0);
 
 struct vs_in {
 	float2 pos : POSITION;
