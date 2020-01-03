@@ -1,21 +1,10 @@
 ﻿#pragma once
 
 #include "mu-core/PrimitiveTypes.h"
+#include "mu-core/Math.h"
 
 // TODO: rename to ArrayNum or ArrayCount 
 template<typename T, size_t N> inline constexpr size_t ArraySize(const T(&)[N]) { return N; }
-
-template<typename T> inline constexpr T AlignPow2(T t, size_t align) {
-	align -= 1;
-	return (T)(((size_t)t + align) & ~align);
-}
-
-inline bool IsPowerOf2(i16 i) { return i && !(i & (i - 1)); }
-inline bool IsPowerOf2(i32 i) { return i && !(i & (i - 1)); }
-inline bool IsPowerOf2(i64 i) { return i && !(i & (i - 1)); }
-inline bool IsPowerOf2(u16 i) { return i && !(i & (i - 1)); }
-inline bool IsPowerOf2(u32 i) { return i && !(i & (i - 1)); }
-inline bool IsPowerOf2(u64 i) { return i && !(i & (i - 1)); }
 
 namespace mu {
 	struct IndexIterator {

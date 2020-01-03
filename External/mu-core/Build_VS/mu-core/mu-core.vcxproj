@@ -58,6 +58,7 @@
     <None Include="..\..\Include\mu-core\Tests\BitArray_Tests.inl" />
     <None Include="..\..\Include\mu-core\Tests\FixedArray_Tests.inl" />
     <None Include="..\..\Include\mu-core\Tests\HashTable_Tests.inl" />
+    <None Include="..\..\Include\mu-core\Tests\Math_Tests.inl" />
     <None Include="..\..\Include\mu-core\Tests\Paths_Tests.inl" />
     <None Include="..\..\Include\mu-core\Tests\PointerRange_Tests.inl" />
     <None Include="..\..\Include\mu-core\Tests\Pool_Tests.inl" />
@@ -127,6 +128,7 @@
       <WarningLevel>Level4</WarningLevel>
       <TreatWarningAsError>true</TreatWarningAsError>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
