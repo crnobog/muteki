@@ -8,6 +8,7 @@
 #include "mu-core/FixedArray.h"
 #include "mu-core/HashTable.h"
 #include "mu-core/IotaRange.h"
+#include "mu-core/Math.h"
 #include "mu-core/Paths.h"
 #include "mu-core/Pool.h"
 #include "mu-core/Ranges.h"
@@ -1043,7 +1044,7 @@ DX12LinearAllocator::DX12LinearAllocator(GPU_DX12* gpu) : m_gpu(gpu) {
 }
 
 GPUAllocation DX12LinearAllocator::Allocate(u32 size) {
-	size = AlignPow2(size, 256);
+	size = AlignPow2<u32>(size, 256);
 	Assertf(m_used + size <= m_max, "Ran out of space trying to allocate {} bytes", size);
 
 	D3D12_GPU_VIRTUAL_ADDRESS addr = m_data->GetGPUVirtualAddress() + m_used;
