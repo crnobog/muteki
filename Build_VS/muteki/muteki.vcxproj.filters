@@ -43,9 +43,6 @@
     <Filter Include="GPU\DX12">
       <UniqueIdentifier>{cfce8443-b6b9-4807-8c5d-cc57897c1a9c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Shaders_DX12">
-      <UniqueIdentifier>{608186c7-272f-45df-8c05-7a8363bd5d69}</UniqueIdentifier>
-    </Filter>
     <Filter Include="GPU\DX11">
       <UniqueIdentifier>{03e3d2c5-1816-40b6-bbb5-55b2274bce18}</UniqueIdentifier>
     </Filter>
@@ -57,6 +54,15 @@
     </Filter>
     <Filter Include="GPU\Vulkan">
       <UniqueIdentifier>{64c5116f-1eee-41b9-b7a5-97b96b5a130f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{46a81a82-6cca-47cd-9c96-ee1575c34ac0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\Vulkan">
+      <UniqueIdentifier>{00e61245-84a3-47a8-b6b9-45d93eeb2d95}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\DX">
+      <UniqueIdentifier>{608186c7-272f-45df-8c05-7a8363bd5d69}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -108,14 +114,32 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="..\..\Shaders\DX\basic_shader.hlsl">
-      <Filter>Shaders_DX12</Filter>
-    </FxCompile>
-    <FxCompile Include="..\..\Shaders\DX\grid_shader.hlsl">
-      <Filter>Shaders_DX12</Filter>
-    </FxCompile>
-    <FxCompile Include="..\..\Shaders\DX\imgui.hlsl">
-      <Filter>Shaders_DX12</Filter>
-    </FxCompile>
+    <None Include="..\..\Shaders\DX\basic_shader.hlsl">
+      <Filter>Shaders\DX</Filter>
+    </None>
+    <None Include="..\..\Shaders\DX\grid_shader.hlsl">
+      <Filter>Shaders\DX</Filter>
+    </None>
+    <None Include="..\..\Shaders\DX\imgui.hlsl">
+      <Filter>Shaders\DX</Filter>
+    </None>
+    <None Include="..\..\Shaders\Vulkan\basic_shader.frag">
+      <Filter>Shaders\Vulkan</Filter>
+    </None>
+    <None Include="..\..\Shaders\Vulkan\basic_shader.vert">
+      <Filter>Shaders\Vulkan</Filter>
+    </None>
+    <None Include="..\..\Shaders\Vulkan\grid_shader.frag">
+      <Filter>Shaders\Vulkan</Filter>
+    </None>
+    <None Include="..\..\Shaders\Vulkan\grid_shader.vert">
+      <Filter>Shaders\Vulkan</Filter>
+    </None>
+    <None Include="..\..\Shaders\Vulkan\imgui.frag">
+      <Filter>Shaders\Vulkan</Filter>
+    </None>
+    <None Include="..\..\Shaders\Vulkan\imgui.vert">
+      <Filter>Shaders\Vulkan</Filter>
+    </None>
   </ItemGroup>
 </Project>

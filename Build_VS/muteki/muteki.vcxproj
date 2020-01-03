@@ -80,6 +80,7 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <MinimalRebuild>false</MinimalRebuild>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -89,7 +90,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>STRICT;NOMINMAX;WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;_DEBUG;_WINDOWS;%(PreprocessorDefinitions);_GLFW_WIN32;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>STRICT;NOMINMAX;WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;_WINDOWS;%(PreprocessorDefinitions);_GLFW_WIN32;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
     </ClCompile>
     <Link>
@@ -162,9 +163,21 @@
     <ClInclude Include="..\..\Source\Vectors.h" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="..\..\Shaders\DX\basic_shader.hlsl" />
-    <FxCompile Include="..\..\Shaders\DX\grid_shader.hlsl" />
-    <FxCompile Include="..\..\Shaders\DX\imgui.hlsl" />
+    <None Include="..\..\Shaders\DX\basic_shader.hlsl">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="..\..\Shaders\DX\grid_shader.hlsl">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="..\..\Shaders\DX\imgui.hlsl">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="..\..\Shaders\Vulkan\basic_shader.frag" />
+    <None Include="..\..\Shaders\Vulkan\basic_shader.vert" />
+    <None Include="..\..\Shaders\Vulkan\grid_shader.frag" />
+    <None Include="..\..\Shaders\Vulkan\grid_shader.vert" />
+    <None Include="..\..\Shaders\Vulkan\imgui.frag" />
+    <None Include="..\..\Shaders\Vulkan\imgui.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
