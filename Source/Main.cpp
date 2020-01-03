@@ -338,7 +338,7 @@ int main(int argc, char** argv) {
 		pipeline_state_desc.RasterState.ScissorEnable = true;
 		pipeline_state_desc.RasterState.FillMode = GPU::FillMode::Wireframe;
 		pipeline_state_desc.RasterState.CullMode = GPU::CullMode::None;
-		pipeline_state_desc.PrimitiveType = GPU::PrimitiveType::Line;
+		pipeline_state_desc.PrimitiveTopology = GPU::PrimitiveTopology::LineList;
 		grid_pipeline_state = gpu->CreatePipelineState(pipeline_state_desc);
 	}
 

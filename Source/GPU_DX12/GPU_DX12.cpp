@@ -673,7 +673,7 @@ GPU::PipelineStateID GPU_DX12::CreatePipelineState(const GPU::PipelineStateDesc&
 		.DepthStencilFormat(desc.DepthStencilState.DepthEnable ? DXGI_FORMAT_D32_FLOAT : DXGI_FORMAT_UNKNOWN)
 		.BlendState(desc.BlendState)
 		.RasterState(desc.RasterState)
-		.PrimType(desc.PrimitiveType)
+		.PrimType(GPU::PrimitiveTopologyToPrimitiveType(desc.PrimitiveTopology))
 		.RenderTargets(DXGI_FORMAT_R8G8B8A8_UNORM)
 		.InputLayout(input_layout.Data(), (u32)input_layout.Num());
 	EnsureHR(m_device->CreateGraphicsPipelineState(&pipeline_desc, IID_PPV_ARGS(ps.PSO.Replace())));

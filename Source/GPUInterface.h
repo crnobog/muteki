@@ -237,7 +237,7 @@ namespace GPU {
 		BlendStateDesc			BlendState;
 		DepthStencilStateDesc	DepthStencilState;
 		StreamFormatDesc		StreamFormat;
-		PrimitiveType			PrimitiveType = PrimitiveType::Triangle;
+		PrimitiveTopology		PrimitiveTopology;
 	};
 
 	// Draw commands
@@ -348,6 +348,17 @@ namespace GPU {
 
 	inline bool operator!=(const GPU::PipelineStateDesc& a, const GPU::PipelineStateDesc& b) {
 		return !(a == b);
+	}
+
+	inline PrimitiveType PrimitiveTopologyToPrimitiveType(PrimitiveTopology topo)
+	{
+		switch(topo)
+		{
+		case PrimitiveTopology::LineList:
+			return PrimitiveType::Line;
+		default:
+			return PrimitiveType::Triangle;
+		}
 	}
 }
 
