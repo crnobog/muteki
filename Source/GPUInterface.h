@@ -376,9 +376,8 @@ struct GPUInterface {
 	//virtual GPU::StreamFormatID RegisterStreamFormat(const GPU::StreamFormatDesc& format) = 0;
 	//virtual GPU::InputAssemblerConfigID RegisterInputAssemblyConfig(GPU::StreamFormatID format, mu::PointerRange<const GPU::VertexBufferID> vertex_buffers, GPU::IndexBufferID index_buffer) = 0;
 
-	virtual mu::String GetShaderFilename(mu::PointerRange<const char> name) = 0;
-	virtual GPU::VertexShaderID CompileVertexShaderHLSL(const char* entry_point, mu::PointerRange<const u8> code) = 0;
-	virtual GPU::PixelShaderID CompilePixelShaderHLSL(const char* entry_point, mu::PointerRange<const u8> code) = 0;
+	virtual GPU::VertexShaderID CompileVertexShaderHLSL(mu::PointerRange<const char> name) = 0;
+	virtual GPU::PixelShaderID CompilePixelShaderHLSL(mu::PointerRange<const char> name) = 0;
 	virtual GPU::ProgramID LinkProgram(GPU::VertexShaderID vertex_shader, GPU::PixelShaderID pixel_shader) = 0;
 
 	virtual GPU::PipelineStateID CreatePipelineState(const GPU::PipelineStateDesc& desc) = 0;

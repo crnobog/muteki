@@ -6,6 +6,7 @@
 #include "../GPU_DXShared/DXSharedUtils.h"
 #include "../Vectors.h"
 
+#include "mu-core/FileReader.h"
 #include "mu-core/FixedArray.h"
 #include "mu-core/IotaRange.h"
 #include "mu-core/Paths.h"
@@ -154,9 +155,8 @@ struct GPU_DX11 : public GPUInterface {
 	//virtual StreamFormatID RegisterStreamFormat(const GPU::StreamFormatDesc& format) override;
 	//virtual InputAssemblerConfigID RegisterInputAssemblyConfig(StreamFormatID format, mu::PointerRange<const VertexBufferID> vertex_buffers, IndexBufferID index_buffer) override;
 
-	virtual String GetShaderFilename(mu::PointerRange<const char> name) override;
-	virtual VertexShaderID CompileVertexShaderHLSL(const char* entry_point, mu::PointerRange<const u8> code) override;
-	virtual PixelShaderID CompilePixelShaderHLSL(const char* entry_point, mu::PointerRange<const u8> code) override;
+	virtual GPU::VertexShaderID CompileVertexShaderHLSL(mu::PointerRange<const char> name) override;
+	virtual PixelShaderID CompilePixelShaderHLSL(mu::PointerRange<const char> name) override;
 	virtual ProgramID LinkProgram(VertexShaderID vertex_shader, PixelShaderID pixel_shader) override;
 
 	virtual GPU::PipelineStateID CreatePipelineState(const GPU::PipelineStateDesc& desc) override;
@@ -392,17 +392,22 @@ static PointerRange<const char> GetShaderDirectory() {
 	return Range(init.path);
 }
 
-String GPU_DX11::GetShaderFilename(mu::PointerRange<const char> name)
+static String GetShaderFilename(mu::PointerRange<const char> name)
 {
 	return String::FromRanges(GetShaderDirectory(), name, ".hlsl");
 }
 
-VertexShaderID GPU_DX11::CompileVertexShaderHLSL(const char* entry_point, mu::PointerRange<const u8> code) {
-	VertexShaderID id = m_vertex_shaders.AddDefaulted();
-	COMPtr<ID3DBlob> compiled_shader;
-	DX::CompileShaderHLSL(compiled_shader.Replace(), "vs_5_0", entry_point, code);
-	Assert(compiled_shader.Get());
+GPU::VertexShaderID GPU_DX11::CompileVertexShaderHLSL(mu::PointerRange<const char> name) {
 
+	COMPtr<ID3DBlob> compiled_shader;
+	VertexShaderID id = m_vertex_shaders.AddDefaulted();
+	{
+		String shader_filename = GetShaderFilename(name);
+		String shader_txt_code = LoadFileToString(shader_filename.GetRaw());
+
+		DX::CompileShaderHLSL(compiled_shader.Replace(), "vs_5_0", "vs_main", shader_txt_code.Bytes());
+		Assert(compiled_shader.Get());
+	}
 	EnsureHR(m_device->CreateVertexShader(compiled_shader->GetBufferPointer(), compiled_shader->GetBufferSize(), nullptr, m_vertex_shaders[id].CompiledShader.Replace()));
 	VertexShaderInputs& inputs = m_vertex_shaders[id].Inputs;
 
@@ -433,11 +438,16 @@ VertexShaderID GPU_DX11::CompileVertexShaderHLSL(const char* entry_point, mu::Po
 
 	return id;
 }
-PixelShaderID GPU_DX11::CompilePixelShaderHLSL(const char* entry_point, mu::PointerRange<const u8> code) {
+PixelShaderID GPU_DX11::CompilePixelShaderHLSL(mu::PointerRange<const char> name) {
 	PixelShaderID id = m_pixel_shaders.AddDefaulted();
 	COMPtr<ID3DBlob> compiled_shader;
-	DX::CompileShaderHLSL(compiled_shader.Replace(), "ps_5_0", entry_point, code);
-	Assert(compiled_shader.Get());
+	{
+		String shader_filename = GetShaderFilename(name);
+		String shader_txt_code = LoadFileToString(shader_filename.GetRaw());
+
+		DX::CompileShaderHLSL(compiled_shader.Replace(), "ps_5_0", "ps_main", shader_txt_code.Bytes());
+		Assert(compiled_shader.Get());
+	}
 	EnsureHR(m_device->CreatePixelShader(compiled_shader->GetBufferPointer(), compiled_shader->GetBufferSize(), nullptr, m_pixel_shaders[id].Replace()));
 	return id;
 }

@@ -71,10 +71,8 @@ struct ImGuiImpl {
 
 		GPU::PipelineStateDesc pipeline_state_desc = {};
 
-		String shader_filename = gpu->GetShaderFilename("imgui"); 
-		String shader_txt_code = LoadFileToString(shader_filename.GetRaw());
-		GPU::VertexShaderID vshader_id = gpu->CompileVertexShaderHLSL("vs_main", shader_txt_code.Bytes());
-		GPU::PixelShaderID pshader_id = gpu->CompilePixelShaderHLSL("ps_main", shader_txt_code.Bytes());
+		GPU::VertexShaderID vshader_id = gpu->CompileVertexShaderHLSL("imgui");
+		GPU::PixelShaderID pshader_id = gpu->CompilePixelShaderHLSL("imgui");
 		pipeline_state_desc.Program = gpu->LinkProgram(vshader_id, pshader_id);
 
 		pipeline_state_desc.StreamFormat.AddSlot({
@@ -306,10 +304,8 @@ int main(int argc, char** argv) {
 	GPU::PipelineStateID cube_pipeline_state;
 	{
 		Timer t;
-		String shader_filename = gpu->GetShaderFilename("basic_shader");
-		String shader_txt_code = LoadFileToString(shader_filename.GetRaw()); // TODO: Handle unicode BOM/other encodings
-		GPU::VertexShaderID vshader_id = gpu->CompileVertexShaderHLSL("vs_main", shader_txt_code.Bytes());
-		GPU::PixelShaderID pshader_id = gpu->CompilePixelShaderHLSL("ps_main", shader_txt_code.Bytes());
+		GPU::VertexShaderID vshader_id = gpu->CompileVertexShaderHLSL("basic_shader");
+		GPU::PixelShaderID pshader_id = gpu->CompilePixelShaderHLSL("basic_shader");
 		GPU::ProgramID program_id = gpu->LinkProgram(vshader_id, pshader_id);
 		dbg::Log("Loaded and compiled basic shader in {} ms", t.GetElapsedTimeMilliseconds());
 
@@ -330,10 +326,8 @@ int main(int argc, char** argv) {
 	GPU::PipelineStateID grid_pipeline_state;
 	{
 		Timer t;
-		String shader_filename = gpu->GetShaderFilename("grid_shader");
-		String shader_txt_code = LoadFileToString(shader_filename.GetRaw());
-		GPU::VertexShaderID vshader_id = gpu->CompileVertexShaderHLSL("vs_main", shader_txt_code.Bytes());
-		GPU::PixelShaderID pshader_id = gpu->CompilePixelShaderHLSL("ps_main", shader_txt_code.Bytes());
+		GPU::VertexShaderID vshader_id = gpu->CompileVertexShaderHLSL("grid_shader");
+		GPU::PixelShaderID pshader_id = gpu->CompilePixelShaderHLSL("grid_shader");
 		GPU::ProgramID program_id = gpu->LinkProgram(vshader_id, pshader_id);
 		dbg::Log("Loaded and compiled grid shader in {} ms", t.GetElapsedTimeMilliseconds());
 

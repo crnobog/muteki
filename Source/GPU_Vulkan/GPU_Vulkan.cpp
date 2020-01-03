@@ -2,6 +2,7 @@
 
 #include "mu-core/Array.h"
 #include "mu-core/Debug.h"
+#include "mu-core/FileReader.h"
 #include "mu-core/Paths.h"
 
 
@@ -100,9 +101,8 @@ struct GPU_Vulkan : public GPUInterface {
 
 	virtual void SubmitPass(const RenderPass& pass) override;
 
-	virtual mu::String GetShaderFilename(mu::PointerRange<const char> name) override;
-	virtual VertexShaderID CompileVertexShaderHLSL(const char* entry_point, mu::PointerRange<const u8> code) override;
-	virtual PixelShaderID CompilePixelShaderHLSL(const char* entry_point, mu::PointerRange<const u8> code) override;
+	virtual GPU::VertexShaderID CompileVertexShaderHLSL(PointerRange<const char> name) override;
+	virtual PixelShaderID CompilePixelShaderHLSL(PointerRange<const char> name) override;
 	virtual ProgramID LinkProgram(VertexShaderID vertex_shader, PixelShaderID pixel_shader) override;
 
 	virtual GPU::PipelineStateID CreatePipelineState(const GPU::PipelineStateDesc& desc) override;
@@ -624,17 +624,23 @@ static PointerRange<const char> GetShaderDirectory() {
 	return Range(init.path);
 }
 
-String GPU_Vulkan::GetShaderFilename(mu::PointerRange<const char> name)
+static String GetShaderFilename(mu::PointerRange<const char> name, GPU::ShaderType type)
 {
-	return String::FromRanges(GetShaderDirectory(), name, ".glsl");
+	PointerRange<const char> suffix;
+	switch (type)
+	{
+	case GPU::ShaderType::Pixel: suffix = ".frag"; break;
+	case GPU::ShaderType::Vertex: suffix = ".vert"; break;
+	}
+	return String::FromRanges(GetShaderDirectory(), name, suffix);
 }
 
-VertexShaderID GPU_Vulkan::CompileVertexShaderHLSL(const char* entry_point, mu::PointerRange<const u8> code)
+GPU::VertexShaderID GPU_Vulkan::CompileVertexShaderHLSL(PointerRange<const char> name)
 {
 	return VertexShaderID{};
 }
 
-PixelShaderID GPU_Vulkan::CompilePixelShaderHLSL(const char* entry_point, mu::PointerRange<const u8> code)
+PixelShaderID GPU_Vulkan::CompilePixelShaderHLSL(PointerRange<const char> name)
 {
 	return PixelShaderID{};
 }
