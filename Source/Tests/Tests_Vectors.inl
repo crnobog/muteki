@@ -108,6 +108,36 @@ TEST_SUITE("Vectors") {
 			CHECK_EQ(2.0f, d.Y);
 			CHECK_EQ(3.0f, d.Z);
 		}
+
+		SUBCASE("Vec3CopyConstructUnitVectors") {
+			Vec3 copy;
+			copy = Vec3::UnitX;
+			CHECK_EQ(1.0f, copy.X);
+			CHECK_EQ(0.0f, copy.Y);
+			CHECK_EQ(0.0f, copy.Z);
+
+			copy = Vec3::UnitY;
+			CHECK_EQ(0.0f, copy.X);
+			CHECK_EQ(1.0f, copy.Y);
+			CHECK_EQ(0.0f, copy.Z);
+
+			copy = Vec3::UnitZ;
+			CHECK_EQ(0.0f, copy.X);
+			CHECK_EQ(0.0f, copy.Y);
+			CHECK_EQ(1.0f, copy.Z);
+		}
+
+		SUBCASE("Vec3InitArrayFromUnits") {
+			Vec3 list[] = {
+				Vec3::UnitX,
+				Vec3::UnitY,
+				Vec3::UnitZ,
+			};
+
+			CHECK_EQ(1.0f, list[0].X);
+			CHECK_EQ(1.0f, list[1].Y);
+			CHECK_EQ(1.0f, list[2].Z);
+		}
 	};
 
 	TEST_CASE("VectorMemberAliasTests") {
