@@ -236,7 +236,7 @@ std::unique_ptr<GPUInterface> CreateGPU(const Array<String>& args)
 	{
 		return std::unique_ptr<GPUInterface>(CreateGPU_DX11());
 	}
-	else if (args.Contains("vulkan"))
+	else if (args.Contains("vulkan") || args.Contains("vk"))
 	{
 		return std::unique_ptr<GPUInterface>(CreateGPU_Vulkan());
 	}
