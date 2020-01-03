@@ -2,8 +2,9 @@
 
 #include "Array.h"
 #include "BitArray.h"
-#include "PrimitiveTypes.h"
 #include "Debug.h"
+#include "PrimitiveTypes.h"
+#include "mu-core/RangeIteration.h"
 
 #include <intrin.h>
 
@@ -107,7 +108,7 @@ namespace mu {
 		};
 
 		template<bool IsConst>
-		struct PoolRangeBase {
+		struct PoolRangeBase : public details::WithBeginEnd<PoolRangeBase<IsConst>> {
 			BitRange<true> m_flags;
 			typename RangeTypes<IsConst>::ElementPtr m_elements = nullptr;
 
