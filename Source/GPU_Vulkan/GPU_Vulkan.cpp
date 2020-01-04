@@ -52,6 +52,8 @@ static const size_t MaxPersistentIndexBuffers		= 128;
 static const size_t MaxPersistentConstantBuffers	= 128;
 static const size_t MaxDescriptorSets				= 128;
 static const size_t MaxTextures						= 128;
+static const size_t MaxShaderResourceLists			= 128;
+static const size_t MaxDepthTargets					= 128;
 
 struct VulkanVertexLayout
 {
@@ -506,6 +508,12 @@ struct GPU_Vulkan : public GPUInterface {
 		GPU::ShaderResourceListDesc Desc;
 	};
 
+	struct DepthTarget {
+		VkImage			m_image = nullptr;
+		VkDeviceMemory	m_device_memory = nullptr;
+		VkImageView		m_image_view = nullptr;
+	};
+
 	GPU_Vulkan();
 	~GPU_Vulkan();
 	GPU_Vulkan(const GPU_Vulkan&) = delete;
@@ -647,7 +655,8 @@ struct GPU_Vulkan : public GPUInterface {
 	Pool<IndexBuffer, IndexBufferID>				m_index_buffers{ MaxPersistentIndexBuffers };
 	Pool<ConstantBuffer, ConstantBufferID>			m_constant_buffers{ MaxPersistentConstantBuffers };
 	Pool<Texture2D, TextureID>						m_textures{ MaxTextures };
-	Pool<ShaderResourceList, ShaderResourceListID>	m_shader_resource_lists{ 128 };
+	Pool<ShaderResourceList, ShaderResourceListID>	m_shader_resource_lists{ MaxShaderResourceLists };
+	Pool<DepthTarget, DepthTargetID>				m_depth_targets{ MaxDepthTargets };
 
 	// Temporary descriptor set layouts
 	// TODO: Expose descriptor set layouts to higher level? Design descriptor set layouts to allow some guarantees about update frequency? Hide it all and use push constants to index large buffers?
@@ -1682,11 +1691,17 @@ void GPU_Vulkan::SubmitPass(const RenderPass& pass)
 	begin_info.flags = 0;
 	begin_info.pInheritanceInfo = nullptr;
 
+	DepthTarget* depth_target = nullptr;
+	if (pass.DepthBuffer != DepthTargetID{}) {
+		depth_target = &m_depth_targets[pass.DepthBuffer];
+	}
+	
 	VkRenderPassBeginInfo pass_begin_info = {};
 	pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	pass_begin_info.pNext = nullptr;
 	pass_begin_info.renderPass = m_render_pass;
 	// TODO: Bind RTs for pass
+	// TODO: Bind depth target here?
 	pass_begin_info.framebuffer = m_swap_chain_framebuffers[frame.m_swap_chain_image_index];
 	pass_begin_info.renderArea.offset = { 0, 0 };
 	pass_begin_info.renderArea.extent = { m_swap_chain_dimensions[0], m_swap_chain_dimensions[1] };
@@ -1695,12 +1710,57 @@ void GPU_Vulkan::SubmitPass(const RenderPass& pass)
 
 	vkBeginCommandBuffer(command_buffer, &begin_info);
 	CmdDebugBegin(command_buffer, pass.Name ? pass.Name : "Unnamed pass");
-	vkCmdBeginRenderPass(command_buffer, &pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 	{
-		if (pass.DepthBuffer != DepthTargetID{} && pass.DepthClearValue) {
+		// Pre render pass
+		if (depth_target && pass.DepthClearValue) {
 			// Clear depth buffer
 			// TODO: Promote this to render pass?
+
+			VkImageSubresourceRange range = {};
+			range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+			range.baseMipLevel = 0;
+			range.levelCount = 1;
+			range.baseArrayLayer = 0;
+			range.layerCount = 1;
+			VkImageMemoryBarrier image_barrier = {};
+			image_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			image_barrier.pNext = nullptr;
+			image_barrier.srcAccessMask = 0;
+			image_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			image_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			image_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			image_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			image_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			image_barrier.image = depth_target->m_image;
+			image_barrier.subresourceRange = range;
+
+			vkCmdPipelineBarrier(command_buffer,
+				VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+				0,
+				0, nullptr,
+				0, nullptr,
+				1, &image_barrier);
+
+			VkClearDepthStencilValue clear_value = {};
+			clear_value.depth = *pass.DepthClearValue;
+			clear_value.stencil = 0;
+			vkCmdClearDepthStencilImage(command_buffer, depth_target->m_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_value, 1, &range);
+
+			image_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			image_barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			image_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			image_barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+
+			vkCmdPipelineBarrier(command_buffer,
+				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+				0,
+				0, nullptr,
+				0, nullptr,
+				1, &image_barrier);
 		}
+	}
+	vkCmdBeginRenderPass(command_buffer, &pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+	{
 
 		// TODO: Set viewports
 		vkCmdSetViewport(command_buffer, 0, 1, &m_viewport);
@@ -2085,18 +2145,6 @@ PipelineStateID GPU_Vulkan::CreatePipelineState(const GPU::PipelineStateDesc& de
 	input_assembly_info.primitiveRestartEnable = VK_FALSE;
 	
 	VkRect2D scissor;
-	//VkViewportSwizzleNV swizzle_0 = {};
-	//swizzle_0.x = VK_VIEWPORT_COORDINATE_SWIZZLE_POSITIVE_X_NV;
-	//swizzle_0.y = VK_VIEWPORT_COORDINATE_SWIZZLE_NEGATIVE_Y_NV;	// Flip Y coordinate so our shaders can match DX's coordinate space
-	//swizzle_0.z = VK_VIEWPORT_COORDINATE_SWIZZLE_POSITIVE_Z_NV;
-	//swizzle_0.w = VK_VIEWPORT_COORDINATE_SWIZZLE_POSITIVE_W_NV;
-	//VkPipelineViewportSwizzleStateCreateInfoNV swizzle = {};
-	//swizzle.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_SWIZZLE_STATE_CREATE_INFO_NV;
-	//swizzle.pNext = nullptr;
-	//swizzle.flags = 0;
-	//swizzle.viewportCount = 1;
-	//swizzle.pViewportSwizzles = &swizzle_0;
-
 	VkPipelineViewportStateCreateInfo viewport_info = {};
 	viewport_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 	viewport_info.pNext = nullptr; // &swizzle;
@@ -2196,15 +2244,18 @@ PipelineStateID GPU_Vulkan::CreatePipelineState(const GPU::PipelineStateDesc& de
 
 void GPU_Vulkan::DestroyPipelineState(GPU::PipelineStateID id)
 {
+	Assert(false);
 }
 
 ConstantBufferID GPU_Vulkan::CreateConstantBuffer(mu::PointerRange<const u8> data)
 {
+	Assert(false);
 	return ConstantBufferID{};
 }
 
 void GPU_Vulkan::DestroyConstantBuffer(ConstantBufferID id)
 {
+	Assert(false);
 }
 
 VertexBufferID GPU_Vulkan::CreateVertexBuffer(mu::PointerRange<const u8> data)
@@ -2292,6 +2343,7 @@ IndexBufferID GPU_Vulkan::CreateIndexBuffer(mu::PointerRange<const u8> data)
 
 void GPU_Vulkan::DestroyIndexBuffer(GPU::IndexBufferID id)
 {
+	Assert(false);
 }
 
 TextureID GPU_Vulkan::CreateTexture2D(u32 width, u32 height, GPU::TextureFormat format_common, mu::PointerRange<const u8> data)
@@ -2476,7 +2528,54 @@ TextureID GPU_Vulkan::CreateTexture2D(u32 width, u32 height, GPU::TextureFormat 
 
 DepthTargetID GPU_Vulkan::CreateDepthTarget(u32 width, u32 height)
 {
-	return DepthTargetID{};
+	DepthTargetID id = m_depth_targets.AddDefaulted();
+	DepthTarget& target_info = m_depth_targets[id];
+
+	VkImageCreateInfo image_info = {};
+	image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	image_info.pNext = nullptr;
+	image_info.flags = 0;
+	image_info.imageType = VK_IMAGE_TYPE_2D;
+	image_info.format = VK_FORMAT_D32_SFLOAT;
+	image_info.extent = { width, height, 1 };
+	image_info.mipLevels = 1;
+	image_info.arrayLayers = 1;
+	image_info.samples = VK_SAMPLE_COUNT_1_BIT;
+	image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+	image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	image_info.queueFamilyIndexCount = 0;
+	image_info.pQueueFamilyIndices = nullptr;
+	image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	EnsureVK(vkCreateImage(m_device, &image_info, m_allocation_callbacks, &target_info.m_image));
+
+	VkMemoryRequirements mem_reqs = {};
+	vkGetImageMemoryRequirements(m_device, target_info.m_image, &mem_reqs);
+
+	VkMemoryAllocateInfo alloc_info = {};
+	alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	alloc_info.pNext = nullptr;
+	alloc_info.allocationSize = mem_reqs.size;
+	alloc_info.memoryTypeIndex = m_chosen_device.m_device_memory_type_index;
+	EnsureVK(vkAllocateMemory(m_device, &alloc_info, m_allocation_callbacks, &target_info.m_device_memory));
+	EnsureVK(vkBindImageMemory(m_device, target_info.m_image, target_info.m_device_memory, 0));
+
+	VkImageViewCreateInfo view_info = {};
+	view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	view_info.pNext = nullptr;
+	view_info.flags = 0;
+	view_info.image = target_info.m_image;
+	view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	view_info.format = image_info.format;
+	view_info.components = { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY };
+	view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+	view_info.subresourceRange.baseMipLevel = 0;
+	view_info.subresourceRange.levelCount = 1;
+	view_info.subresourceRange.baseArrayLayer = 0;
+	view_info.subresourceRange.layerCount = 1;
+	EnsureVK(vkCreateImageView(m_device, &view_info, m_allocation_callbacks, &target_info.m_image_view));
+
+	return id;
 }
 
 ShaderResourceListID GPU_Vulkan::CreateShaderResourceList(const GPU::ShaderResourceListDesc& desc)
