@@ -39,6 +39,7 @@ using DepthTargetID = GPU::DepthTargetID;
 using TextureID = GPU::TextureID;
 using ShaderResourceListID = GPU::ShaderResourceListID;
 using RenderPass = GPU::RenderPass;
+using FramebufferID = GPU::FramebufferID;
 
 using DX::COMPtr;
 
@@ -96,6 +97,9 @@ struct GPU_DX11 : public GPUInterface {
 		COMPtr<ID3D11BlendState> BlendState;
 		COMPtr<ID3D11RasterizerState> RasterState;
 	};
+	struct Framebuffer {
+		GPU::FramebufferDesc Desc;
+	};
 
 	GPU_DX11() : m_frame_data(this) {}
 	~GPU_DX11() = default;
@@ -131,6 +135,7 @@ struct GPU_DX11 : public GPUInterface {
 	Pool<COMPtr<ID3D11PixelShader>, PixelShaderID>		m_pixel_shaders{ 128 };
 	Pool<LinkedProgram, ProgramID>						m_linked_programs{ 128 };
 	Pool<PipelineState, PipelineStateID>				m_pipeline_states{ 128 };
+	Pool<Framebuffer, FramebufferID>					m_framebuffers{ 128 };
 
 	GPU_DX11_Frame m_frame_data;
 
@@ -169,6 +174,10 @@ struct GPU_DX11 : public GPUInterface {
 	virtual DepthTargetID CreateDepthTarget(u32 width, u32 height) override;
 
 	virtual ShaderResourceListID CreateShaderResourceList(const GPU::ShaderResourceListDesc& desc) override;
+
+	virtual GPU::FramebufferID CreateFramebuffer(const GPU::FramebufferDesc& desc) override;
+	virtual void DestroyFramebuffer(GPU::FramebufferID id) override;
+
 	virtual const char* GetName() override
 	{
 		return "DX11";
@@ -294,12 +303,13 @@ void GPU_DX11::EndFrame(GPUFrameInterface* frame) {
 void GPU_DX11::SubmitPass(const RenderPass& pass) {
 	COMPtr<ID3D11DeviceContext> context{ m_immediate_context };
 
+	const Framebuffer& framebuffer = m_framebuffers[pass.Framebuffer];
+
 	ID3D11RenderTargetView* rtvs[GPU::MaxRenderTargets];
-	Assert(pass.RenderTargets.Num() <= GPU::MaxRenderTargets);
-	for (auto[rtv, rt] : Zip(rtvs, pass.RenderTargets)) {
+	for (auto[rtv, rt] : Zip(rtvs, framebuffer.Desc.RenderTargets)) {
 		rtv = GetRenderTargetView(rt);
 	}
-	context->OMSetRenderTargets((u32)pass.RenderTargets.Num(), rtvs, nullptr);
+	context->OMSetRenderTargets((u32)framebuffer.Desc.RenderTargets.Num(), rtvs, nullptr);
 
 	// TODO: Make part of render pass
 	context->RSSetViewports(1, &m_viewport);
@@ -620,6 +630,15 @@ ShaderResourceListID GPU_DX11::CreateShaderResourceList(const GPU::ShaderResourc
 	ShaderResourceListID id = m_shader_resource_lists.AddDefaulted();
 	m_shader_resource_lists[id].Desc = desc;
 	return id;
+}
+
+GPU::FramebufferID GPU_DX11::CreateFramebuffer(const GPU::FramebufferDesc& desc) {
+	Assert(false);
+	return {};
+}
+
+void GPU_DX11::DestroyFramebuffer(GPU::FramebufferID id) {
+	Assert(false);
 }
 
 ConstantBufferID GPU_DX11_Frame::GetTemporaryConstantBuffer(PointerRange<const u8> data) {

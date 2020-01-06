@@ -38,8 +38,11 @@ namespace GPU {
 	DECLARE_GPU_HANDLE(ProgramID, u32);
 	DECLARE_GPU_HANDLE(ShaderResourceListID, u32);
 	DECLARE_GPU_HANDLE(PipelineStateID, u32);
+	DECLARE_GPU_HANDLE(FramebufferID, u32);
 
-
+	// Limits
+	static constexpr u8 MaxRenderTargets = 16;
+	
 	enum class ShaderType {
 		Vertex,
 		Pixel
@@ -240,6 +243,11 @@ namespace GPU {
 		PrimitiveTopology		PrimitiveTopology;
 	};
 
+	struct FramebufferDesc {
+		mu::FixedArray<RenderTargetID, GPU::MaxRenderTargets> RenderTargets;
+		DepthTargetID DepthBuffer = {};
+	};
+
 	// Draw commands
 	struct DrawCommand {
 		u32 VertexOrIndexCount;
@@ -263,11 +271,9 @@ namespace GPU {
 
 	// Render pass
 	static constexpr RenderTargetID BackBufferID = RenderTargetID{ u32_max };
-	static constexpr u8 MaxRenderTargets = 16;
 	struct RenderPass {
+		FramebufferID Framebuffer = {};
 		Rect<u32> ClipRect = { 0, 0, 0, 0 }; // TODO: Document clip space?
-		mu::FixedArray<RenderTargetID, MaxRenderTargets> RenderTargets;
-		DepthTargetID DepthBuffer = {};
 		mu::PointerRange<const DrawItem> DrawItems;
 		const float* DepthClearValue = nullptr;
 		const char* Name = nullptr;
@@ -407,6 +413,9 @@ struct GPUInterface {
 	virtual GPU::DepthTargetID CreateDepthTarget(u32 width, u32 height) = 0;
 
 	virtual GPU::ShaderResourceListID CreateShaderResourceList(const GPU::ShaderResourceListDesc& desc) = 0;
+
+	virtual GPU::FramebufferID CreateFramebuffer(const GPU::FramebufferDesc& desc) = 0;
+	virtual void DestroyFramebuffer(GPU::FramebufferID) = 0;
 
 	virtual const char* GetName() = 0;
 };

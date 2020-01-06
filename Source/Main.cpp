@@ -36,6 +36,7 @@ struct ImGuiImpl {
 	GPU::PipelineStateID m_pipeline_state = {};
 	GPU::TextureID m_fonts_tex = {};
 	GPU::ShaderResourceListID m_fonts_srl = {};
+	GPU::FramebufferID m_framebuffer = {};
 
 	void Init(HWND hwnd, GPUInterface* gpu) {
 		m_hwnd = hwnd;
@@ -87,6 +88,7 @@ struct ImGuiImpl {
 
 		pipeline_state_desc.RasterState.CullMode = GPU::CullMode::None;
 		pipeline_state_desc.RasterState.ScissorEnable = true;
+		pipeline_state_desc.DepthStencilState.DepthEnable = false;
 
 		m_pipeline_state = gpu->CreatePipelineState(pipeline_state_desc); // TODO: Correct blend state etc
 
@@ -102,6 +104,10 @@ struct ImGuiImpl {
 		m_fonts_srl = gpu->CreateShaderResourceList(srl_desc);
 
 		io.Fonts->SetTexID((void*)(uptr)m_fonts_srl);
+
+		GPU::FramebufferDesc framebuffer_desc = {};
+		framebuffer_desc.RenderTargets.Add(GPU::BackBufferID);
+		m_framebuffer = gpu->CreateFramebuffer(framebuffer_desc);
 	}
 
 	void Shutdown() {
@@ -163,7 +169,7 @@ struct ImGuiImpl {
 					// left top right bottom
 					current_pass->ClipRect = { (u32)last_clip_rect.X, (u32)last_clip_rect.Y, (u32)last_clip_rect.Z, (u32)last_clip_rect.W };
 					current_pass->DrawItems = { gpu_cmd_cursor.m_start, 0 };
-					current_pass->RenderTargets.Add(GPU::RenderTargetID{});
+					current_pass->Framebuffer = m_framebuffer;
 					current_pass->Name = "IMGUI";
 				}
 
@@ -277,7 +283,8 @@ int main(int argc, char** argv) {
 	std::unique_ptr<GPUInterface> gpu = CreateGPU(args);
 	gpu->Init(hwnd);
 
-	glfwSetWindowTitle(win, String::Format("muteki {}", gpu->GetName()).GetRaw());
+	String win_title = String::Format("muteki {}", gpu->GetName());
+	glfwSetWindowTitle(win, win_title.GetRaw());
 
 	GPU::DepthTargetID depthbuffer;
 	{
@@ -286,6 +293,11 @@ int main(int argc, char** argv) {
 		gpu->CreateSwapChain(fb_width, fb_height);
 		depthbuffer = gpu->CreateDepthTarget(fb_width, fb_height);
 	}
+
+	GPU::FramebufferDesc framebuffer_desc;
+	framebuffer_desc.RenderTargets.Add(GPU::BackBufferID);
+	framebuffer_desc.DepthBuffer = depthbuffer;
+	GPU::FramebufferID framebuffer = gpu->CreateFramebuffer(framebuffer_desc);
 
 	ImGuiImpl imgui;
 	imgui.Init(hwnd, gpu.get());
@@ -453,7 +465,7 @@ int main(int argc, char** argv) {
 			view_pitch = -f32(delta_cursor.Y * rot_speed_deg * dt);
 		}
 
-		if (ImGui::Begin("muteki", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+		if (ImGui::Begin(win_title.GetRaw(), nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
 			if (win_user_data.m_input_to_imgui) {
 				ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "ImGUI Input Captured");
 			}
@@ -548,8 +560,7 @@ int main(int argc, char** argv) {
 
 		float DepthClear = 1.0f;
 		GPU::RenderPass pass;
-		pass.RenderTargets.Add(GPU::BackBufferID);
-		pass.DepthBuffer = depthbuffer;
+		pass.Framebuffer = framebuffer;
 		pass.DepthClearValue = &DepthClear;
 		pass.DrawItems = mu::Range(draw_items);
 		pass.ClipRect = { 0, 0, current_size[0], current_size[1] };

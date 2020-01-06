@@ -46,6 +46,7 @@ using TextureID = GPU::TextureID;
 using ShaderResourceListID = GPU::ShaderResourceListID;
 using RenderPass = GPU::RenderPass;
 using PipelineStateID = GPU::PipelineStateID;
+using FramebufferID = GPU::FramebufferID;
 
 struct GPUAllocation {
 	D3D12_GPU_VIRTUAL_ADDRESS	GPUAddress;
@@ -185,6 +186,10 @@ struct GPU_DX12 : public GPUInterface {
 		GPU::ShaderResourceListDesc Desc;
 	};
 
+	struct Framebuffer {
+		GPU::FramebufferDesc Desc;
+	};
+
 	struct ConstantBuffer {
 		COMPtr<ID3D12Resource> Resource;
 		D3D12_CONSTANT_BUFFER_VIEW_DESC ViewDesc = { 0, 0 };
@@ -246,6 +251,7 @@ struct GPU_DX12 : public GPUInterface {
 
 	HashTable<GPU::PipelineStateDesc, PipelineStateID> m_cached_pipeline_states;
 	Pool<PipelineState, PipelineStateID> m_pipeline_states{ 128 };
+	Pool<Framebuffer, FramebufferID> m_framebuffers{ 128 };
 
 	static constexpr size_t max_persistent_cbs = 128;
 	Pool<ConstantBuffer, ConstantBufferID> m_constant_buffers{ max_persistent_cbs };
@@ -291,6 +297,10 @@ struct GPU_DX12 : public GPUInterface {
 	virtual GPU::DepthTargetID CreateDepthTarget(u32 width, u32 height) override;
 
 	virtual ShaderResourceListID CreateShaderResourceList(const GPU::ShaderResourceListDesc& desc) override;
+
+	virtual GPU::FramebufferID CreateFramebuffer(const GPU::FramebufferDesc& desc) override;
+	virtual void DestroyFramebuffer(GPU::FramebufferID id) override;
+
 	virtual const char* GetName() override
 	{
 		return "DX12";
@@ -868,6 +878,19 @@ ShaderResourceListID GPU_DX12::CreateShaderResourceList(const GPU::ShaderResourc
 	return id;
 }
 
+GPU::FramebufferID GPU_DX12::CreateFramebuffer(const GPU::FramebufferDesc& desc) {
+	FramebufferID id = m_framebuffers.AddDefaulted();
+	Framebuffer& framebuffer = m_framebuffers[id];
+
+	framebuffer.Desc = desc;
+
+	return id;
+}
+
+void GPU_DX12::DestroyFramebuffer(GPU::FramebufferID) {
+	Assert(false);
+}
+
 
 D3D12_CPU_DESCRIPTOR_HANDLE GPU_DX12::GetRenderTargetView(D3D12_CPU_DESCRIPTOR_HANDLE backbuffer, RenderTargetID id) {
 	Assert(id == RenderTargetID{});
@@ -924,17 +947,17 @@ void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
 	m_command_list->SetDescriptorHeaps((u32)ArraySize(heaps), heaps);
 
 	// Bind RTs for pass
-	Assert(pass.RenderTargets.Num() <= GPU::MaxRenderTargets);
+	const Framebuffer& framebuffer = m_framebuffers[pass.Framebuffer];
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvs[GPU::MaxRenderTargets];
-	for (auto[rtv, rt_id] : Zip(rtvs, pass.RenderTargets)) {
+	for (auto[rtv, rt_id] : Zip(rtvs, framebuffer.Desc.RenderTargets)) {
 		rtv = GetRenderTargetView(frame->m_render_target_view, rt_id);
 	}
 	const D3D12_CPU_DESCRIPTOR_HANDLE* dsv = nullptr;
-	if (pass.DepthBuffer != DepthTargetID{}) {
-		const DepthTarget& dt = m_depth_targets[pass.DepthBuffer];
+	if (framebuffer.Desc.DepthBuffer != DepthTargetID{}) {
+		const DepthTarget& dt = m_depth_targets[framebuffer.Desc.DepthBuffer];
 		dsv = &dt.Descriptor;
 	}
-	m_command_list->OMSetRenderTargets((u32)pass.RenderTargets.Num(), rtvs, false, dsv);
+	m_command_list->OMSetRenderTargets((u32)framebuffer.Desc.RenderTargets.Num(), rtvs, false, dsv);
 
 	if (dsv && pass.DepthClearValue) {
 		m_command_list->ClearDepthStencilView(*dsv, D3D12_CLEAR_FLAG_DEPTH, *pass.DepthClearValue, 0, 0, nullptr);

@@ -42,10 +42,13 @@ using RenderTargetID = GPU::RenderTargetID;
 using DepthTargetID = GPU::DepthTargetID;
 using TextureID = GPU::TextureID;
 using ShaderResourceListID = GPU::ShaderResourceListID;
+using FramebufferID = GPU::FramebufferID;
 using RenderPass = GPU::RenderPass;
 
 using namespace mu;
 using std::tuple;
+
+static const i32 MaxSwapChainImages = 8;
 
 static const size_t MaxPersistentVertexBuffers		= 128;
 static const size_t MaxPersistentIndexBuffers		= 128;
@@ -508,6 +511,21 @@ struct GPU_Vulkan : public GPUInterface {
 		GPU::ShaderResourceListDesc Desc;
 	};
 
+	struct Framebuffer {
+		GPU::FramebufferDesc Desc;
+
+		VkFramebuffer m_framebuffer;
+		FixedArray<VkFramebuffer, MaxSwapChainImages> m_frame_framebuffers;
+
+		VkFramebuffer GetForFrame(u32 frame_index) {
+			if (m_framebuffer) {
+				return m_framebuffer;
+			}
+			Assert(frame_index < m_frame_framebuffers.Num());
+			return m_frame_framebuffers[frame_index];
+		}
+	};
+
 	struct DepthTarget {
 		VkImage			m_image = nullptr;
 		VkDeviceMemory	m_device_memory = nullptr;
@@ -553,6 +571,10 @@ struct GPU_Vulkan : public GPUInterface {
 	virtual GPU::DepthTargetID CreateDepthTarget(u32 width, u32 height) override;
 
 	virtual ShaderResourceListID CreateShaderResourceList(const GPU::ShaderResourceListDesc& desc) override;
+
+	virtual FramebufferID CreateFramebuffer(const GPU::FramebufferDesc& desc) override;
+	virtual void DestroyFramebuffer(FramebufferID) override;
+
 	virtual const char* GetName() override
 	{
 		return "Vulkan";
@@ -644,7 +666,6 @@ struct GPU_Vulkan : public GPUInterface {
 	Vector<u32, 2>		m_swap_chain_dimensions = { 0, 0 };
 	Array<VkImage>		m_swap_chain_images;
 	Array<VkImageView>	m_swap_chain_image_views;
-	Array<VkFramebuffer> m_swap_chain_framebuffers;
 	VkViewport			m_viewport;
 
 	Pool<VkShaderModule, VertexShaderID>			m_registered_vertex_shaders{ 128 };
@@ -657,6 +678,7 @@ struct GPU_Vulkan : public GPUInterface {
 	Pool<Texture2D, TextureID>						m_textures{ MaxTextures };
 	Pool<ShaderResourceList, ShaderResourceListID>	m_shader_resource_lists{ MaxShaderResourceLists };
 	Pool<DepthTarget, DepthTargetID>				m_depth_targets{ MaxDepthTargets };
+	Pool<Framebuffer, FramebufferID>				m_framebuffers{ 128 };
 
 	// Temporary descriptor set layouts
 	// TODO: Expose descriptor set layouts to higher level? Design descriptor set layouts to allow some guarantees about update frequency? Hide it all and use push constants to index large buffers?
@@ -670,7 +692,10 @@ struct GPU_Vulkan : public GPUInterface {
 	VkSampler m_sampler = nullptr;
 
 	VkPipelineLayout m_pipeline_layout				= nullptr;
+
+	// TODO: Expose render passes for pipeline state creation somehow
 	VkRenderPass m_render_pass						= nullptr;
+	VkRenderPass m_render_pass_depth				= nullptr;
 
 	GPU_Vulkan_Frame* m_frame_data;
 	u64 m_frame_count = 0;
@@ -1212,46 +1237,100 @@ void GPU_Vulkan::Init(void* hwnd) {
 	pipeline_layout_info.pPushConstantRanges = nullptr;
 	EnsureVK(vkCreatePipelineLayout(m_device, &pipeline_layout_info, m_allocation_callbacks, &m_pipeline_layout));
 
-	VkAttachmentDescription color_attachment = {};
-	color_attachment.flags			= 0;
-	color_attachment.format			= VK_FORMAT_B8G8R8A8_UNORM;
-	color_attachment.samples		= VK_SAMPLE_COUNT_1_BIT;
-	color_attachment.loadOp			= VK_ATTACHMENT_LOAD_OP_LOAD;
-	color_attachment.storeOp		= VK_ATTACHMENT_STORE_OP_STORE;
-	color_attachment.stencilLoadOp	= VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	color_attachment.initialLayout	= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	color_attachment.finalLayout	= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	{
+		VkAttachmentDescription color_attachment = {};
+		color_attachment.flags = 0;
+		color_attachment.format = VK_FORMAT_B8G8R8A8_UNORM;
+		color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+		color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		color_attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		color_attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-	VkAttachmentReference color_attachment_ref = {};
-	color_attachment_ref.attachment = 0;
-	color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		VkAttachmentDescription depth_attachment = {};
+		depth_attachment.flags = 0;
+		depth_attachment.format = VK_FORMAT_D32_SFLOAT;
+		depth_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		depth_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		depth_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		depth_attachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		depth_attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-	// TODO: promote to API so it can be used for PSO creation
-	VkSubpassDescription subpass_info = {};
-	subpass_info.flags = 0;
-	subpass_info.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-	subpass_info.inputAttachmentCount;
-	subpass_info.pInputAttachments;
-	subpass_info.colorAttachmentCount = 1;
-	subpass_info.pColorAttachments = &color_attachment_ref;
-	subpass_info.pResolveAttachments;
-	subpass_info.pDepthStencilAttachment;
-	subpass_info.preserveAttachmentCount;
-	subpass_info.pPreserveAttachments;
+		VkAttachmentDescription attachments[] = {
+			color_attachment,
+			depth_attachment,
+		};
 
-	VkRenderPassCreateInfo render_pass_info = {};
-	render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	render_pass_info.pNext = nullptr;
-	render_pass_info.flags = 0;
-	render_pass_info.attachmentCount = 1;
-	render_pass_info.pAttachments = &color_attachment;
-	render_pass_info.subpassCount = 1;
-	render_pass_info.pSubpasses = &subpass_info;
-	render_pass_info.dependencyCount = 0;
-	render_pass_info.pDependencies = nullptr;
-	vkCreateRenderPass(m_device, &render_pass_info, m_allocation_callbacks, &m_render_pass);
+		{
+			VkAttachmentReference color_attachment_ref = {};
+			color_attachment_ref.attachment = 0;
+			color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
+			// TODO: promote to API so it can be used for PSO creation
+			VkSubpassDescription subpass_info = {};
+			subpass_info.flags = 0;
+			subpass_info.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+			subpass_info.inputAttachmentCount;
+			subpass_info.pInputAttachments;
+			subpass_info.colorAttachmentCount = 1;
+			subpass_info.pColorAttachments = &color_attachment_ref;
+			subpass_info.pResolveAttachments;
+			subpass_info.pDepthStencilAttachment = nullptr;
+			subpass_info.preserveAttachmentCount;
+			subpass_info.pPreserveAttachments;
+
+			VkRenderPassCreateInfo render_pass_info = {};
+			render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+			render_pass_info.pNext = nullptr;
+			render_pass_info.flags = 0;
+			render_pass_info.attachmentCount = 1;
+			render_pass_info.pAttachments = attachments;
+			render_pass_info.subpassCount = 1;
+			render_pass_info.pSubpasses = &subpass_info;
+			render_pass_info.dependencyCount = 0;
+			render_pass_info.pDependencies = nullptr;
+			vkCreateRenderPass(m_device, &render_pass_info, m_allocation_callbacks, &m_render_pass);
+		}
+
+		{
+			VkAttachmentReference color_attachment_ref = {};
+			color_attachment_ref.attachment = 0;
+			color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+			VkAttachmentReference depth_attachment_ref = {};
+			depth_attachment_ref.attachment = 1;
+			depth_attachment_ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+			// TODO: promote to API so it can be used for PSO creation
+			VkSubpassDescription subpass_info = {};
+			subpass_info.flags = 0;
+			subpass_info.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+			subpass_info.inputAttachmentCount;
+			subpass_info.pInputAttachments;
+			subpass_info.colorAttachmentCount = 1;
+			subpass_info.pColorAttachments = &color_attachment_ref;
+			subpass_info.pResolveAttachments;
+			subpass_info.pDepthStencilAttachment = &depth_attachment_ref;
+			subpass_info.preserveAttachmentCount;
+			subpass_info.pPreserveAttachments;
+
+			VkRenderPassCreateInfo render_pass_info = {};
+			render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+			render_pass_info.pNext = nullptr;
+			render_pass_info.flags = 0;
+			render_pass_info.attachmentCount = (u32)ArraySize(attachments);
+			render_pass_info.pAttachments = attachments;
+			render_pass_info.subpassCount = 1;
+			render_pass_info.pSubpasses = &subpass_info;
+			render_pass_info.dependencyCount = 0;
+			render_pass_info.pDependencies = nullptr;
+			vkCreateRenderPass(m_device, &render_pass_info, m_allocation_callbacks, &m_render_pass_depth);
+		}
+	}
 	for (i32 i = 0; i < 1; ++i)
 	{
 		VulkanLinearAllocator linear_allocator{
@@ -1376,11 +1455,9 @@ void GPU_Vulkan::Shutdown()
 	}
 	m_registered_pixel_shaders.Empty();
 
-	for (VkFramebuffer framebuffer : m_swap_chain_framebuffers)
-	{
-		vkDestroyFramebuffer(m_device, framebuffer, m_allocation_callbacks);
+	for (auto[i, framebuffer] : m_framebuffers.Range()) {
+	//	vkDestroyFramebuffer(m_device, framebuffer, m_allocation_callbacks);
 	}
-	m_swap_chain_framebuffers.RemoveAll();
 
 	for (VkImageView view : m_swap_chain_image_views)
 	{
@@ -1452,8 +1529,9 @@ void GPU_Vulkan::CreateSwapChain(u32 width, u32 height)
 	m_swap_chain_images.AddZeroed(num_images);
 	EnsureVK(vkGetSwapchainImagesKHR(m_device, m_swap_chain, &num_images, m_swap_chain_images.Data()));
 
+	Assert(num_images <= MaxSwapChainImages);
+
 	m_swap_chain_image_views.AddZeroed(num_images);
-	m_swap_chain_framebuffers.AddZeroed(num_images);
 	
 	VkImageViewCreateInfo image_view_create_info = {};
 	image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -1472,24 +1550,10 @@ void GPU_Vulkan::CreateSwapChain(u32 width, u32 height)
 	image_view_create_info.subresourceRange.baseArrayLayer = 0;
 	image_view_create_info.subresourceRange.layerCount = 1;
 
-	VkFramebufferCreateInfo framebuffer_info = {};
-	/*VkStructureType             */framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	/*const void*                 */framebuffer_info.pNext = nullptr;
-	/*VkFramebufferCreateFlags    */framebuffer_info.flags = 0;
-	/*VkRenderPass                */framebuffer_info.renderPass = m_render_pass;
-	/*uint32_t                    */framebuffer_info.attachmentCount = 1;
-	/*const VkImageView*          */framebuffer_info.pAttachments;
-	/*uint32_t                    */framebuffer_info.width = swap_extent.width;
-	/*uint32_t                    */framebuffer_info.height = swap_extent.height;
-	/*uint32_t                    */framebuffer_info.layers = 1;
-
 	for (u32 i = 0; i < num_images; ++i)
 	{
 		image_view_create_info.image = m_swap_chain_images[i];
 		EnsureVK(vkCreateImageView(m_device, &image_view_create_info, m_allocation_callbacks, &m_swap_chain_image_views[i]));
-
-		framebuffer_info.pAttachments = &m_swap_chain_image_views[i];
-		EnsureVK(vkCreateFramebuffer(m_device, &framebuffer_info, m_allocation_callbacks, &m_swap_chain_framebuffers[i]));
 	}
 
 	m_viewport.x = 0;
@@ -1691,18 +1755,20 @@ void GPU_Vulkan::SubmitPass(const RenderPass& pass)
 	begin_info.flags = 0;
 	begin_info.pInheritanceInfo = nullptr;
 
+	Framebuffer& framebuffer = m_framebuffers[pass.Framebuffer];
+
 	DepthTarget* depth_target = nullptr;
-	if (pass.DepthBuffer != DepthTargetID{}) {
-		depth_target = &m_depth_targets[pass.DepthBuffer];
+	if (framebuffer.Desc.DepthBuffer != DepthTargetID{}) {
+		depth_target = &m_depth_targets[framebuffer.Desc.DepthBuffer];
 	}
 	
 	VkRenderPassBeginInfo pass_begin_info = {};
 	pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	pass_begin_info.pNext = nullptr;
-	pass_begin_info.renderPass = m_render_pass;
+	pass_begin_info.renderPass = depth_target ? m_render_pass_depth : m_render_pass;
 	// TODO: Bind RTs for pass
 	// TODO: Bind depth target here?
-	pass_begin_info.framebuffer = m_swap_chain_framebuffers[frame.m_swap_chain_image_index];
+	pass_begin_info.framebuffer = framebuffer.GetForFrame(frame.m_swap_chain_image_index); // m_swap_chain_framebuffers[frame.m_swap_chain_image_index];
 	pass_begin_info.renderArea.offset = { 0, 0 };
 	pass_begin_info.renderArea.extent = { m_swap_chain_dimensions[0], m_swap_chain_dimensions[1] };
 	pass_begin_info.clearValueCount = 0;
@@ -2230,7 +2296,7 @@ PipelineStateID GPU_Vulkan::CreatePipelineState(const GPU::PipelineStateDesc& de
 	pipeline_state_info.pColorBlendState = &blend_info;
 	pipeline_state_info.pDynamicState = &dynamic_state;
 	pipeline_state_info.layout = m_pipeline_layout;
-	pipeline_state_info.renderPass = m_render_pass;
+	pipeline_state_info.renderPass = desc.DepthStencilState.DepthEnable ? m_render_pass_depth : m_render_pass;
 	pipeline_state_info.subpass = 0;
 	pipeline_state_info.basePipelineHandle = nullptr;
 	pipeline_state_info.basePipelineIndex = -1;
@@ -2585,6 +2651,68 @@ ShaderResourceListID GPU_Vulkan::CreateShaderResourceList(const GPU::ShaderResou
 	srl.Desc = desc;
 
 	return id;
+}
+
+FramebufferID GPU_Vulkan::CreateFramebuffer(const GPU::FramebufferDesc& desc) {
+	FramebufferID id = m_framebuffers.AddDefaulted();
+	Framebuffer& fb = m_framebuffers[id];
+	fb.Desc = desc;
+
+	Assert(desc.RenderTargets.Num() <= 1); // TODO
+
+	bool uses_backbuffer = Contains(desc.RenderTargets, [](RenderTargetID id) { return id == GPU::BackBufferID; });
+
+	if (uses_backbuffer) {
+		FixedArray<VkImageView, GPU::MaxRenderTargets + 1> attachments;
+
+		for (RenderTargetID rt_id : desc.RenderTargets) {
+			if (rt_id == GPU::BackBufferID) {
+				attachments.Add(nullptr);
+			}
+			else {
+				Assert(false);
+			}
+		}
+
+		if (desc.DepthBuffer != DepthTargetID{}) {
+			VkImageView depth_view = m_depth_targets[desc.DepthBuffer].m_image_view;
+			attachments.Add(depth_view);
+		}
+
+		// We need one framebuffer per swap chain image
+		fb.m_frame_framebuffers.AddDefaulted(m_swap_chain_image_views.Num());
+		for ( auto[view, framebuffer] : Zip(m_swap_chain_image_views, fb.m_frame_framebuffers) ) {
+			for (i32 i = 0; i < desc.RenderTargets.Num(); ++i) {
+				RenderTargetID rt_id = desc.RenderTargets[i];
+				if (rt_id == GPU::BackBufferID) {
+					attachments[i] = view;
+				}
+			}
+
+			VkFramebufferCreateInfo fb_info = {};
+			fb_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+			fb_info.pNext = nullptr;
+			fb_info.flags = 0;
+			fb_info.renderPass = desc.DepthBuffer == DepthTargetID{} ? m_render_pass : m_render_pass_depth; // TODO: Render pass prototypes
+			fb_info.attachmentCount = (u32)attachments.Num();
+			fb_info.pAttachments = attachments.Data();
+			fb_info.width = m_swap_chain_dimensions[0]; // TODO: generic
+			fb_info.height = m_swap_chain_dimensions[1];
+			fb_info.layers = 1;
+			EnsureVK(vkCreateFramebuffer(m_device, &fb_info, m_allocation_callbacks, &framebuffer));
+		}		
+	}
+	else {
+		// We only need one framebuffer
+		Assert(false); // Not yet implemented
+		// vkCreateFramebuffer(m_device, &fb_info, m_allocation_callbacks, &framebuffer);
+	}
+
+	return id;
+}
+
+void GPU_Vulkan::DestroyFramebuffer(FramebufferID) {
+	Assert(false);
 }
 
 tuple<VkBuffer, VkDeviceAddress> GPU_Vulkan::GetVertexBufferForBinding(VertexBufferID id, GPU_Vulkan_Frame& frame)
