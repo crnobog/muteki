@@ -1935,9 +1935,9 @@ void GPU_Vulkan::SubmitPass(const RenderPass& pass)
 						bound_resources[i] = list.Desc.Textures[i - list.Desc.StartSlot];
 					}
 				}
-				
+
+				VkDescriptorImageInfo image_info = {};
 				if (bound_resources[0] != TextureID{ }) {
-					VkDescriptorImageInfo image_info = {};
 					image_info.imageView = m_textures[bound_resources[0]].m_image_view;
 					image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
