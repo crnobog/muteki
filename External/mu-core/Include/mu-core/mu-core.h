@@ -24,6 +24,7 @@
 #include "FileReader.h"
 #include "FixedArray.h"
 #include "Functors.h"
+#include "GeneratorRange.h"
 #include "HashTable.h"
 #include "Math.h"
 #include "Metaprogramming.h"

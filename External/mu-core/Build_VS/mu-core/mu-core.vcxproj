@@ -23,6 +23,7 @@
     <ClInclude Include="..\..\Include\mu-core\FileReader.h" />
     <ClInclude Include="..\..\Include\mu-core\FixedArray.h" />
     <ClInclude Include="..\..\Include\mu-core\Functors.h" />
+    <ClInclude Include="..\..\Include\mu-core\GeneratorRange.h" />
     <ClInclude Include="..\..\Include\mu-core\Global.h" />
     <ClInclude Include="..\..\Include\mu-core\HashTable.h" />
     <ClInclude Include="..\..\Include\mu-core\IotaRange.h" />
@@ -57,6 +58,7 @@
     <None Include="..\..\Include\mu-core\Tests\Array_Tests.inl" />
     <None Include="..\..\Include\mu-core\Tests\BitArray_Tests.inl" />
     <None Include="..\..\Include\mu-core\Tests\FixedArray_Tests.inl" />
+    <None Include="..\..\Include\mu-core\Tests\GeneratorRange_Tests.inl" />
     <None Include="..\..\Include\mu-core\Tests\HashTable_Tests.inl" />
     <None Include="..\..\Include\mu-core\Tests\Math_Tests.inl" />
     <None Include="..\..\Include\mu-core\Tests\Paths_Tests.inl" />
@@ -127,6 +129,7 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <AdditionalOptions>/await %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

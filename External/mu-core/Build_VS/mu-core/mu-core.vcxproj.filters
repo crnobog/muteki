@@ -95,6 +95,9 @@
     <ClInclude Include="..\..\Include\mu-core\Timer.h">
       <Filter>Include</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\GeneratorRange.h">
+      <Filter>Include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Include\mu-core\Tests\Array_Tests.inl">
@@ -146,6 +149,9 @@
       <Filter>Tests</Filter>
     </None>
     <None Include="..\..\Include\mu-core\Tests\Math_Tests.inl">
+      <Filter>Tests</Filter>
+    </None>
+    <None Include="..\..\Include\mu-core\Tests\GeneratorRange_Tests.inl">
       <Filter>Tests</Filter>
     </None>
   </ItemGroup>
