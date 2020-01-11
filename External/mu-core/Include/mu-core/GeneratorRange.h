@@ -19,7 +19,6 @@ namespace mu {
 			void yield_value(T& value) {
 				m_current = std::addressof(value);
 			}
-
 			
 			template<typename U>
 			U&& await_transform(U&&) {
@@ -42,25 +41,33 @@ namespace mu {
 			Advance();
 		}
 		~GeneratorRange() {
-			if (m_coro) {
+			if (m_coro != nullptr) {
 				m_coro.destroy();
 			}
 		}
 		GeneratorRange(const GeneratorRange&) = delete;
 		GeneratorRange& operator=(const GeneratorRange&) = delete;
 
+		GeneratorRange(GeneratorRange&& other) 
+		: m_coro(std::move(other.m_coro))
+		{
+			other.m_coro = nullptr;
+		}
+
 		void Advance() {
+			Assert(m_coro != nullptr);
 			if (!m_coro.done()) {
 				m_coro.resume();
 			}
 		}
 		void AdvanceBy(size_t num) {
+			Assert(m_coro != nullptr);
 			for (size_t i = 0; i < num(); ++i) {
 				Advance();
 			}
 		}
 
-		bool IsEmpty() { return m_coro.done(); }
+		bool IsEmpty() { return m_coro == nullptr || m_coro.done(); }
 		T& Front() {
 			return *m_coro.promise().m_current;
 		}
