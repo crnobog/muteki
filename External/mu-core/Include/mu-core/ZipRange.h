@@ -8,15 +8,15 @@ namespace mu {
 		// Functor for folding over ranges of finite/infinite size and picking the minimum size
 		template<typename RANGE>
 		struct RangeMinSizeFolder {
-			template<typename T = RANGE, EnableIf<T::HasSize>...>
 			size_t operator()(size_t s, const RANGE& r) const {
-				size_t rs = r.Size();
-				return rs < s ? rs : s;
-			}
-
-			template<typename T = RANGE, DisableIf<T::HasSize>...>
-			size_t operator()(size_t s, const RANGE&) const {
-				return s;
+				if constexpr (RANGE::HasSize) {
+					size_t rs = r.Size();
+					return rs < s ? rs : s;
+				}
+				else
+				{
+					return s;
+				}
 			}
 		};
 
