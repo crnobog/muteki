@@ -35,7 +35,7 @@ namespace mu {
 			Add(init);
 		}
 		FixedArray(const FixedArray& other) {
-			AddRange(Range(other));
+			AddRange(other.Range());
 		}
 		FixedArray(FixedArray&& other) {
 			for (T& t : other) {
@@ -45,7 +45,7 @@ namespace mu {
 
 		FixedArray& operator=(const FixedArray& other) {
 			Empty();
-			AddRange(Range(other));
+			AddRange(other.Range());
 			return *this;
 		}
 		FixedArray& operator=(FixedArray&& other) {
@@ -129,6 +129,9 @@ namespace mu {
 			}
 			m_num = 0;
 		}
+
+		PointerRange<T> Range() { return PointerRange{ Data(), Data() + Num() }; }
+		PointerRange<const T> Range() const { return PointerRange{ Data(), Data() + Num() }; }
 
 		PointerRange<u8> Bytes() { return ByteRange((u8*)m_data, m_num * sizeof(T)); }
 		PointerRange<const u8> Bytes() const { return ByteRange((u8*)m_data, m_num * sizeof(T)); }

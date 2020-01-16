@@ -183,6 +183,8 @@ namespace mu {
 		auto begin() const { return mu::MakeRangeIterator(mu::Range(m_data, m_num)); }
 		auto end() const { return mu::MakeRangeSentinel(); }
 
+		auto Range() { return PointerRange<T>{ Data(), Data() + Num() }; }
+		auto Range() const { return PointerRange<const T>{ Data(), Data() + Num() }; }
 	private:
 		bool FindIndex(const T& item, size_t& out_idx) const {
 			for (size_t i = 0; i < m_num; ++i) {
