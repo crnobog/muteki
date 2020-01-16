@@ -295,11 +295,11 @@ namespace GPU {
 		if (a.Slots.Num() != b.Slots.Num()) {
 			return false;
 		}
-		for (auto[slot_a, slot_b] : Zip(a.Slots, b.Slots)) {
+		for (auto[slot_a, slot_b] : Zip(a.Slots.Range(), b.Slots.Range())) {
 			if (slot_a.Elements.Num() != slot_b.Elements.Num()) {
 				return false;
 			}
-			for (auto[e_a, e_b] : Zip(slot_a.Elements, slot_b.Elements)) {
+			for (auto[e_a, e_b] : Zip(slot_a.Elements.Range(), slot_b.Elements.Range())) {
 				if (e_a != e_b) { return false; }
 			}
 		}

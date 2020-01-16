@@ -2681,7 +2681,7 @@ FramebufferID GPU_Vulkan::CreateFramebuffer(const GPU::FramebufferDesc& desc) {
 
 		// We need one framebuffer per swap chain image
 		fb.m_frame_framebuffers.AddDefaulted(m_swap_chain_image_views.Num());
-		for ( auto[view, framebuffer] : Zip(m_swap_chain_image_views, fb.m_frame_framebuffers) ) {
+		for ( auto[view, framebuffer] : Zip(m_swap_chain_image_views.Range(), fb.m_frame_framebuffers.Range()) ) {
 			for (i32 i = 0; i < desc.RenderTargets.Num(); ++i) {
 				RenderTargetID rt_id = desc.RenderTargets[i];
 				if (rt_id == GPU::BackBufferID) {

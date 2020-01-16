@@ -949,7 +949,7 @@ void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
 	// Bind RTs for pass
 	const Framebuffer& framebuffer = m_framebuffers[pass.Framebuffer];
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvs[GPU::MaxRenderTargets];
-	for (auto[rtv, rt_id] : Zip(rtvs, framebuffer.Desc.RenderTargets)) {
+	for (auto[rtv, rt_id] : Zip(Range(rtvs), framebuffer.Desc.RenderTargets.Range())) {
 		rtv = GetRenderTargetView(frame->m_render_target_view, rt_id);
 	}
 	const D3D12_CPU_DESCRIPTOR_HANDLE* dsv = nullptr;
@@ -1022,7 +1022,7 @@ void GPU_DX12::SubmitPass(const GPU::RenderPass& pass) {
 		const GPU::StreamSetup& stream_setup = item.StreamSetup;
 		FixedArray<D3D12_VERTEX_BUFFER_VIEW, GPU::MaxStreamSlots> vbs;
 
-		for (auto[vb_id, stride] : Zip(item.StreamSetup.VertexBuffers, pipeline_state.VBStrides)) {
+		for (auto[vb_id, stride] : Zip(item.StreamSetup.VertexBuffers.Range(), pipeline_state.VBStrides.Range())) {
 			vbs.Add(GetVertexBufferView(frame, vb_id, stride));
 		}
 

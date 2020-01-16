@@ -306,7 +306,7 @@ void GPU_DX11::SubmitPass(const RenderPass& pass) {
 	const Framebuffer& framebuffer = m_framebuffers[pass.Framebuffer];
 
 	ID3D11RenderTargetView* rtvs[GPU::MaxRenderTargets];
-	for (auto[rtv, rt] : Zip(rtvs, framebuffer.Desc.RenderTargets)) {
+	for (auto[rtv, rt] : Zip(Range(rtvs), framebuffer.Desc.RenderTargets.Range())) {
 		rtv = GetRenderTargetView(rt);
 	}
 	context->OMSetRenderTargets((u32)framebuffer.Desc.RenderTargets.Num(), rtvs, nullptr);
@@ -426,7 +426,7 @@ GPU::VertexShaderID GPU_DX11::CompileVertexShaderHLSL(mu::PointerRange<const cha
 	FixedArray<D3D11_SIGNATURE_PARAMETER_DESC, VertexShaderInputs::MaxInputElements> input_params;
 	Assert(desc.InputParameters < VertexShaderInputs::MaxInputElements);
 	input_params.AddZeroed(desc.InputParameters);
-	for (auto[index, input_param] : Zip(Iota<u32>(), input_params)) {
+	for (auto[index, input_param] : Zip(Iota<u32>(), input_params.Range())) {
 		reflector->GetInputParameterDesc(index, &input_param);
 	}
 
