@@ -3,7 +3,7 @@
 #include <type_traits>
 
 // Debugging helper. Specialize this template and read the compiler error to see a typename.
-template<typename T>
+template<typename... T>
 struct TD;
 
 namespace mu {
