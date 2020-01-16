@@ -6,13 +6,15 @@ namespace mu {
 	class IotaRange {
 		T m_it = 0;
 	public:
-		enum { HasSize = 0 };
+		static constexpr bool HasSize = false;
+		static constexpr bool IsContiguous = false;
+		static constexpr bool IsIndexable = false;
 
 		IotaRange(T start = 0) : m_it(start) {}
 
 		void Advance() { ++m_it; }
 		bool IsEmpty() const { return false; }
-		T Front() { return m_it; }
+		T Front() const { return m_it; }
 	};
 
 	template<typename T = size_t>
