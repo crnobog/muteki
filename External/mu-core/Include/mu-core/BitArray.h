@@ -18,6 +18,7 @@ namespace mu {
 	public:
 		static constexpr bool HasSize = false; // Unknown how many bits are set without preprocessing
 		static constexpr bool IsContiguous = false; // Cannot be treated as a C array
+		static constexpr bool IsIndexable = false; // no operator[]
 
 		BitRange(u64* data, size_t num_qwords, size_t num_bits)
 			: m_data(data)
