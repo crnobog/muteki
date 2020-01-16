@@ -59,7 +59,7 @@ namespace mu {
 		}
 
 		bool operator==(const String_T& other) const {
-			for (auto[a, b] : Zip(m_data, other.m_data)) {
+			for (auto[a, b] : Zip(m_data.Range(), other.m_data.Range())) {
 				if (a != b) {
 					return false;
 				}
