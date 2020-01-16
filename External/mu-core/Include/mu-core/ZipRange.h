@@ -29,6 +29,8 @@ namespace mu {
 
 	public:
 		static constexpr bool HasSize = mu::functor::FoldOr(RANGES::HasSize...);
+		static constexpr bool IsContiguous = false;
+		static constexpr bool IsIndexable = false; // TODO: If all ranges are indexable
 
 		ZipRange(RANGES... ranges) : m_ranges(ranges...) {}
 
