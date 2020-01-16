@@ -1,9 +1,6 @@
-﻿#include "Ranges.h"
-#include "PointerRange.h"
-#include "IotaRange.h"
-
-template<typename T>
-struct TD;
+﻿#include "mu-core/Ranges.h"
+#include "mu-core/PointerRange.h"
+#include "mu-core/IotaRange.h"
 
 TEST_SUITE("ZipRange") {
 	using namespace mu;
