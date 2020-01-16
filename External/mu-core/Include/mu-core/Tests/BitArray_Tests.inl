@@ -85,7 +85,7 @@ TEST_SUITE("BitArray") {
 			bits.SetBit(i);
 		}
 
-		for (auto[a, b] : Zip(indices, bits.GetSetBits())) {
+		for (auto[a, b] : Zip(Range(indices), bits.GetSetBits())) {
 			CHECK_EQ(a, b);
 		}
 	}
