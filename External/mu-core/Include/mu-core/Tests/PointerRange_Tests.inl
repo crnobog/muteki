@@ -1,4 +1,6 @@
-﻿TEST_SUITE("PointerRange") {
+﻿#include "mu-core/PointerRange.h"
+
+TEST_SUITE("PointerRange") {
 	using namespace mu;
 
 	TEST_CASE("Size") {
