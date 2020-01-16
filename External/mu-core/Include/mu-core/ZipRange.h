@@ -2,6 +2,7 @@
 
 #include "mu-core/Functors.h"
 #include "mu-core/Metaprogramming.h"
+#include "mu-core/RangeConcept.h"
 
 namespace mu {
 	namespace details {
@@ -57,7 +58,12 @@ namespace mu {
 
 	template<typename... RANGES>
 	auto Zip(RANGES&&... ranges) {
-		return ZipRange<decltype(Range(std::forward<RANGES>(ranges)))...>(Range(std::forward<RANGES>(ranges))...);
+		static_assert((... && mu::IsRange<RANGES>), "All arguments to Zip should be ranges");
+
+		return ZipRange<decltype(Range(std::forward<RANGES>(ranges)))...>
+		{
+			Range(std::forward<RANGES>(ranges))...
+		};
 	}
 }
 
