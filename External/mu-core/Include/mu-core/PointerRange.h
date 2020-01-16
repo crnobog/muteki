@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "mu-core/Global.h"
+#include "mu-core/RangeConcept.h"
 #include "mu-core/RangeIteration.h"
 #include "mu-core/Metaprogramming.h"
 
@@ -68,6 +69,10 @@ namespace mu {
 			return { reinterpret_cast<ByteType*>(m_start), reinterpret_cast<ByteType*>(m_end) };
 		}
 	};
+
+	static_assert(mu::IsRange<PointerRange<i32>>);
+	static_assert(mu::IsRange<PointerRange<i32>&>);
+	static_assert(mu::IsRange<const PointerRange<i32>&>);
 
 	// A PointerRange can be used by algorithms with no further conversion
 	template<typename T>

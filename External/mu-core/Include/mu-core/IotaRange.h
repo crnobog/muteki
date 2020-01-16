@@ -1,5 +1,7 @@
 #pragma once
 
+#include "mu-core/RangeConcept.h"
+
 namespace mu {
 // A linear infinite range over an integral type
 	template<typename T>
@@ -22,6 +24,8 @@ namespace mu {
 
 	template<typename T>
 	inline auto Range(IotaRange<T> r) { return r; }
+
+	static_assert(mu::IsRange<IotaRange<size_t>>);
 }
 
 #ifdef DOCTEST_LIBRARY_INCLUDED

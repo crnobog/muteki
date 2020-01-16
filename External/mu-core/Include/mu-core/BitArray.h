@@ -3,6 +3,7 @@
 #include <memory.h>
 #include "mu-core/PrimitiveTypes.h"
 #include "mu-core/RangeIteration.h"
+#include "mu-core/RangeConcept.h"
 
 namespace mu {
 
@@ -53,6 +54,9 @@ namespace mu {
 			return m_qword_index * 64 + m_bit_index;
 		}
 	};
+
+	static_assert(mu::IsRange<BitRange<true>>, "BitRange<true> is not range");
+	static_assert(mu::IsRange<BitRange<false>>, "BitRange<true> is not range");
 
 	template<bool Set>
 	auto Range(BitRange<Set> r) { return r; }
