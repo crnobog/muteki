@@ -69,7 +69,7 @@ TEST_SUITE("Hashtable") {
 				CHECK(hash_contains);
 			}
 
-			for (auto[key, value] : Zip(keys, values)) {
+			for (auto[key, value] : Zip(keys.Range(), values.Range())) {
 				CHECK(hash.Find(key) == value);
 			}
 		}
