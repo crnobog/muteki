@@ -28,12 +28,14 @@
     <ClInclude Include="..\..\Include\mu-core\HashTable.h" />
     <ClInclude Include="..\..\Include\mu-core\IotaRange.h" />
     <ClInclude Include="..\..\Include\mu-core\Math.h" />
+    <ClInclude Include="..\..\Include\mu-core\MemberDetection.h" />
     <ClInclude Include="..\..\Include\mu-core\Metaprogramming.h" />
     <ClInclude Include="..\..\Include\mu-core\mu-core.h" />
     <ClInclude Include="..\..\Include\mu-core\Paths.h" />
     <ClInclude Include="..\..\Include\mu-core\PointerRange.h" />
     <ClInclude Include="..\..\Include\mu-core\Pool.h" />
     <ClInclude Include="..\..\Include\mu-core\PrimitiveTypes.h" />
+    <ClInclude Include="..\..\Include\mu-core\RangeConcept.h" />
     <ClInclude Include="..\..\Include\mu-core\RangeIteration.h" />
     <ClInclude Include="..\..\Include\mu-core\Ranges.h" />
     <ClInclude Include="..\..\Include\mu-core\RangeWrappers.h" />
