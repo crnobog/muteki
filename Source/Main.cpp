@@ -467,10 +467,10 @@ int main(int argc, char** argv) {
 
 		if (ImGui::Begin(win_title.GetRaw(), nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
 			if (win_user_data.m_input_to_imgui) {
-				ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "ImGUI Input Captured");
+				ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "ImGUI Input Captured - Press Esc to release");
 			}
 			else {
-				ImGui::TextColored(ImVec4(0.3f, 0.3f, 0.3f, 1.0f), "ImGUI Input Not Captured");
+				ImGui::TextColored(ImVec4(0.3f, 0.3f, 0.3f, 1.0f), "ImGUI Input Not Captured - Press Space to capture");
 			}
 			ImGui::LabelText("dt (ms)", "%.1f", dt_avg * 1000.0);
 			ImGui::Checkbox("Pause", &pause_anim);
