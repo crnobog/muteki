@@ -5,18 +5,15 @@ ShaderManager::ShaderManager(GPUInterface* GPU)
 {
 }
 
-GPU::PixelShaderID ShaderManager::CompilePixelShader(mu::PointerRange<const char> name) {
-	return m_gpu->CompilePixelShader(name);
+GPU::ShaderID ShaderManager::CompilePixelShader(mu::PointerRange<const char> name) {
+	return m_gpu->CompileShader(GPU::ShaderType::Pixel, name);
 }
 
-GPU::VertexShaderID ShaderManager::CompileVertexShader(mu::PointerRange<const char>  name) {
-	return m_gpu->CompileVertexShader(name);
+GPU::ShaderID ShaderManager::CompileVertexShader(mu::PointerRange<const char>  name) {
+	return m_gpu->CompileShader(GPU::ShaderType::Vertex, name);
 }
 
-void ShaderManager::RecompilePixelShader(GPU::PixelShaderID) {
-}
-
-void ShaderManager::RecompileVertexShader(GPU::VertexShaderID) {
+void ShaderManager::RecompileShader(GPU::ShaderID) {
 }
 
 void ShaderManager::PushChangesToGPU() {

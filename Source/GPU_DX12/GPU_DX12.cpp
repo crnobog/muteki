@@ -36,8 +36,9 @@ using DX::COMPtr;
 
 using VertexBufferID = GPU::VertexBufferID;
 using IndexBufferID = GPU::IndexBufferID;
-using VertexShaderID = GPU::VertexShaderID;
-using PixelShaderID = GPU::PixelShaderID;
+using ShaderID = GPU::ShaderID;
+using ShaderType = GPU::ShaderType;
+using ProgramDesc = GPU::ProgramDesc;
 using ProgramID = GPU::ProgramID;
 using ConstantBufferID = GPU::ConstantBufferID;
 using RenderTargetID = GPU::RenderTargetID;
@@ -134,17 +135,25 @@ struct GPU_DX12 : public GPUInterface {
 	};
 
 	struct LinkedProgram {
-		VertexShaderID VertexShader;
-		PixelShaderID PixelShader;
+		ProgramDesc Desc;
+		LinkedProgram(ProgramDesc desc)
+			: Desc(desc)
+		{
+		}
 	};
 
 	struct VertexShaderInputs {
 		static constexpr i32 MaxInputElements = 8;
 		FixedArray<DX::VertexShaderInputElement, MaxInputElements> InputElements;
 	};
-	struct VertexShader {
+	struct Shader {
+		ShaderType Type;
 		COMPtr<ID3DBlob> CompiledShader;
 		VertexShaderInputs Inputs;
+
+		Shader(ShaderType type)
+			: Type(type)
+		{}
 	};
 
 	struct InputAssemblerConfig {
@@ -243,8 +252,7 @@ struct GPU_DX12 : public GPUInterface {
 	Fence	m_frame_fence;
 	HANDLE	m_frame_fence_event = nullptr;
 
-	Pool<VertexShader, VertexShaderID> m_registered_vertex_shaders{ 128 };
-	Pool<COMPtr<ID3DBlob>, PixelShaderID> m_registered_pixel_shaders{ 128 };
+	Pool<Shader, ShaderID> m_registered_shaders{ 128 };
 	Pool<LinkedProgram, ProgramID> m_linked_programs{ 128 };
 	Pool<Texture, TextureID> m_textures{ 128 };
 	Pool<ShaderResourceList, ShaderResourceListID> m_shader_resource_lists{ 128 };
@@ -277,9 +285,8 @@ struct GPU_DX12 : public GPUInterface {
 
 	virtual void SubmitPass(const RenderPass& pass) override;
 
-	virtual GPU::VertexShaderID CompileVertexShader(mu::PointerRange<const char>) override;
-	virtual PixelShaderID CompilePixelShader(mu::PointerRange<const char>) override;
-	virtual ProgramID LinkProgram(VertexShaderID vertex_shader, PixelShaderID pixel_shader) override;
+	virtual ShaderID CompileShader(ShaderType type, mu::PointerRange<const char>) override;
+	virtual ProgramID LinkProgram(ProgramDesc desc) override;
 
 	virtual GPU::PipelineStateID CreatePipelineState(const GPU::PipelineStateDesc& desc) override;
 	virtual void DestroyPipelineState(GPU::PipelineStateID id) override;
@@ -589,62 +596,68 @@ static String GetShaderFilename(mu::PointerRange<const char> name)
 	return String::FromRanges(GetShaderDirectory(), name, ".hlsl");
 }
 
-GPU::VertexShaderID GPU_DX12::CompileVertexShader(PointerRange<const char> name) {
-	VertexShaderID id = m_registered_vertex_shaders.AddDefaulted();
-	COMPtr<ID3DBlob>& compiled_shader = m_registered_vertex_shaders[id].CompiledShader;
-
+GPU::ShaderID GPU_DX12::CompileShader(ShaderType type, PointerRange<const char> name) {
+	ShaderID id = m_registered_shaders.Emplace(type);
+	Shader& shader = m_registered_shaders[id];
+	COMPtr<ID3DBlob>& compiled_shader = shader.CompiledShader;
 	{
+		const char* shader_model = nullptr;
+		const char* entry_point = nullptr;
+		switch (type) {
+		case GPU::ShaderType::Vertex:
+			shader_model = "vs_5_0";
+			entry_point = "vs_main";
+			break;
+		case GPU::ShaderType::Pixel:
+			shader_model = "ps_5_0";
+			entry_point = "ps_main";
+			break;
+		default:
+			Assert(false);
+		}
+
 		String shader_filename = GetShaderFilename(name);
 		String shader_txt_code = LoadFileToString(shader_filename.GetRaw());
 
-		DX::CompileShaderHLSL(compiled_shader.Replace(), "vs_5_0", "vs_main", shader_txt_code.Bytes());
+		DX::CompileShaderHLSL(compiled_shader.Replace(), shader_model, entry_point, shader_txt_code.Bytes());
 		Assert(compiled_shader.Get());
 	}
-	VertexShaderInputs& inputs = m_registered_vertex_shaders[id].Inputs;
 
-	COMPtr<ID3D12ShaderReflection> reflector;
-	EnsureHR(D3DReflect(
-		compiled_shader->GetBufferPointer(),
-		compiled_shader->GetBufferSize(),
-		IID_PPV_ARGS(reflector.Replace())
-	));
-	D3D12_SHADER_DESC desc;
-	EnsureHR(reflector->GetDesc(&desc));
-	Assert(desc.InputParameters < VertexShaderInputs::MaxInputElements);
-	FixedArray<D3D12_SIGNATURE_PARAMETER_DESC, VertexShaderInputs::MaxInputElements> input_params;
-	input_params.AddZeroed(desc.InputParameters);
-	for (u32 i = 0; i < desc.InputParameters; ++i) {
-		D3D12_SIGNATURE_PARAMETER_DESC& input_param = input_params[i];
-		reflector->GetInputParameterDesc(i, &input_param);
-	}
+	if (type == GPU::ShaderType::Vertex) {
+		// TODO: Use for validation or remove
+		VertexShaderInputs& inputs = shader.Inputs;
 
-	for (u32 i = 0; i < desc.InputParameters; ++i) {
-		const D3D12_SIGNATURE_PARAMETER_DESC& input_param = input_params[i];
+		COMPtr<ID3D12ShaderReflection> reflector;
+		EnsureHR(D3DReflect(
+			compiled_shader->GetBufferPointer(),
+			compiled_shader->GetBufferSize(),
+			IID_PPV_ARGS(reflector.Replace())
+		));
+		D3D12_SHADER_DESC desc;
+		EnsureHR(reflector->GetDesc(&desc));
+		Assert(desc.InputParameters < VertexShaderInputs::MaxInputElements);
+		FixedArray<D3D12_SIGNATURE_PARAMETER_DESC, VertexShaderInputs::MaxInputElements> input_params;
+		input_params.AddZeroed(desc.InputParameters);
+		for (u32 i = 0; i < desc.InputParameters; ++i) {
+			D3D12_SIGNATURE_PARAMETER_DESC& input_param = input_params[i];
+			reflector->GetInputParameterDesc(i, &input_param);
+		}
 
-		DX::VertexShaderInputElement parsed_param;
-		if (ParseInputParameter(input_param, parsed_param)) {
-			inputs.InputElements.Add(parsed_param);
+		for (u32 i = 0; i < desc.InputParameters; ++i) {
+			const D3D12_SIGNATURE_PARAMETER_DESC& input_param = input_params[i];
+
+			DX::VertexShaderInputElement parsed_param;
+			if (ParseInputParameter(input_param, parsed_param)) {
+				inputs.InputElements.Add(parsed_param);
+			}
 		}
 	}
 
 	return id;
 }
-PixelShaderID GPU_DX12::CompilePixelShader(PointerRange<const char > name) {
-	PixelShaderID id = m_registered_pixel_shaders.AddDefaulted();
-	ID3DBlob** compiled_shader = m_registered_pixel_shaders[id].Replace();
-	{
-		String shader_filename = GetShaderFilename(name);
-		String shader_txt_code = LoadFileToString(shader_filename.GetRaw());
 
-		DX::CompileShaderHLSL(compiled_shader, "ps_5_0", "ps_main", shader_txt_code.Bytes());
-		Assert(*compiled_shader);
-	}
-	return id;
-}
-
-ProgramID GPU_DX12::LinkProgram(VertexShaderID vertex_shader, PixelShaderID pixel_shader) {
-	ProgramID id = m_linked_programs.AddDefaulted();
-	m_linked_programs[id] = { vertex_shader, pixel_shader };
+ProgramID GPU_DX12::LinkProgram(ProgramDesc desc) {
+	ProgramID id = m_linked_programs.Emplace(desc);
 	return id;
 }
 
@@ -678,8 +691,8 @@ GPU::PipelineStateID GPU_DX12::CreatePipelineState(const GPU::PipelineStateDesc&
 	}
 
 	auto pipeline_desc = GraphicsPipelineStateDesc{ m_root_signature.Get() }
-		.VS(m_registered_vertex_shaders[program.VertexShader].CompiledShader)
-		.PS(m_registered_pixel_shaders[program.PixelShader])
+		.VS(m_registered_shaders[program.Desc.VertexShader].CompiledShader)
+		.PS(m_registered_shaders[program.Desc.PixelShader].CompiledShader)
 		.DepthStencilState(desc.DepthStencilState)
 		.DepthStencilFormat(desc.DepthStencilState.DepthEnable ? DXGI_FORMAT_D32_FLOAT : DXGI_FORMAT_UNKNOWN)
 		.BlendState(desc.BlendState)

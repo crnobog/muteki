@@ -75,9 +75,9 @@ struct ImGuiImpl {
 
 		GPU::PipelineStateDesc pipeline_state_desc = {};
 
-		GPU::VertexShaderID vshader_id = shader_manager->CompileVertexShader("imgui");
-		GPU::PixelShaderID pshader_id = shader_manager->CompilePixelShader("imgui");
-		pipeline_state_desc.Program = gpu->LinkProgram(vshader_id, pshader_id);
+		GPU::ShaderID vshader_id = shader_manager->CompileVertexShader("imgui");
+		GPU::ShaderID pshader_id = shader_manager->CompilePixelShader("imgui");
+		pipeline_state_desc.Program = gpu->LinkProgram({ vshader_id, pshader_id });
 
 		pipeline_state_desc.StreamFormat.AddSlot({
 			{ GPU::ScalarType::Float,	2, GPU::InputSemantic::Position,	0 },
@@ -321,9 +321,9 @@ int main(int argc, char** argv) {
 	GPU::PipelineStateID cube_pipeline_state;
 	{
 		Timer t;
-		GPU::VertexShaderID vshader_id = shader_manager.CompileVertexShader("basic_shader");
-		GPU::PixelShaderID pshader_id = shader_manager.CompilePixelShader("basic_shader");
-		GPU::ProgramID program_id = gpu->LinkProgram(vshader_id, pshader_id);
+		GPU::ShaderID vshader_id = shader_manager.CompileVertexShader("basic_shader");
+		GPU::ShaderID pshader_id = shader_manager.CompilePixelShader("basic_shader");
+		GPU::ProgramID program_id = gpu->LinkProgram({ vshader_id, pshader_id});
 		dbg::Log("Loaded and compiled basic shader in {} ms", t.GetElapsedTimeMilliseconds());
 
 		GPU::PipelineStateDesc pipeline_state_desc{};
@@ -343,9 +343,9 @@ int main(int argc, char** argv) {
 	GPU::PipelineStateID grid_pipeline_state;
 	{
 		Timer t;
-		GPU::VertexShaderID vshader_id = shader_manager.CompileVertexShader("grid_shader");
-		GPU::PixelShaderID pshader_id = shader_manager.CompilePixelShader("grid_shader");
-		GPU::ProgramID program_id = gpu->LinkProgram(vshader_id, pshader_id);
+		GPU::ShaderID vshader_id = shader_manager.CompileVertexShader("grid_shader");
+		GPU::ShaderID pshader_id = shader_manager.CompilePixelShader("grid_shader");
+		GPU::ProgramID program_id = gpu->LinkProgram({ vshader_id, pshader_id });
 		dbg::Log("Loaded and compiled grid shader in {} ms", t.GetElapsedTimeMilliseconds());
 
 		GPU::PipelineStateDesc pipeline_state_desc{};

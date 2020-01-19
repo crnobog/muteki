@@ -33,8 +33,7 @@ namespace GPU {
 	DECLARE_GPU_HANDLE(TextureID, u32);
 	DECLARE_GPU_HANDLE(RenderTargetID, u32);
 	DECLARE_GPU_HANDLE(DepthTargetID, u32);
-	DECLARE_GPU_HANDLE(VertexShaderID, u32);
-	DECLARE_GPU_HANDLE(PixelShaderID, u32);
+	DECLARE_GPU_HANDLE(ShaderID, u32);
 	DECLARE_GPU_HANDLE(ProgramID, u32);
 	DECLARE_GPU_HANDLE(ShaderResourceListID, u32);
 	DECLARE_GPU_HANDLE(PipelineStateID, u32);
@@ -46,6 +45,11 @@ namespace GPU {
 	enum class ShaderType {
 		Vertex,
 		Pixel
+	};
+
+	struct ProgramDesc {
+		ShaderID VertexShader;
+		ShaderID PixelShader;
 	};
 
 	enum class TextureFormat {
@@ -393,9 +397,8 @@ struct GPUInterface {
 	//virtual GPU::StreamFormatID RegisterStreamFormat(const GPU::StreamFormatDesc& format) = 0;
 	//virtual GPU::InputAssemblerConfigID RegisterInputAssemblyConfig(GPU::StreamFormatID format, mu::PointerRange<const GPU::VertexBufferID> vertex_buffers, GPU::IndexBufferID index_buffer) = 0;
 
-	virtual GPU::VertexShaderID CompileVertexShader(mu::PointerRange<const char> name) = 0;
-	virtual GPU::PixelShaderID CompilePixelShader(mu::PointerRange<const char> name) = 0;
-	virtual GPU::ProgramID LinkProgram(GPU::VertexShaderID vertex_shader, GPU::PixelShaderID pixel_shader) = 0;
+	virtual GPU::ShaderID CompileShader(GPU::ShaderType type, mu::PointerRange<const char> name) = 0;
+	virtual GPU::ProgramID LinkProgram(GPU::ProgramDesc desc) = 0;
 
 	virtual GPU::PipelineStateID CreatePipelineState(const GPU::PipelineStateDesc& desc) = 0;
 	virtual void DestroyPipelineState(GPU::PipelineStateID id) = 0;

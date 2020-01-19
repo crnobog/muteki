@@ -33,8 +33,9 @@
 
 using VertexBufferID = GPU::VertexBufferID;
 using IndexBufferID = GPU::IndexBufferID;
-using VertexShaderID = GPU::VertexShaderID;
-using PixelShaderID = GPU::PixelShaderID;
+using ShaderID = GPU::ShaderID;
+using ShaderType = GPU::ShaderType;
+using ProgramDesc = GPU::ProgramDesc;
 using ProgramID = GPU::ProgramID;
 using PipelineStateID = GPU::PipelineStateID;
 using ConstantBufferID = GPU::ConstantBufferID;
@@ -474,11 +475,25 @@ VkBlendOp CommonToVK(GPU::BlendOp op)
 struct GPU_Vulkan : public GPUInterface {
 
 	// Internal types
-	struct LinkedProgram {
-		VertexShaderID VertexShader;
-		PixelShaderID PixelShader;
+	struct Shader {
+		ShaderType Type;
+		VkShaderModule ShaderModule;
 
-		VkPipelineShaderStageCreateInfo ShaderStages[2];
+		Shader(ShaderType type)
+			: Type(type) 
+		{
+		}
+	};
+
+	struct LinkedProgram {
+		ProgramDesc Desc;
+
+		VkPipelineShaderStageCreateInfo ShaderStages[2]; // TODO: Comment
+
+		LinkedProgram(ProgramDesc desc) 
+		: Desc(desc) 
+		{			
+		}
 	};
 
 	struct PipelineState {
@@ -551,9 +566,8 @@ struct GPU_Vulkan : public GPUInterface {
 
 	virtual void SubmitPass(const RenderPass& pass) override;
 
-	virtual GPU::VertexShaderID CompileVertexShader(PointerRange<const char> name) override;
-	virtual PixelShaderID CompilePixelShader(PointerRange<const char> name) override;
-	virtual ProgramID LinkProgram(VertexShaderID vertex_shader, PixelShaderID pixel_shader) override;
+	virtual ShaderID CompileShader(ShaderType type, PointerRange<const char> name) override;
+	virtual ProgramID LinkProgram(ProgramDesc desc) override;
 
 	virtual GPU::PipelineStateID CreatePipelineState(const GPU::PipelineStateDesc& desc) override;
 	virtual void DestroyPipelineState(GPU::PipelineStateID id) override;
@@ -668,8 +682,7 @@ struct GPU_Vulkan : public GPUInterface {
 	Array<VkImageView>	m_swap_chain_image_views;
 	VkViewport			m_viewport;
 
-	Pool<VkShaderModule, VertexShaderID>			m_registered_vertex_shaders{ 128 };
-	Pool<VkShaderModule, PixelShaderID>				m_registered_pixel_shaders{ 128 };
+	Pool<Shader, ShaderID>			m_registered_shaders{ 128 };
 	Pool<LinkedProgram, ProgramID>					m_linked_programs{ 128 };
 	Pool<PipelineState, PipelineStateID>			m_pipeline_states{ 128 };
 	Pool<VertexBuffer, VertexBufferID>				m_vertex_buffers{ MaxPersistentVertexBuffers };
@@ -1446,14 +1459,10 @@ void GPU_Vulkan::Shutdown()
 		vkDestroyPipeline(m_device, pipeline.m_pipeline, m_allocation_callbacks);
 	}
 
-	for (auto [i, shader] : m_registered_vertex_shaders.Range()) {
-		vkDestroyShaderModule(m_device, shader, m_allocation_callbacks);
+	for (auto [i, shader] : m_registered_shaders.Range()) {
+		vkDestroyShaderModule(m_device, shader.ShaderModule, m_allocation_callbacks);
 	}
-	m_registered_vertex_shaders.Empty();
-	for (auto[i, shader] : m_registered_pixel_shaders.Range()) {
-		vkDestroyShaderModule(m_device, shader, m_allocation_callbacks);
-	}
-	m_registered_pixel_shaders.Empty();
+	m_registered_shaders.Empty();
 
 	for (auto[i, framebuffer] : m_framebuffers.Range()) {
 	//	vkDestroyFramebuffer(m_device, framebuffer, m_allocation_callbacks);
@@ -2044,6 +2053,72 @@ static String GetShaderFilename(mu::PointerRange<const char> name, GPU::ShaderTy
 	return String::FromRanges(GetShaderDirectory(), name, suffix);
 }
 
+GPU::ShaderID GPU_Vulkan::CompileShader(ShaderType type, PointerRange<const char> name) {
+	String shader_filename = GetShaderFilename(name, type);
+	String shader_txt_code = LoadFileToString(shader_filename.GetRaw());
+	PointerRange<const u8> code = shader_txt_code.Bytes();
+	Assert(code.Size() > 0);
+
+	shaderc_shader_kind shader_c_kind = shaderc_glsl_infer_from_source;
+	switch (type) {
+	case ShaderType::Vertex:
+		shader_c_kind = shaderc_vertex_shader;
+		break;
+	case ShaderType::Pixel:
+		shader_c_kind = shaderc_fragment_shader;
+		break;
+	default:
+		Assert(false);
+	}
+
+	shaderc_compilation_result_t result = shaderc_compile_into_spv(
+		m_shader_compiler,
+		(const char*)code.m_start,
+		code.Size() - 1,
+		shader_c_kind,
+		"",
+		"main",
+		nullptr
+	);
+	Assert(result);
+	shaderc_compilation_status status = shaderc_result_get_compilation_status(result);
+	if (status != shaderc_compilation_status_success)
+	{
+
+		if (size_t num_errors = shaderc_result_get_num_errors(result); num_errors != 0)
+		{
+			const char* err = shaderc_result_get_error_message(result);
+			Assertf(false, "{} errors:\n {}", num_errors, err);
+		}
+		return ShaderID{};
+	}
+
+	if (size_t num_warnings = shaderc_result_get_num_warnings(result); num_warnings != 0)
+	{
+		const char* warnings = shaderc_result_get_error_message(result); // ?
+		dbg::Log("{} warnings:\n {}", num_warnings, warnings);
+	}
+
+	size_t result_size = shaderc_result_get_length(result);
+	const char* result_bytes = shaderc_result_get_bytes(result);
+
+	ShaderID id = m_registered_shaders.Emplace(type);
+	Shader& shader = m_registered_shaders[id];
+	VkShaderModule& shader_module = shader.ShaderModule;
+
+	VkShaderModuleCreateInfo create_info = {};
+	create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	create_info.pNext = nullptr;
+	create_info.flags = 0;
+	create_info.codeSize = result_size;
+	create_info.pCode = (const u32*)result_bytes;
+
+	EnsureVK(vkCreateShaderModule(m_device, &create_info, m_allocation_callbacks, &shader_module));
+
+	return id;
+}
+
+#if 0
 GPU::VertexShaderID GPU_Vulkan::CompileVertexShader(PointerRange<const char> name)
 {
 	String shader_filename = GetShaderFilename(name, GPU::ShaderType::Vertex);
@@ -2149,19 +2224,20 @@ PixelShaderID GPU_Vulkan::CompilePixelShader(PointerRange<const char> name)
 
 	return id;
 }
+#endif
 
-ProgramID GPU_Vulkan::LinkProgram(VertexShaderID vertex_shader, PixelShaderID pixel_shader)
+ProgramID GPU_Vulkan::LinkProgram(ProgramDesc desc)
 {
-	ProgramID id = m_linked_programs.AddDefaulted();
+	ProgramID id = m_linked_programs.Emplace(desc);
 	LinkedProgram& program = m_linked_programs[id];
-	program.VertexShader = vertex_shader;
-	program.PixelShader = pixel_shader;
 
+	// TODO: Check which stages are used
 	program.ShaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	program.ShaderStages[0].pNext = nullptr;
 	program.ShaderStages[0].flags = 0;
 	program.ShaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-	program.ShaderStages[0].module = m_registered_vertex_shaders[vertex_shader];
+	Assert(m_registered_shaders[desc.VertexShader].Type == GPU::ShaderType::Vertex);
+	program.ShaderStages[0].module = m_registered_shaders[desc.VertexShader].ShaderModule;
 	program.ShaderStages[0].pName = "main";
 	program.ShaderStages[0].pSpecializationInfo = nullptr;
 
@@ -2169,7 +2245,8 @@ ProgramID GPU_Vulkan::LinkProgram(VertexShaderID vertex_shader, PixelShaderID pi
 	program.ShaderStages[1].pNext = nullptr;
 	program.ShaderStages[1].flags = 0;
 	program.ShaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-	program.ShaderStages[1].module = m_registered_pixel_shaders[pixel_shader];
+	Assert(m_registered_shaders[desc.VertexShader].Type == GPU::ShaderType::Pixel);
+	program.ShaderStages[1].module = m_registered_shaders[desc.PixelShader].ShaderModule;
 	program.ShaderStages[1].pName = "main";
 	program.ShaderStages[1].pSpecializationInfo = nullptr;
 

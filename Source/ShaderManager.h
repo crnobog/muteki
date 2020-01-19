@@ -1,7 +1,9 @@
 #pragma once
 
 #include "GPUInterface.h" // For ID types - those could be split into their own header?
+
 #include "mu-core/PointerRange.h"
+#include "mu-core/HashTable.h"
 
 // Can be used to sit in the middle of a program and GPUInterface to allow updating of 
 // shaders at runtime.
@@ -15,11 +17,10 @@ public:
 	ShaderManager(GPUInterface* GPU);
 
 	// TODO: Combine and use enum to select shader stage?
-	GPU::PixelShaderID CompilePixelShader(mu::PointerRange<const char> name);
-	GPU::VertexShaderID CompileVertexShader(mu::PointerRange<const char> name);
+	GPU::ShaderID CompilePixelShader(mu::PointerRange<const char> name);
+	GPU::ShaderID CompileVertexShader(mu::PointerRange<const char> name);
 
-	void RecompilePixelShader(GPU::PixelShaderID id);
-	void RecompileVertexShader(GPU::VertexShaderID id);
+	void RecompileShader(GPU::ShaderID id);
 
 	// TODO: Configure auto-watching shader files for changes
 

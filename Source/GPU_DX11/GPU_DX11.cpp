@@ -29,9 +29,9 @@
 
 using VertexBufferID = GPU::VertexBufferID;
 using IndexBufferID = GPU::IndexBufferID;
-using VertexShaderID = GPU::VertexShaderID;
-using PixelShaderID = GPU::PixelShaderID;
+using ShaderID = GPU::ShaderID;
 using ProgramID = GPU::ProgramID;
+using ProgramDesc = GPU::ProgramDesc;
 using PipelineStateID = GPU::PipelineStateID;
 using ConstantBufferID = GPU::ConstantBufferID;
 using RenderTargetID = GPU::RenderTargetID;
@@ -82,13 +82,39 @@ struct GPU_DX11 : public GPUInterface {
 		static constexpr i32 MaxInputElements = 8;
 		FixedArray<DX::VertexShaderInputElement, MaxInputElements> InputElements;
 	};
-	struct VertexShader {
-		COMPtr<ID3D11VertexShader> CompiledShader;
+	struct Shader {
+		GPU::ShaderType Type;
+		union {
+			ID3D11VertexShader* VertexShader;
+			ID3D11PixelShader* PixelShader;
+		} ShaderObject;
 		VertexShaderInputs Inputs;
+
+		Shader(GPU::ShaderType type)
+			: Type(type)
+		{
+		}
+
+		Shader(const Shader& other) = delete;
+		Shader(Shader&& other) = default;
+
+		Shader& operator=(const Shader& other) = delete;
+		Shader& operator=(Shader&& other) = default;
+
+		~Shader()
+		{
+			switch (Type) {
+			case GPU::ShaderType::Vertex:
+				ShaderObject.VertexShader->Release();
+				break;
+			case GPU::ShaderType::Pixel:
+				ShaderObject.PixelShader->Release();
+				break;
+			}
+		}
 	};
 	struct LinkedProgram {
-		VertexShaderID VertexShader;
-		PixelShaderID PixelShader;
+		ProgramDesc Desc;
 	};
 	struct PipelineState {
 		GPU::PipelineStateDesc Desc;
@@ -131,8 +157,7 @@ struct GPU_DX11 : public GPUInterface {
 	Pool<COMPtr<ID3D11Buffer>, ConstantBufferID>		m_constant_buffers{ 128 };
 	Pool<ShaderResourceList, ShaderResourceListID>		m_shader_resource_lists{ 128 };
 	Pool<Texture, TextureID>							m_textures{ 128 };
-	Pool<VertexShader, VertexShaderID>					m_vertex_shaders{ 128 };
-	Pool<COMPtr<ID3D11PixelShader>, PixelShaderID>		m_pixel_shaders{ 128 };
+	Pool<Shader, ShaderID>								m_shaders{ 128 };
 	Pool<LinkedProgram, ProgramID>						m_linked_programs{ 128 };
 	Pool<PipelineState, PipelineStateID>				m_pipeline_states{ 128 };
 	Pool<Framebuffer, FramebufferID>					m_framebuffers{ 128 };
@@ -154,9 +179,8 @@ struct GPU_DX11 : public GPUInterface {
 	//virtual StreamFormatID RegisterStreamFormat(const GPU::StreamFormatDesc& format) override;
 	//virtual InputAssemblerConfigID RegisterInputAssemblyConfig(StreamFormatID format, mu::PointerRange<const VertexBufferID> vertex_buffers, IndexBufferID index_buffer) override;
 
-	virtual GPU::VertexShaderID CompileVertexShader(mu::PointerRange<const char> name) override;
-	virtual PixelShaderID CompilePixelShader(mu::PointerRange<const char> name) override;
-	virtual ProgramID LinkProgram(VertexShaderID vertex_shader, PixelShaderID pixel_shader) override;
+	virtual ShaderID CompileShader(GPU::ShaderType type, mu::PointerRange<const char> name) override;
+	virtual ProgramID LinkProgram(ProgramDesc desc) override;
 
 	virtual GPU::PipelineStateID CreatePipelineState(const GPU::PipelineStateDesc& desc) override;
 	virtual void DestroyPipelineState(GPU::PipelineStateID id) override;
@@ -328,8 +352,8 @@ void GPU_DX11::SubmitPass(const RenderPass& pass) {
 		context->RSSetState(pso.RasterState.Get());
 
 		const LinkedProgram& program = m_linked_programs[pso.Desc.Program];
-		context->VSSetShader(m_vertex_shaders[program.VertexShader].CompiledShader.Get(), nullptr, 0);
-		context->PSSetShader(m_pixel_shaders[program.PixelShader].Get(), nullptr, 0);
+		context->VSSetShader(m_shaders[program.Desc.VertexShader].ShaderObject.VertexShader, nullptr, 0);
+		context->PSSetShader(m_shaders[program.Desc.PixelShader].ShaderObject.PixelShader, nullptr, 0);
 
 		FixedArray<ID3D11Buffer*, GPU::MaxBoundConstantBuffers> cbs;
 		for (ConstantBufferID cb_id : item.BoundResources.ConstantBuffers) {
@@ -401,65 +425,83 @@ static String GetShaderFilename(mu::PointerRange<const char> name)
 	return String::FromRanges(GetShaderDirectory(), name, ".hlsl");
 }
 
-GPU::VertexShaderID GPU_DX11::CompileVertexShader(mu::PointerRange<const char> name) {
-
+GPU::ShaderID GPU_DX11::CompileShader(GPU::ShaderType type, mu::PointerRange<const char> name) {
 	COMPtr<ID3DBlob> compiled_shader;
-	VertexShaderID id = m_vertex_shaders.AddDefaulted();
 	{
+		const char* shader_model = nullptr;
+		const char* entry_point = nullptr;
+		switch (type) {
+		case GPU::ShaderType::Vertex:
+			shader_model = "vs_5_0";
+			entry_point = "vs_main";
+			break;
+		case GPU::ShaderType::Pixel:
+			shader_model = "ps_5_0";
+			entry_point = "ps_main";
+			break;
+		default:
+			Assert(false);
+		}
+
 		String shader_filename = GetShaderFilename(name);
 		String shader_txt_code = LoadFileToString(shader_filename.GetRaw());
 
-		DX::CompileShaderHLSL(compiled_shader.Replace(), "vs_5_0", "vs_main", shader_txt_code.Bytes());
+		DX::CompileShaderHLSL(compiled_shader.Replace(), shader_model, entry_point, shader_txt_code.Bytes());
 		Assert(compiled_shader.Get());
 	}
-	EnsureHR(m_device->CreateVertexShader(compiled_shader->GetBufferPointer(), compiled_shader->GetBufferSize(), nullptr, m_vertex_shaders[id].CompiledShader.Replace()));
-	VertexShaderInputs& inputs = m_vertex_shaders[id].Inputs;
 
-	COMPtr<ID3D11ShaderReflection> reflector;
-	EnsureHR(D3DReflect(
-		compiled_shader->GetBufferPointer(),
-		compiled_shader->GetBufferSize(),
-		IID_PPV_ARGS(reflector.Replace())
-	));
-	D3D11_SHADER_DESC desc;
-	EnsureHR(reflector->GetDesc(&desc));
-	FixedArray<D3D11_SIGNATURE_PARAMETER_DESC, VertexShaderInputs::MaxInputElements> input_params;
-	Assert(desc.InputParameters < VertexShaderInputs::MaxInputElements);
-	input_params.AddZeroed(desc.InputParameters);
-	for (auto[index, input_param] : Zip(Iota<u32>(), input_params.Range())) {
-		reflector->GetInputParameterDesc(index, &input_param);
+	ShaderID id = m_shaders.Emplace(type);
+	Shader& shader = m_shaders[id];
+
+	switch (type) {
+	case GPU::ShaderType::Vertex:
+		EnsureHR(m_device->CreateVertexShader(
+			compiled_shader->GetBufferPointer(), compiled_shader->GetBufferSize(), nullptr, &shader.ShaderObject.VertexShader
+		));
+		break;
+	case GPU::ShaderType::Pixel:
+		EnsureHR(m_device->CreatePixelShader(
+			compiled_shader->GetBufferPointer(), compiled_shader->GetBufferSize(), nullptr, &shader.ShaderObject.PixelShader
+		));
+		break;
 	}
 
-	for (u32 i = 0; i < desc.InputParameters; ++i) {
-		D3D11_SIGNATURE_PARAMETER_DESC& input_param = input_params[i];
+	if (type == GPU::ShaderType::Vertex) {
+		VertexShaderInputs& inputs = shader.Inputs;
 
-		DX::VertexShaderInputElement parsed_elem;
-		if (DX11Util::ParseInputParameter(input_param, parsed_elem))
-		{
-			inputs.InputElements.Add(parsed_elem);
+		COMPtr<ID3D11ShaderReflection> reflector;
+		EnsureHR(D3DReflect(
+			compiled_shader->GetBufferPointer(),
+			compiled_shader->GetBufferSize(),
+			IID_PPV_ARGS(reflector.Replace())
+		));
+		D3D11_SHADER_DESC desc;
+		EnsureHR(reflector->GetDesc(&desc));
+		FixedArray<D3D11_SIGNATURE_PARAMETER_DESC, VertexShaderInputs::MaxInputElements> input_params;
+		Assert(desc.InputParameters < VertexShaderInputs::MaxInputElements);
+		input_params.AddZeroed(desc.InputParameters);
+		for (auto [index, input_param] : Zip(Iota<u32>(), input_params.Range())) {
+			reflector->GetInputParameterDesc(index, &input_param);
+		}
+
+		for (u32 i = 0; i < desc.InputParameters; ++i) {
+			D3D11_SIGNATURE_PARAMETER_DESC& input_param = input_params[i];
+
+			DX::VertexShaderInputElement parsed_elem;
+			if (DX11Util::ParseInputParameter(input_param, parsed_elem))
+			{
+				inputs.InputElements.Add(parsed_elem);
+			}
 		}
 	}
-
+	
 	return id;
 }
-PixelShaderID GPU_DX11::CompilePixelShader(mu::PointerRange<const char> name) {
-	PixelShaderID id = m_pixel_shaders.AddDefaulted();
-	COMPtr<ID3DBlob> compiled_shader;
-	{
-		String shader_filename = GetShaderFilename(name);
-		String shader_txt_code = LoadFileToString(shader_filename.GetRaw());
 
-		DX::CompileShaderHLSL(compiled_shader.Replace(), "ps_5_0", "ps_main", shader_txt_code.Bytes());
-		Assert(compiled_shader.Get());
-	}
-	EnsureHR(m_device->CreatePixelShader(compiled_shader->GetBufferPointer(), compiled_shader->GetBufferSize(), nullptr, m_pixel_shaders[id].Replace()));
-	return id;
-}
-ProgramID GPU_DX11::LinkProgram(VertexShaderID vertex_shader, PixelShaderID pixel_shader) {
+ProgramID GPU_DX11::LinkProgram(ProgramDesc desc) {
 	ProgramID id = m_linked_programs.AddDefaulted();
 	LinkedProgram& prog = m_linked_programs[id];
-	prog.VertexShader = vertex_shader;
-	prog.PixelShader = pixel_shader;
+	prog.Desc = desc;
 	return id;
 }
 
