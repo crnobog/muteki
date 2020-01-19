@@ -154,8 +154,8 @@ struct GPU_DX11 : public GPUInterface {
 	//virtual StreamFormatID RegisterStreamFormat(const GPU::StreamFormatDesc& format) override;
 	//virtual InputAssemblerConfigID RegisterInputAssemblyConfig(StreamFormatID format, mu::PointerRange<const VertexBufferID> vertex_buffers, IndexBufferID index_buffer) override;
 
-	virtual GPU::VertexShaderID CompileVertexShaderHLSL(mu::PointerRange<const char> name) override;
-	virtual PixelShaderID CompilePixelShaderHLSL(mu::PointerRange<const char> name) override;
+	virtual GPU::VertexShaderID CompileVertexShader(mu::PointerRange<const char> name) override;
+	virtual PixelShaderID CompilePixelShader(mu::PointerRange<const char> name) override;
 	virtual ProgramID LinkProgram(VertexShaderID vertex_shader, PixelShaderID pixel_shader) override;
 
 	virtual GPU::PipelineStateID CreatePipelineState(const GPU::PipelineStateDesc& desc) override;
@@ -401,7 +401,7 @@ static String GetShaderFilename(mu::PointerRange<const char> name)
 	return String::FromRanges(GetShaderDirectory(), name, ".hlsl");
 }
 
-GPU::VertexShaderID GPU_DX11::CompileVertexShaderHLSL(mu::PointerRange<const char> name) {
+GPU::VertexShaderID GPU_DX11::CompileVertexShader(mu::PointerRange<const char> name) {
 
 	COMPtr<ID3DBlob> compiled_shader;
 	VertexShaderID id = m_vertex_shaders.AddDefaulted();
@@ -442,7 +442,7 @@ GPU::VertexShaderID GPU_DX11::CompileVertexShaderHLSL(mu::PointerRange<const cha
 
 	return id;
 }
-PixelShaderID GPU_DX11::CompilePixelShaderHLSL(mu::PointerRange<const char> name) {
+PixelShaderID GPU_DX11::CompilePixelShader(mu::PointerRange<const char> name) {
 	PixelShaderID id = m_pixel_shaders.AddDefaulted();
 	COMPtr<ID3DBlob> compiled_shader;
 	{

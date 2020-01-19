@@ -136,6 +136,7 @@
     <ClCompile Include="..\..\Source\GPU_Vulkan\GPU_Vulkan.cpp" />
     <ClCompile Include="..\..\Source\Main.cpp" />
     <ClCompile Include="..\..\Source\MathImpl.cpp" />
+    <ClCompile Include="..\..\Source\ShaderManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\External\imgui\imconfig.h" />
@@ -156,6 +157,7 @@
     <ClInclude Include="..\..\Source\GPU_Vulkan\GPU_Vulkan.h" />
     <ClInclude Include="..\..\Source\Quaternion.h" />
     <ClInclude Include="..\..\Source\Rect.h" />
+    <ClInclude Include="..\..\Source\ShaderManager.h" />
     <ClInclude Include="..\..\Source\TransformMatrices.h" />
     <ClInclude Include="..\..\Source\Vectors.h" />
   </ItemGroup>

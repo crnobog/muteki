@@ -277,8 +277,8 @@ struct GPU_DX12 : public GPUInterface {
 
 	virtual void SubmitPass(const RenderPass& pass) override;
 
-	virtual GPU::VertexShaderID CompileVertexShaderHLSL(mu::PointerRange<const char>) override;
-	virtual PixelShaderID CompilePixelShaderHLSL(mu::PointerRange<const char>) override;
+	virtual GPU::VertexShaderID CompileVertexShader(mu::PointerRange<const char>) override;
+	virtual PixelShaderID CompilePixelShader(mu::PointerRange<const char>) override;
 	virtual ProgramID LinkProgram(VertexShaderID vertex_shader, PixelShaderID pixel_shader) override;
 
 	virtual GPU::PipelineStateID CreatePipelineState(const GPU::PipelineStateDesc& desc) override;
@@ -589,7 +589,7 @@ static String GetShaderFilename(mu::PointerRange<const char> name)
 	return String::FromRanges(GetShaderDirectory(), name, ".hlsl");
 }
 
-GPU::VertexShaderID GPU_DX12::CompileVertexShaderHLSL(PointerRange<const char> name) {
+GPU::VertexShaderID GPU_DX12::CompileVertexShader(PointerRange<const char> name) {
 	VertexShaderID id = m_registered_vertex_shaders.AddDefaulted();
 	COMPtr<ID3DBlob>& compiled_shader = m_registered_vertex_shaders[id].CompiledShader;
 
@@ -629,7 +629,7 @@ GPU::VertexShaderID GPU_DX12::CompileVertexShaderHLSL(PointerRange<const char> n
 
 	return id;
 }
-PixelShaderID GPU_DX12::CompilePixelShaderHLSL(PointerRange<const char > name) {
+PixelShaderID GPU_DX12::CompilePixelShader(PointerRange<const char > name) {
 	PixelShaderID id = m_registered_pixel_shaders.AddDefaulted();
 	ID3DBlob** compiled_shader = m_registered_pixel_shaders[id].Replace();
 	{

@@ -10,6 +10,7 @@
 #include "Quaternion.h"
 #include "CoreMath.h"
 #include "CubePrimitive.h"
+#include "ShaderManager.h"
 
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include "GLFW/glfw3.h"
@@ -33,14 +34,16 @@ using std::unique_ptr;
 struct ImGuiImpl {
 	HWND m_hwnd;
 	GPUInterface* m_gpu = nullptr;
+	ShaderManager* m_shader_manager = nullptr;
 	GPU::PipelineStateID m_pipeline_state = {};
 	GPU::TextureID m_fonts_tex = {};
 	GPU::ShaderResourceListID m_fonts_srl = {};
 	GPU::FramebufferID m_framebuffer = {};
 
-	void Init(HWND hwnd, GPUInterface* gpu) {
+	void Init(HWND hwnd, GPUInterface* gpu, ShaderManager* shader_manager) {
 		m_hwnd = hwnd;
 		m_gpu = gpu;
+		m_shader_manager = shader_manager;
 		ImGuiIO& io = ImGui::GetIO();
 		io.ImeWindowHandle = hwnd;
 		io.IniFilename = nullptr;
@@ -72,8 +75,8 @@ struct ImGuiImpl {
 
 		GPU::PipelineStateDesc pipeline_state_desc = {};
 
-		GPU::VertexShaderID vshader_id = gpu->CompileVertexShaderHLSL("imgui");
-		GPU::PixelShaderID pshader_id = gpu->CompilePixelShaderHLSL("imgui");
+		GPU::VertexShaderID vshader_id = shader_manager->CompileVertexShader("imgui");
+		GPU::PixelShaderID pshader_id = shader_manager->CompilePixelShader("imgui");
 		pipeline_state_desc.Program = gpu->LinkProgram(vshader_id, pshader_id);
 
 		pipeline_state_desc.StreamFormat.AddSlot({
@@ -283,6 +286,8 @@ int main(int argc, char** argv) {
 	std::unique_ptr<GPUInterface> gpu = CreateGPU(args);
 	gpu->Init(hwnd);
 
+	ShaderManager shader_manager{ gpu.get() };
+
 	String win_title = String::Format("muteki {}", gpu->GetName());
 	glfwSetWindowTitle(win, win_title.GetRaw());
 
@@ -300,7 +305,7 @@ int main(int argc, char** argv) {
 	GPU::FramebufferID framebuffer = gpu->CreateFramebuffer(framebuffer_desc);
 
 	ImGuiImpl imgui;
-	imgui.Init(hwnd, gpu.get());
+	imgui.Init(hwnd, gpu.get(), &shader_manager);
 
 	glfwSetInputMode(win, GLFW_CURSOR, win_user_data.m_input_to_imgui ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED);
 
@@ -316,8 +321,8 @@ int main(int argc, char** argv) {
 	GPU::PipelineStateID cube_pipeline_state;
 	{
 		Timer t;
-		GPU::VertexShaderID vshader_id = gpu->CompileVertexShaderHLSL("basic_shader");
-		GPU::PixelShaderID pshader_id = gpu->CompilePixelShaderHLSL("basic_shader");
+		GPU::VertexShaderID vshader_id = shader_manager.CompileVertexShader("basic_shader");
+		GPU::PixelShaderID pshader_id = shader_manager.CompilePixelShader("basic_shader");
 		GPU::ProgramID program_id = gpu->LinkProgram(vshader_id, pshader_id);
 		dbg::Log("Loaded and compiled basic shader in {} ms", t.GetElapsedTimeMilliseconds());
 
@@ -338,8 +343,8 @@ int main(int argc, char** argv) {
 	GPU::PipelineStateID grid_pipeline_state;
 	{
 		Timer t;
-		GPU::VertexShaderID vshader_id = gpu->CompileVertexShaderHLSL("grid_shader");
-		GPU::PixelShaderID pshader_id = gpu->CompilePixelShaderHLSL("grid_shader");
+		GPU::VertexShaderID vshader_id = shader_manager.CompileVertexShader("grid_shader");
+		GPU::PixelShaderID pshader_id = shader_manager.CompilePixelShader("grid_shader");
 		GPU::ProgramID program_id = gpu->LinkProgram(vshader_id, pshader_id);
 		dbg::Log("Loaded and compiled grid shader in {} ms", t.GetElapsedTimeMilliseconds());
 

@@ -551,8 +551,8 @@ struct GPU_Vulkan : public GPUInterface {
 
 	virtual void SubmitPass(const RenderPass& pass) override;
 
-	virtual GPU::VertexShaderID CompileVertexShaderHLSL(PointerRange<const char> name) override;
-	virtual PixelShaderID CompilePixelShaderHLSL(PointerRange<const char> name) override;
+	virtual GPU::VertexShaderID CompileVertexShader(PointerRange<const char> name) override;
+	virtual PixelShaderID CompilePixelShader(PointerRange<const char> name) override;
 	virtual ProgramID LinkProgram(VertexShaderID vertex_shader, PixelShaderID pixel_shader) override;
 
 	virtual GPU::PipelineStateID CreatePipelineState(const GPU::PipelineStateDesc& desc) override;
@@ -2044,7 +2044,7 @@ static String GetShaderFilename(mu::PointerRange<const char> name, GPU::ShaderTy
 	return String::FromRanges(GetShaderDirectory(), name, suffix);
 }
 
-GPU::VertexShaderID GPU_Vulkan::CompileVertexShaderHLSL(PointerRange<const char> name)
+GPU::VertexShaderID GPU_Vulkan::CompileVertexShader(PointerRange<const char> name)
 {
 	String shader_filename = GetShaderFilename(name, GPU::ShaderType::Vertex);
 	String shader_txt_code = LoadFileToString(shader_filename.GetRaw());
@@ -2097,7 +2097,7 @@ GPU::VertexShaderID GPU_Vulkan::CompileVertexShaderHLSL(PointerRange<const char>
 	return id;
 }
 
-PixelShaderID GPU_Vulkan::CompilePixelShaderHLSL(PointerRange<const char> name)
+PixelShaderID GPU_Vulkan::CompilePixelShader(PointerRange<const char> name)
 {
 	String shader_filename = GetShaderFilename(name, GPU::ShaderType::Pixel);
 	String shader_txt_code = LoadFileToString(shader_filename.GetRaw());
