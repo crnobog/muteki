@@ -14,7 +14,7 @@
 
 #define DECLARE_GPU_HANDLE(NAME, INTERNAL) \
 struct NAME { \
-	explicit operator size_t() { return Index; } \
+	explicit operator size_t() const { return Index; } \
 	constexpr NAME() = default; \
 	constexpr explicit NAME(size_t i) : Index((INTERNAL)i) {} \
 	constexpr explicit NAME(INTERNAL i) : Index(i) {} \
