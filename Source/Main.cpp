@@ -386,6 +386,7 @@ int main(int argc, char** argv) {
 
 	i64 frame_num = 0;
 	bool pause_anim = false;
+	bool show_imgui_test_window = false;
 	float vfov = 0.5f;
 	float near_plane = 0.1f;
 	float far_plane = 20.0f;
@@ -486,6 +487,13 @@ int main(int argc, char** argv) {
 			else {
 				ImGui::TextColored(ImVec4(0.3f, 0.3f, 0.3f, 1.0f), "ImGUI Input Not Captured - Press Space to capture");
 			}
+			ImGui::Separator();
+			
+			if (ImGui::Button("Show ImGui Test Window")) {
+				show_imgui_test_window = true;
+			}
+			ImGui::Separator();
+
 			ImGui::LabelText("dt (ms)", "%.1f", dt_avg * 1000.0);
 			ImGui::Checkbox("Pause", &pause_anim);
 			ImGui::Checkbox("Use Quat", &bUseQuat);
@@ -507,8 +515,11 @@ int main(int argc, char** argv) {
 			ImGui::SliderFloat("VFOV", &vfov, 0.0f, 3.0f);
 			ImGui::SliderFloat("Near Plane", &near_plane, 0.001f, 1.0f);
 			ImGui::SliderFloat("Far Plane", &far_plane, near_plane, 100.0f);
-
-			ImGui::End();
+		}
+		ImGui::End();
+		
+		if (show_imgui_test_window) {
+			ImGui::ShowTestWindow(&show_imgui_test_window);
 		}
 
 		Quat q = Quat::FromAxisAngle(Normalize(rot_axis), DegreesToRadians(rot_deg));

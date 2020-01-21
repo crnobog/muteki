@@ -33,6 +33,7 @@
       <Filter>GPU\Vulkan</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\ShaderManager.cpp" />
+    <ClCompile Include="..\..\External\imgui\imgui_demo.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="imgui">
