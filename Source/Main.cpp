@@ -84,8 +84,8 @@ struct ImGuiImpl {
 
 		GPU::PipelineStateDesc pipeline_state_desc = {};
 
-		GPU::ShaderID vshader_id = shader_manager->CompileVertexShader("imgui");
-		GPU::ShaderID pshader_id = shader_manager->CompilePixelShader("imgui");
+		GPU::ShaderID vshader_id = shader_manager->CompileShader(GPU::ShaderType::Vertex, "imgui");
+		GPU::ShaderID pshader_id = shader_manager->CompileShader(GPU::ShaderType::Pixel, "imgui");
 		pipeline_state_desc.Program = gpu->LinkProgram({ vshader_id, pshader_id });
 
 		pipeline_state_desc.StreamFormat.AddSlot({
@@ -330,8 +330,8 @@ int main(int argc, char** argv) {
 	GPU::PipelineStateID cube_pipeline_state;
 	{
 		Timer t;
-		GPU::ShaderID vshader_id = shader_manager.CompileVertexShader("basic_shader");
-		GPU::ShaderID pshader_id = shader_manager.CompilePixelShader("basic_shader");
+		GPU::ShaderID vshader_id = shader_manager.CompileShader(GPU::ShaderType::Vertex, "basic_shader");
+		GPU::ShaderID pshader_id = shader_manager.CompileShader(GPU::ShaderType::Pixel, "basic_shader");
 		GPU::ProgramID program_id = gpu->LinkProgram({ vshader_id, pshader_id});
 		dbg::Log("Loaded and compiled basic shader in {} ms", t.GetElapsedTimeMilliseconds());
 
@@ -352,8 +352,8 @@ int main(int argc, char** argv) {
 	GPU::PipelineStateID grid_pipeline_state;
 	{
 		Timer t;
-		GPU::ShaderID vshader_id = shader_manager.CompileVertexShader("grid_shader");
-		GPU::ShaderID pshader_id = shader_manager.CompilePixelShader("grid_shader");
+		GPU::ShaderID vshader_id = shader_manager.CompileShader(GPU::ShaderType::Vertex, "grid_shader");
+		GPU::ShaderID pshader_id = shader_manager.CompileShader(GPU::ShaderType::Pixel, "grid_shader");
 		GPU::ProgramID program_id = gpu->LinkProgram({ vshader_id, pshader_id });
 		dbg::Log("Loaded and compiled grid shader in {} ms", t.GetElapsedTimeMilliseconds());
 
@@ -492,6 +492,10 @@ int main(int argc, char** argv) {
 			if (ImGui::Button("Show ImGui Test Window")) {
 				show_imgui_test_window = true;
 			}
+
+			if (ImGui::Button("Shader Manager")) {
+				shader_manager.ShowWindow();
+			}
 			ImGui::Separator();
 
 			ImGui::LabelText("dt (ms)", "%.1f", dt_avg * 1000.0);
@@ -521,6 +525,7 @@ int main(int argc, char** argv) {
 		if (show_imgui_test_window) {
 			ImGui::ShowTestWindow(&show_imgui_test_window);
 		}
+		shader_manager.DrawUI();
 
 		Quat q = Quat::FromAxisAngle(Normalize(rot_axis), DegreesToRadians(rot_deg));
 
