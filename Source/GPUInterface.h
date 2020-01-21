@@ -398,6 +398,7 @@ struct GPUInterface {
 	//virtual GPU::InputAssemblerConfigID RegisterInputAssemblyConfig(GPU::StreamFormatID format, mu::PointerRange<const GPU::VertexBufferID> vertex_buffers, GPU::IndexBufferID index_buffer) = 0;
 
 	virtual GPU::ShaderID CompileShader(GPU::ShaderType type, mu::PointerRange<const char> name) = 0;
+	virtual void RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const char> name) = 0;
 	virtual GPU::ProgramID LinkProgram(GPU::ProgramDesc desc) = 0;
 
 	virtual GPU::PipelineStateID CreatePipelineState(const GPU::PipelineStateDesc& desc) = 0;

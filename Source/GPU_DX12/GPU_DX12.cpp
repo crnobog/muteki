@@ -286,6 +286,7 @@ struct GPU_DX12 : public GPUInterface {
 	virtual void SubmitPass(const RenderPass& pass) override;
 
 	virtual ShaderID CompileShader(ShaderType type, mu::PointerRange<const char>) override;
+	virtual void RecompileShader(ShaderID id, ShaderType type, mu::PointerRange<const char>) override;
 	virtual ProgramID LinkProgram(ProgramDesc desc) override;
 
 	virtual GPU::PipelineStateID CreatePipelineState(const GPU::PipelineStateDesc& desc) override;
@@ -654,6 +655,10 @@ GPU::ShaderID GPU_DX12::CompileShader(ShaderType type, PointerRange<const char> 
 	}
 
 	return id;
+}
+
+void GPU_DX12::RecompileShader(GPU::ShaderID, GPU::ShaderType, mu::PointerRange<const char>) {
+
 }
 
 ProgramID GPU_DX12::LinkProgram(ProgramDesc desc) {

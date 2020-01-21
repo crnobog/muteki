@@ -567,6 +567,7 @@ struct GPU_Vulkan : public GPUInterface {
 	virtual void SubmitPass(const RenderPass& pass) override;
 
 	virtual ShaderID CompileShader(ShaderType type, PointerRange<const char> name) override;
+	virtual void RecompileShader(ShaderID id, ShaderType type, PointerRange<const char> name) override;
 	virtual ProgramID LinkProgram(ProgramDesc desc) override;
 
 	virtual GPU::PipelineStateID CreatePipelineState(const GPU::PipelineStateDesc& desc) override;
@@ -2118,6 +2119,7 @@ GPU::ShaderID GPU_Vulkan::CompileShader(ShaderType type, PointerRange<const char
 	return id;
 }
 
+void GPU_Vulkan::RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const char> name) {
 
 }
 

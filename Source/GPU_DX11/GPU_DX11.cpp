@@ -180,6 +180,7 @@ struct GPU_DX11 : public GPUInterface {
 	//virtual InputAssemblerConfigID RegisterInputAssemblyConfig(StreamFormatID format, mu::PointerRange<const VertexBufferID> vertex_buffers, IndexBufferID index_buffer) override;
 
 	virtual ShaderID CompileShader(GPU::ShaderType type, mu::PointerRange<const char> name) override;
+	virtual void RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const char> name) override;
 	virtual ProgramID LinkProgram(ProgramDesc desc) override;
 
 	virtual GPU::PipelineStateID CreatePipelineState(const GPU::PipelineStateDesc& desc) override;
@@ -496,6 +497,10 @@ GPU::ShaderID GPU_DX11::CompileShader(GPU::ShaderType type, mu::PointerRange<con
 	}
 	
 	return id;
+}
+
+void GPU_DX11::RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const char> name) {
+
 }
 
 ProgramID GPU_DX11::LinkProgram(ProgramDesc desc) {
