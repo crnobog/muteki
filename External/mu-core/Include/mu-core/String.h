@@ -34,7 +34,7 @@ namespace mu {
 		String_T(std::tuple<OtherChar*, SizeType> t) {
 			const auto* str = std::get<0>(t);
 			auto len = std::get<1>(t);
-			AppendRange(Range(str, str + len));
+			AppendRange(mu::Range(str, str + len));
 		}
 
 		String_T(PointerRange<const CharType> range)
@@ -44,8 +44,9 @@ namespace mu {
 
 		template<typename... RANGES>
 		static String_T FromRanges(RANGES&&... rs) {
+			// TODO: Assert that all are ranges
 			String_T s;
-			s.AppendRanges(Range(std::forward<RANGES>(rs))...);
+			s.AppendRanges(mu::Range(std::forward<RANGES>(rs))...);
 			return s;
 		}
 
@@ -53,6 +54,12 @@ namespace mu {
 		const CharType* GetRaw() const { return m_data.Data(); }
 		PointerRange<u8> Bytes() { return m_data.Bytes(); }
 		PointerRange<const u8> Bytes() const { return m_data.Bytes(); }
+		PointerRange<CharType> Range() {
+			return m_data.Range();
+		}
+		PointerRange<const CharType> Range() const { 
+			return m_data.Range();
+		}
 		size_t GetLength() const {
 			size_t n = m_data.Num();
 			return n == 0 ? 0 : n - 1;
