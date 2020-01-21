@@ -49,7 +49,7 @@ namespace mu {
 		template<typename... TS>
 		IndexType Emplace(TS&&... ts) {
 			size_t index = AllocateIndex();
-			new(&m_elements[index]) ElementType(std::forward<TS>(ts)...);
+			new(&m_elements[index]) ElementType(std::forward<TS>(ts)...); // TODO: Replace with uniform initialization?
 			return IndexType{ index };
 		}
 
