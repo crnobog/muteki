@@ -1,4 +1,13 @@
-﻿#ifdef _MSC_VER
+﻿// TODO: Shader manager
+// TODO: Overlay for FPS/Input State/ETC
+// TODO: Update IMGUI
+// TODO: Move IMGUI integration to its own file
+// TODO: Integrate mouse wheel controls into IMGUI
+// TODO: Refactor GPU ID structs to split bits internally e.g. temporary vs persistent constant buffer
+// TODO: Descriptor set design
+// TODOLONGTERM: Render graph
+
+#ifdef _MSC_VER
 #    pragma comment(linker, "/subsystem:windows /ENTRY:mainCRTStartup")
 #endif
 
