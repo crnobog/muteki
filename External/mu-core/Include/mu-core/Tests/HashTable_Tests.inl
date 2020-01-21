@@ -23,7 +23,7 @@ TEST_SUITE("Hashtable") {
 		CHECK_EQ(hash.GetNum(), 0);
 		CHECK_FALSE(hash.Contains(Key{ 12 }));
 
-		auto r = Range(hash);
+		auto r = hash.Range();
 		CHECK(r.IsEmpty());
 	}
 
@@ -77,7 +77,7 @@ TEST_SUITE("Hashtable") {
 		SUBCASE("Iterate") {
 			u64 expected_pairs = keys.Num();
 			u64 num = 0;
-			for (auto[k, v] : Range(hash)) {
+			for (auto[k, v] : hash.Range()) {
 				++num;
 				auto found_key = Find(keys, [k](const Key& arr_k) { return k == arr_k; });
 				CHECK_FALSE(found_key.IsEmpty());

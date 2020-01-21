@@ -230,14 +230,9 @@ namespace mu {
 		}
 	public:
 
-		HashRange MakeRange() { return { HashUtil::FirstFilled(0, m_hash_state, m_size), m_size, m_hash_state, m_keys, m_values }; }
-		ConstHashRange MakeRange() const { return { HashUtil::FirstFilled(0, m_hash_state, m_size), m_size, m_hash_state, m_keys, m_values }; }
+		HashRange Range() { return { HashUtil::FirstFilled(0, m_hash_state, m_size), m_size, m_hash_state, m_keys, m_values }; }
+		ConstHashRange Range() const { return { HashUtil::FirstFilled(0, m_hash_state, m_size), m_size, m_hash_state, m_keys, m_values }; }
 	};
-
-	template<typename K, typename V>
-	auto Range(const HashTable<K, V>& hash_table) { return hash_table.MakeRange(); }
-	template<typename K, typename V>
-	auto Range(HashTable<K, V>& hash_table) { return hash_table.MakeRange(); }
 
 	template<typename KeyType, typename ValueType>
 	HashTable<KeyType, ValueType>::HashTable() {}
