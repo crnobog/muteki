@@ -150,10 +150,15 @@ struct GPU_DX12 : public GPUInterface {
 		ShaderType Type;
 		COMPtr<ID3DBlob> CompiledShader;
 		VertexShaderInputs Inputs;
+		Array<PipelineStateID> UsingPSOs;
 
-		Shader(ShaderType type)
+		Shader(ShaderType type, COMPtr<ID3DBlob> compiled_shader)
 			: Type(type)
+			, CompiledShader(std::move(compiled_shader))
 		{}
+
+		Shader(Shader&&) = default;
+		Shader& operator=(Shader&&) = default;
 	};
 
 	struct InputAssemblerConfig {
@@ -183,6 +188,14 @@ struct GPU_DX12 : public GPUInterface {
 		GPU::PipelineStateDesc					Desc;
 		COMPtr<ID3D12PipelineState>				PSO;
 		FixedArray<u32, GPU::MaxStreamSlots>	VBStrides;
+
+		PipelineState(const GPU::PipelineStateDesc& desc) 
+			: Desc(desc)
+		{
+		}
+
+		PipelineState(PipelineState&&) = default;
+		PipelineState& operator=(PipelineState&&) = default;
 	};
 
 	struct Texture {
@@ -259,6 +272,7 @@ struct GPU_DX12 : public GPUInterface {
 
 	HashTable<GPU::PipelineStateDesc, PipelineStateID> m_cached_pipeline_states;
 	Pool<PipelineState, PipelineStateID> m_pipeline_states{ 128 };
+	Array<PipelineStateID> m_dirty_pipeline_states;
 	Pool<Framebuffer, FramebufferID> m_framebuffers{ 128 };
 
 	static constexpr size_t max_persistent_cbs = 128;
@@ -316,6 +330,9 @@ struct GPU_DX12 : public GPUInterface {
 	// END GPUInterface functions
 
 	void OnSwapChainUpdated();
+	void PostCompileShader(Shader& shader);
+	bool CreatePipelineStateInternal(const GPU::PipelineStateDesc& desc, PipelineState& out_ps);
+	bool RecreatePipelineState(PipelineStateID id);
 
 	D3D12_CPU_DESCRIPTOR_HANDLE GetRenderTargetView(D3D12_CPU_DESCRIPTOR_HANDLE backbuffer, RenderTargetID id);
 	D3D12_CONSTANT_BUFFER_VIEW_DESC GetConstantBufferViewDesc(GPU_DX12_Frame* frame, ConstantBufferID id);
@@ -531,6 +548,21 @@ void GPU_DX12::OnSwapChainUpdated() {
 GPUFrameInterface* GPU_DX12::BeginFrame(Vec4 scene_clear_color) {
 	auto& frame = m_frame_data[m_frame_index];
 
+	if( m_dirty_pipeline_states.Num() ) {
+		// TODO: Wait for pipeline states to be out of use? Or create and leave ready without discarding refs to old state?
+		for (i32 i = 0; i < frame_count; ++i) {
+			m_frame_fence.WaitForFence(m_frame_data[i]->m_fence_value, m_frame_fence_event);
+		}
+
+		Array<PipelineStateID> new_dirty_pipeline_states;
+		for (PipelineStateID id : m_dirty_pipeline_states) {
+			if (!RecreatePipelineState(id)) {
+				new_dirty_pipeline_states.Add(id);
+			}
+		}
+		m_dirty_pipeline_states = new_dirty_pipeline_states;
+	}
+
 	m_frame_fence.WaitForFence(frame->m_fence_value, m_frame_fence_event);
 	frame->m_used_command_allocators = 0;
 
@@ -597,41 +629,40 @@ static String GetShaderFilename(mu::PointerRange<const char> name)
 	return String::FromRanges(GetShaderDirectory(), name, ".hlsl");
 }
 
-GPU::ShaderID GPU_DX12::CompileShader(ShaderType type, PointerRange<const char> name) {
-	ShaderID id = m_registered_shaders.Emplace(type);
-	Shader& shader = m_registered_shaders[id];
-	COMPtr<ID3DBlob>& compiled_shader = shader.CompiledShader;
-	{
-		const char* shader_model = nullptr;
-		const char* entry_point = nullptr;
-		switch (type) {
-		case GPU::ShaderType::Vertex:
-			shader_model = "vs_5_0";
-			entry_point = "vs_main";
-			break;
-		case GPU::ShaderType::Pixel:
-			shader_model = "ps_5_0";
-			entry_point = "ps_main";
-			break;
-		default:
-			Assert(false);
-		}
-
-		String shader_filename = GetShaderFilename(name);
-		String shader_txt_code = LoadFileToString(shader_filename.GetRaw());
-
-		DX::CompileShaderHLSL(compiled_shader.Replace(), shader_model, entry_point, shader_txt_code.Bytes());
-		Assert(compiled_shader.Get());
+static COMPtr<ID3DBlob> CompileShaderInternal(ShaderType type, PointerRange<const char> name) {
+	COMPtr<ID3DBlob> compiled_shader;
+	const char* shader_model = nullptr;
+	const char* entry_point = nullptr;
+	switch (type) {
+	case GPU::ShaderType::Vertex:
+		shader_model = "vs_5_0";
+		entry_point = "vs_main";
+		break;
+	case GPU::ShaderType::Pixel:
+		shader_model = "ps_5_0";
+		entry_point = "ps_main";
+		break;
+	default:
+		Assert(false);
 	}
 
-	if (type == GPU::ShaderType::Vertex) {
+	String shader_filename = GetShaderFilename(name);
+	String shader_txt_code = LoadFileToString(shader_filename.GetRaw());
+
+	DX::CompileShaderHLSL(compiled_shader.Replace(), shader_model, entry_point, shader_txt_code.Bytes());
+	return std::move(compiled_shader);
+}
+
+void GPU_DX12::PostCompileShader(Shader& shader) {
+	if (shader.Type == GPU::ShaderType::Vertex) {
 		// TODO: Use for validation or remove
 		VertexShaderInputs& inputs = shader.Inputs;
+		inputs.InputElements.Empty();
 
 		COMPtr<ID3D12ShaderReflection> reflector;
 		EnsureHR(D3DReflect(
-			compiled_shader->GetBufferPointer(),
-			compiled_shader->GetBufferSize(),
+			shader.CompiledShader->GetBufferPointer(),
+			shader.CompiledShader->GetBufferSize(),
 			IID_PPV_ARGS(reflector.Replace())
 		));
 		D3D12_SHADER_DESC desc;
@@ -653,12 +684,42 @@ GPU::ShaderID GPU_DX12::CompileShader(ShaderType type, PointerRange<const char> 
 			}
 		}
 	}
+}
+
+GPU::ShaderID GPU_DX12::CompileShader(ShaderType type, PointerRange<const char> name) {
+	COMPtr<ID3DBlob> compiled_shader = CompileShaderInternal(type, name);
+	if (!compiled_shader) {
+		return {}; //Failure
+	}
+
+	ShaderID id = m_registered_shaders.Emplace(type, std::move(compiled_shader));
+	Shader& shader = m_registered_shaders[id];
+
+	PostCompileShader(shader);
 
 	return id;
 }
 
-void GPU_DX12::RecompileShader(GPU::ShaderID, GPU::ShaderType, mu::PointerRange<const char>) {
+void GPU_DX12::RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const char> name) {
+	Shader& shader = m_registered_shaders[id];
+	Assert(shader.Type == type); // TODO: is type argument necessary?
 
+	{
+		COMPtr<ID3DBlob> compiled_shader = CompileShaderInternal(type, name);
+		if (!compiled_shader) {
+			// TODO: Logging
+			return; // Failure
+		}
+
+		// TODO: Is any synchronization needed here?
+		// TODO: Can these pointers actually be freed after PSO creation?
+		shader.CompiledShader = std::move(compiled_shader);
+		// TODO: Invalidate PSOs
+	}
+	
+	PostCompileShader(shader);
+
+	m_dirty_pipeline_states.Append(shader.UsingPSOs.Range());
 }
 
 ProgramID GPU_DX12::LinkProgram(ProgramDesc desc) {
@@ -666,20 +727,12 @@ ProgramID GPU_DX12::LinkProgram(ProgramDesc desc) {
 	return id;
 }
 
-GPU::PipelineStateID GPU_DX12::CreatePipelineState(const GPU::PipelineStateDesc& desc) {
-	PipelineStateID id = m_cached_pipeline_states.FindOrDefault(desc);
-	if (id != PipelineStateID{}) {
-		return id;
-	}
-
-	id = m_pipeline_states.AddDefaulted();
-	PipelineState& ps = m_pipeline_states[id];
-	ps.Desc = desc;
+bool GPU_DX12::CreatePipelineStateInternal(const GPU::PipelineStateDesc& desc, PipelineState& out_ps) {
 	LinkedProgram program = m_linked_programs[desc.Program];
 	Array<D3D12_INPUT_ELEMENT_DESC> input_layout; // TODO: fixed array
 
 	for (u32 slot_idx = 0; slot_idx < desc.StreamFormat.Slots.Num(); ++slot_idx) {
-		u32& stride = ps.VBStrides.AddZeroed(1).Front();
+		u32& stride = out_ps.VBStrides.AddZeroed(1).Front();
 		const GPU::StreamSlotDesc& slot = desc.StreamFormat.Slots[slot_idx];
 		for (GPU::StreamElementDesc& elem : slot.Elements) {
 			stride += GPU::GetStreamElementSize(elem);
@@ -691,13 +744,16 @@ GPU::PipelineStateID GPU_DX12::CreatePipelineState(const GPU::PipelineStateDesc&
 				D3D12_APPEND_ALIGNED_ELEMENT,
 				D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
 				0
-							 });
+				});
 		}
 	}
 
+	Shader& vshader = m_registered_shaders[program.Desc.VertexShader];
+	Shader& pshader = m_registered_shaders[program.Desc.PixelShader];
+
 	auto pipeline_desc = GraphicsPipelineStateDesc{ m_root_signature.Get() }
-		.VS(m_registered_shaders[program.Desc.VertexShader].CompiledShader)
-		.PS(m_registered_shaders[program.Desc.PixelShader].CompiledShader)
+		.VS(vshader.CompiledShader)
+		.PS(pshader.CompiledShader)
 		.DepthStencilState(desc.DepthStencilState)
 		.DepthStencilFormat(desc.DepthStencilState.DepthEnable ? DXGI_FORMAT_D32_FLOAT : DXGI_FORMAT_UNKNOWN)
 		.BlendState(desc.BlendState)
@@ -705,11 +761,45 @@ GPU::PipelineStateID GPU_DX12::CreatePipelineState(const GPU::PipelineStateDesc&
 		.PrimType(GPU::PrimitiveTopologyToPrimitiveType(desc.PrimitiveTopology))
 		.RenderTargets(DXGI_FORMAT_R8G8B8A8_UNORM)
 		.InputLayout(input_layout.Data(), (u32)input_layout.Num());
-	EnsureHR(m_device->CreateGraphicsPipelineState(&pipeline_desc, IID_PPV_ARGS(ps.PSO.Replace())));
+	EnsureHR(m_device->CreateGraphicsPipelineState(&pipeline_desc, IID_PPV_ARGS(out_ps.PSO.Replace())));
+
+	return true;
+}
+
+GPU::PipelineStateID GPU_DX12::CreatePipelineState(const GPU::PipelineStateDesc& desc) {
+	PipelineStateID id = m_cached_pipeline_states.FindOrDefault(desc);
+	if (id != PipelineStateID{}) {
+		return id;
+	}
+
+	id = m_pipeline_states.Emplace(desc);
+	PipelineState& ps = m_pipeline_states[id];
+
+	bool success = CreatePipelineStateInternal(desc, ps);
+	Assert(success);
+
+	LinkedProgram program = m_linked_programs[desc.Program];
+	Shader& vshader = m_registered_shaders[program.Desc.VertexShader];
+	vshader.UsingPSOs.Add(id);
+	Shader& pshader = m_registered_shaders[program.Desc.PixelShader];
+	pshader.UsingPSOs.Add(id);
 
 	return id;
 }
 void GPU_DX12::DestroyPipelineState(GPU::PipelineStateID) {}
+
+bool GPU_DX12::RecreatePipelineState(GPU::PipelineStateID id) {
+	PipelineState& existing_ps = m_pipeline_states[id];
+	PipelineState new_ps{existing_ps.Desc};
+	if (CreatePipelineStateInternal(existing_ps.Desc, new_ps)) {
+		existing_ps = std::move(new_ps);
+		return true;
+	}
+	else {
+		Assert(false);
+		return false;
+	}
+}
 
 ConstantBufferID GPU_DX12::CreateConstantBuffer(PointerRange<const u8> data) {
 	COMPtr<ID3D12Resource> cbuffer;
