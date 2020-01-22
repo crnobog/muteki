@@ -37,7 +37,8 @@ public:
 	RefCountPtr& operator=(const RefCountPtr& other) {
 		Clear();
 		m_ptr = other.m_ptr;
-		AddRef();
+		IncRef();
+		return *this;
 	}
 
 	RefCountPtr& operator=(RefCountPtr&& other) {
