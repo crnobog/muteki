@@ -5,6 +5,7 @@
 #define SCOPE_EXIT(BLOCK) auto STRING_JOIN2(scope_exit_, __LINE__) = mu::make_scope_exit([&](){ BLOCK ;});
 
 #define FORCEINLINE __forceinline
+#define FORCENOINLINE __declspec(noinline)
 #define BREAK_OR_CRASH (__debugbreak(),(*(int*)nullptr)++)
 
 template<typename T>
