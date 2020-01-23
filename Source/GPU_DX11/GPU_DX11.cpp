@@ -96,20 +96,46 @@ struct GPU_DX11 : public GPUInterface {
 		}
 
 		Shader(const Shader& other) = delete;
-		Shader(Shader&& other) = default;
+		Shader(Shader&& other) {
+			Type = other.Type;
+			switch (Type) {
+			case GPU::ShaderType::Vertex:
+				ShaderObject.VertexShader = other.ShaderObject.VertexShader;
+				other.ShaderObject.VertexShader = nullptr;
+				break;
+
+			case GPU::ShaderType::Pixel:
+				ShaderObject.PixelShader = other.ShaderObject.PixelShader;
+				other.ShaderObject.PixelShader = nullptr;
+				break;
+			default:
+				Assert(false);
+			}
+		}
 
 		Shader& operator=(const Shader& other) = delete;
-		Shader& operator=(Shader&& other) = default;
+		Shader& operator=(Shader&& other) {
+			this->~Shader();
+			new(this) Shader(std::move(other));
+			return *this;
+		}
 
 		~Shader()
 		{
+			IUnknown* Obj = nullptr;
 			switch (Type) {
 			case GPU::ShaderType::Vertex:
-				ShaderObject.VertexShader->Release();
+				Obj = ShaderObject.VertexShader;
 				break;
 			case GPU::ShaderType::Pixel:
-				ShaderObject.PixelShader->Release();
+				Obj = ShaderObject.PixelShader;
 				break;
+			default:
+				Assert(false);
+			}
+
+			if (Obj) {
+				Obj->Release();
 			}
 		}
 	};
@@ -214,6 +240,7 @@ struct GPU_DX11 : public GPUInterface {
 	// END GPUInterface functions
 
 	void OnSwapChainUpdated();
+	bool CompileShaderInternal(GPU::ShaderType type, mu::PointerRange<const char> name, Shader& out_shader) const;
 
 	ID3D11RenderTargetView* GetRenderTargetView(RenderTargetID id) {
 		Assert(id == RenderTargetID{});
@@ -430,7 +457,7 @@ static String GetShaderFilename(mu::PointerRange<const char> name)
 	return String::FromRanges(GetShaderDirectory(), name, ".hlsl");
 }
 
-GPU::ShaderID GPU_DX11::CompileShader(GPU::ShaderType type, mu::PointerRange<const char> name) {
+bool GPU_DX11::CompileShaderInternal(GPU::ShaderType type, mu::PointerRange<const char> name, Shader& out_shader) const {
 	COMPtr<ID3DBlob> compiled_shader;
 	{
 		const char* shader_model = nullptr;
@@ -455,24 +482,22 @@ GPU::ShaderID GPU_DX11::CompileShader(GPU::ShaderType type, mu::PointerRange<con
 		Assert(compiled_shader.Get());
 	}
 
-	ShaderID id = m_shaders.Emplace(type);
-	Shader& shader = m_shaders[id];
 
 	switch (type) {
 	case GPU::ShaderType::Vertex:
 		EnsureHR(m_device->CreateVertexShader(
-			compiled_shader->GetBufferPointer(), compiled_shader->GetBufferSize(), nullptr, &shader.ShaderObject.VertexShader
+			compiled_shader->GetBufferPointer(), compiled_shader->GetBufferSize(), nullptr, &out_shader.ShaderObject.VertexShader
 		));
 		break;
 	case GPU::ShaderType::Pixel:
 		EnsureHR(m_device->CreatePixelShader(
-			compiled_shader->GetBufferPointer(), compiled_shader->GetBufferSize(), nullptr, &shader.ShaderObject.PixelShader
+			compiled_shader->GetBufferPointer(), compiled_shader->GetBufferSize(), nullptr, &out_shader.ShaderObject.PixelShader
 		));
 		break;
 	}
 
 	if (type == GPU::ShaderType::Vertex) {
-		VertexShaderInputs& inputs = shader.Inputs;
+		VertexShaderInputs& inputs = out_shader.Inputs;
 
 		COMPtr<ID3D11ShaderReflection> reflector;
 		EnsureHR(D3DReflect(
@@ -500,11 +525,23 @@ GPU::ShaderID GPU_DX11::CompileShader(GPU::ShaderType type, mu::PointerRange<con
 		}
 	}
 	
+	return true;
+}
+
+GPU::ShaderID GPU_DX11::CompileShader(GPU::ShaderType type, mu::PointerRange<const char> name) {
+	ShaderID id = m_shaders.Emplace(type);
+	Shader& shader = m_shaders[id];
+	CompileShaderInternal(type, name, shader);
 	return id;
 }
 
 void GPU_DX11::RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const char> name) {
+	Shader new_shader{type};
+	if (!CompileShaderInternal(type, name, new_shader)) {
+		return;
+	}
 
+	m_shaders[id] = std::move(new_shader);
 }
 
 ProgramID GPU_DX11::LinkProgram(ProgramDesc desc) {
