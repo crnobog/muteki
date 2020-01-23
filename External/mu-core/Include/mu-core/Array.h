@@ -44,10 +44,12 @@ namespace mu {
 
 		Array& operator=(Array&& other) {
 			this->~Array();
+			m_data = nullptr;
 
 			std::swap(m_data, other.m_data);
 			std::swap(m_num, other.m_num);
 			std::swap(m_max, other.m_max);
+
 			return *this;
 		}
 
