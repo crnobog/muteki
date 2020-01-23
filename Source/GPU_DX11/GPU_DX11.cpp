@@ -125,6 +125,10 @@ struct GPU_DX11 : public GPUInterface {
 	};
 	struct Framebuffer {
 		GPU::FramebufferDesc Desc;
+		Framebuffer(GPU::FramebufferDesc desc)
+			: Desc(desc) 
+		{
+		}
 	};
 
 	GPU_DX11() : m_frame_data(this) {}
@@ -680,8 +684,7 @@ ShaderResourceListID GPU_DX11::CreateShaderResourceList(const GPU::ShaderResourc
 }
 
 GPU::FramebufferID GPU_DX11::CreateFramebuffer(const GPU::FramebufferDesc& desc) {
-	Assert(false);
-	return {};
+	return m_framebuffers.Emplace(desc);
 }
 
 void GPU_DX11::DestroyFramebuffer(GPU::FramebufferID id) {
