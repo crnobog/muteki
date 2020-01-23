@@ -164,7 +164,7 @@ struct ImGuiImpl {
 			gpu_cmds.AddZeroed(draw_list->CmdBuffer.Size);
 			PointerRange<GPU::DrawItem> gpu_cmd_cursor{ Range(gpu_cmds) };
 
-			GPU::VertexBufferID vb_id = gpu_frame->GetTemporaryVertexBuffer(mu::ByteRange(draw_list->VtxBuffer.Data, draw_list->VtxBuffer.Size));
+			GPU::VertexBufferID vb_id = gpu_frame->GetTemporaryVertexBuffer(mu::ByteRange(draw_list->VtxBuffer.Data, draw_list->VtxBuffer.Size), 12); // TODO: Determine alignment properly from stream format
 			GPU::IndexBufferID ib_id = gpu_frame->GetTemporaryIndexBuffer(mu::ByteRange(draw_list->IdxBuffer.Data, draw_list->IdxBuffer.Size));
 			GPU::StreamSetup stream_setup;
 			stream_setup.VertexBuffers.Add(vb_id);

@@ -59,7 +59,7 @@ struct GPU_DX11_Frame : public GPUFrameInterface {
 	Array<IndexBufferID> m_temp_ibuffers;
 
 	virtual GPU::ConstantBufferID GetTemporaryConstantBuffer(PointerRange<const u8>) override;
-	virtual GPU::VertexBufferID GetTemporaryVertexBuffer(mu::PointerRange<const u8> data) override;
+	virtual GPU::VertexBufferID GetTemporaryVertexBuffer(mu::PointerRange<const u8> data, size_t alignment) override;
 	virtual GPU::IndexBufferID GetTemporaryIndexBuffer(mu::PointerRange<const u8> data) override;
 };
 
@@ -695,7 +695,7 @@ ConstantBufferID GPU_DX11_Frame::GetTemporaryConstantBuffer(PointerRange<const u
 	return id;
 }
 
-VertexBufferID GPU_DX11_Frame::GetTemporaryVertexBuffer(mu::PointerRange<const u8> data) {
+VertexBufferID GPU_DX11_Frame::GetTemporaryVertexBuffer(mu::PointerRange<const u8> data, size_t alignment) {
 	VertexBufferID id = m_gpu->CreateVertexBuffer(data);
 	m_temp_vbuffers.Add(id);
 	return id;

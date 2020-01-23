@@ -119,7 +119,7 @@ struct GPU_DX12_Frame : public GPUFrameInterface {
 	size_t									m_used_command_allocators = 0;
 
 	virtual ConstantBufferID GetTemporaryConstantBuffer(PointerRange<const u8>) override;
-	virtual VertexBufferID GetTemporaryVertexBuffer(mu::PointerRange<const u8> data) override;
+	virtual VertexBufferID GetTemporaryVertexBuffer(mu::PointerRange<const u8> data, size_t alignment) override;
 	virtual IndexBufferID GetTemporaryIndexBuffer(mu::PointerRange<const u8> data) override;
 
 	ID3D12CommandAllocator*	GetCommandAllocator();
@@ -1192,7 +1192,7 @@ ConstantBufferID GPU_DX12_Frame::GetTemporaryConstantBuffer(PointerRange<const u
 	return ConstantBufferID{ index + m_gpu->max_persistent_cbs };
 }
 
-VertexBufferID GPU_DX12_Frame::GetTemporaryVertexBuffer(mu::PointerRange<const u8> data) {
+VertexBufferID GPU_DX12_Frame::GetTemporaryVertexBuffer(mu::PointerRange<const u8> data, size_t /*alignment*/) {
 	auto addr = m_linear_allocator.Allocate((u32)data.Size());
 	memcpy(addr.CPUAddress, &data.Front(), data.Size());
 	auto index = m_temp_vbs.Add({ addr.GPUAddress, (u32)data.Size(), 0 });

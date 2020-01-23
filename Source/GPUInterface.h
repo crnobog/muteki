@@ -377,7 +377,7 @@ struct GPUFrameInterface {
 	// Returns a constant buffer that is only valid for the current frame
 	//	e.g. may use a per-frame linear allocator on DX12
 	virtual GPU::ConstantBufferID GetTemporaryConstantBuffer(mu::PointerRange<const u8> data) = 0;
-	virtual GPU::VertexBufferID GetTemporaryVertexBuffer(mu::PointerRange<const u8> data) = 0;
+	virtual GPU::VertexBufferID GetTemporaryVertexBuffer(mu::PointerRange<const u8> data, size_t alignment) = 0;
 	virtual GPU::IndexBufferID GetTemporaryIndexBuffer(mu::PointerRange<const u8> data) = 0;
 };
 

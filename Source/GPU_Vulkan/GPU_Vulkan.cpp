@@ -279,9 +279,9 @@ struct GPU_Vulkan_Frame : public GPUFrameInterface
 		memcpy(alloc.m_mapped, data.m_start, data.Size());
 		return ConstantBufferID{ MaxPersistentConstantBuffers + idx };
 	}
-	virtual VertexBufferID GetTemporaryVertexBuffer(PointerRange<const u8> data)
+	virtual VertexBufferID GetTemporaryVertexBuffer(PointerRange<const u8> data, size_t alignment)
 	{
-		VulkanSubAllocation alloc = m_linear_allocator.Allocate(data.Size(), 1);
+		VulkanSubAllocation alloc = m_linear_allocator.Allocate(data.Size(), alignment);
 		size_t idx = m_temp_vbs.Add(alloc);
 		memcpy(alloc.m_mapped, data.m_start, data.Size());
 		return VertexBufferID{ MaxPersistentVertexBuffers + idx };
