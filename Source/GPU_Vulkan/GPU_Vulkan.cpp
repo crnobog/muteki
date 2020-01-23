@@ -478,17 +478,17 @@ struct GPU_Vulkan : public GPUInterface {
 	struct Shader {
 		ShaderType Type;
 		VkShaderModule ShaderModule;
+		Array<PipelineStateID> UsingPSOs;
 
-		Shader(ShaderType type)
+		Shader(ShaderType type, VkShaderModule shader_module)
 			: Type(type) 
+			, ShaderModule(shader_module)
 		{
 		}
 	};
 
 	struct LinkedProgram {
 		ProgramDesc Desc;
-
-		VkPipelineShaderStageCreateInfo ShaderStages[2]; // TODO: Comment
 
 		LinkedProgram(ProgramDesc desc) 
 		: Desc(desc) 
@@ -499,6 +499,12 @@ struct GPU_Vulkan : public GPUInterface {
 	struct PipelineState {
 		VkPipeline				m_pipeline = nullptr;
 		GPU::PipelineStateDesc	m_desc;
+
+		PipelineState(GPU::PipelineStateDesc desc, VkPipeline pipeline)
+			: m_pipeline(pipeline)
+			, m_desc(desc)
+		{
+		}
 	};
 
 	struct VertexBuffer {
@@ -694,6 +700,8 @@ struct GPU_Vulkan : public GPUInterface {
 	Pool<DepthTarget, DepthTargetID>				m_depth_targets{ MaxDepthTargets };
 	Pool<Framebuffer, FramebufferID>				m_framebuffers{ 128 };
 
+	Array<PipelineStateID> m_dirty_psos;
+
 	// Temporary descriptor set layouts
 	// TODO: Expose descriptor set layouts to higher level? Design descriptor set layouts to allow some guarantees about update frequency? Hide it all and use push constants to index large buffers?
 	// Uniform buffers
@@ -747,6 +755,11 @@ struct GPU_Vulkan : public GPUInterface {
 	void CmdDebugEnd(VkCommandBuffer command_buffer) {
 		m_debug_utils.VkCmdEndDebugUtilsLabelEXT(command_buffer);
 	}
+
+	// Internal functions
+	VkShaderModule CompileShaderInternal(ShaderType type, PointerRange<const char> name);
+	bool RecreatePipelineState(PipelineStateID id);
+	bool CreatePipelineStateInternal(const GPU::PipelineStateDesc& desc, VkPipeline& out_ps);
 };
 
 GPU_Vulkan::GPU_Vulkan() {
@@ -1593,6 +1606,17 @@ GPUFrameInterface* GPU_Vulkan::BeginFrame(Vec4 scene_clear_color)
 	Assert(vkGetFenceStatus(m_device, frame.m_fence) == VK_SUCCESS);
 	frame.ResetFrame(m_device);
 
+	if (m_dirty_psos.Num()) {
+		Array<PipelineStateID> new_dirty_psos;
+		for( PipelineStateID id : m_dirty_psos ) {
+			if (!RecreatePipelineState(id)) {
+				new_dirty_psos.Add(id);
+			}
+		}
+
+		m_dirty_psos = std::move(new_dirty_psos);
+	}
+
 	vkAcquireNextImageKHR(m_device, m_swap_chain, u64_max, frame.m_backbuffer_semaphore, nullptr, &frame.m_swap_chain_image_index); // TODO: semaphore, fence?
 
 	VkImage image = m_swap_chain_images[frame.m_swap_chain_image_index];
@@ -2054,7 +2078,7 @@ static String GetShaderFilename(mu::PointerRange<const char> name, GPU::ShaderTy
 	return String::FromRanges(GetShaderDirectory(), name, suffix);
 }
 
-GPU::ShaderID GPU_Vulkan::CompileShader(ShaderType type, PointerRange<const char> name) {
+VkShaderModule GPU_Vulkan::CompileShaderInternal(ShaderType type, PointerRange<const char> name) {
 	String shader_filename = GetShaderFilename(name, type);
 	String shader_txt_code = LoadFileToString(shader_filename.GetRaw());
 	PointerRange<const u8> code = shader_txt_code.Bytes();
@@ -2091,7 +2115,7 @@ GPU::ShaderID GPU_Vulkan::CompileShader(ShaderType type, PointerRange<const char
 			const char* err = shaderc_result_get_error_message(result);
 			Assertf(false, "{} errors:\n {}", num_errors, err);
 		}
-		return ShaderID{};
+		return nullptr;
 	}
 
 	if (size_t num_warnings = shaderc_result_get_num_warnings(result); num_warnings != 0)
@@ -2103,10 +2127,8 @@ GPU::ShaderID GPU_Vulkan::CompileShader(ShaderType type, PointerRange<const char
 	size_t result_size = shaderc_result_get_length(result);
 	const char* result_bytes = shaderc_result_get_bytes(result);
 
-	ShaderID id = m_registered_shaders.Emplace(type);
-	Shader& shader = m_registered_shaders[id];
-	VkShaderModule& shader_module = shader.ShaderModule;
-
+	VkShaderModule shader_module;
+	
 	VkShaderModuleCreateInfo create_info = {};
 	create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 	create_info.pNext = nullptr;
@@ -2116,42 +2138,47 @@ GPU::ShaderID GPU_Vulkan::CompileShader(ShaderType type, PointerRange<const char
 
 	EnsureVK(vkCreateShaderModule(m_device, &create_info, m_allocation_callbacks, &shader_module));
 
+	shaderc_result_release(result);
+
+	return shader_module;
+}
+
+GPU::ShaderID GPU_Vulkan::CompileShader(ShaderType type, PointerRange<const char> name) {
+	VkShaderModule shader_module = CompileShaderInternal(type, name);
+	Assert(shader_module);
+
+	ShaderID id = m_registered_shaders.Emplace(type, shader_module);
+
 	return id;
 }
 
 void GPU_Vulkan::RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const char> name) {
+	VkShaderModule shader_module = CompileShaderInternal(type, name);
+	if (!shader_module) {
+		return;
+	}
+	
+	// TODO: Smart pointers would make this easier, or at least easier to catch leaks
+	Shader& shader = m_registered_shaders[id];
+	VkShaderModule old_module = shader.ShaderModule;
+	shader.ShaderModule = shader_module;
 
+	if (old_module) {
+		vkDestroyShaderModule(m_device, old_module, m_allocation_callbacks);
+	}
+
+	for (PipelineStateID pso_id : shader.UsingPSOs) {
+		m_dirty_psos.Add(pso_id);
+	}
 }
 
 ProgramID GPU_Vulkan::LinkProgram(ProgramDesc desc)
 {
 	ProgramID id = m_linked_programs.Emplace(desc);
-	LinkedProgram& program = m_linked_programs[id];
-
-	// TODO: Check which stages are used
-	program.ShaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	program.ShaderStages[0].pNext = nullptr;
-	program.ShaderStages[0].flags = 0;
-	program.ShaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-	Assert(m_registered_shaders[desc.VertexShader].Type == GPU::ShaderType::Vertex);
-	program.ShaderStages[0].module = m_registered_shaders[desc.VertexShader].ShaderModule;
-	program.ShaderStages[0].pName = "main";
-	program.ShaderStages[0].pSpecializationInfo = nullptr;
-
-	program.ShaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	program.ShaderStages[1].pNext = nullptr;
-	program.ShaderStages[1].flags = 0;
-	program.ShaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-	Assert(m_registered_shaders[desc.VertexShader].Type == GPU::ShaderType::Pixel);
-	program.ShaderStages[1].module = m_registered_shaders[desc.PixelShader].ShaderModule;
-	program.ShaderStages[1].pName = "main";
-	program.ShaderStages[1].pSpecializationInfo = nullptr;
-
 	return id;
 }
 
-PipelineStateID GPU_Vulkan::CreatePipelineState(const GPU::PipelineStateDesc& desc)
-{
+bool GPU_Vulkan::CreatePipelineStateInternal(const GPU::PipelineStateDesc& desc, VkPipeline& out_ps) {
 	const LinkedProgram& program = m_linked_programs[desc.Program];
 
 	VkDynamicState dynamic_states[] = {
@@ -2183,7 +2210,7 @@ PipelineStateID GPU_Vulkan::CreatePipelineState(const GPU::PipelineStateDesc& de
 	input_assembly_info.flags = 0;
 	input_assembly_info.topology = CommonToVK(desc.PrimitiveTopology);
 	input_assembly_info.primitiveRestartEnable = VK_FALSE;
-	
+
 	VkRect2D scissor;
 	VkPipelineViewportStateCreateInfo viewport_info = {};
 	viewport_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -2254,12 +2281,31 @@ PipelineStateID GPU_Vulkan::CreatePipelineState(const GPU::PipelineStateDesc& de
 	blend_info.pAttachments = &blend_attachment;
 	//blend_info.blendConstants[4];
 
+	VkPipelineShaderStageCreateInfo shader_stages[2] = {
+		{
+			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr,
+			0, 
+			VK_SHADER_STAGE_VERTEX_BIT,
+			m_registered_shaders[program.Desc.VertexShader].ShaderModule,
+			"main",
+			nullptr
+		},
+		{
+			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr,
+			0,
+			VK_SHADER_STAGE_FRAGMENT_BIT,
+			m_registered_shaders[program.Desc.PixelShader].ShaderModule,
+			"main",
+			nullptr
+		},
+	};
+
 	VkGraphicsPipelineCreateInfo pipeline_state_info = {};
 	pipeline_state_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 	pipeline_state_info.pNext = nullptr;
 	pipeline_state_info.flags = 0;
 	pipeline_state_info.stageCount = 2;
-	pipeline_state_info.pStages = program.ShaderStages;
+	pipeline_state_info.pStages = shader_stages;
 	pipeline_state_info.pVertexInputState = &vertex_input_info;
 	pipeline_state_info.pInputAssemblyState = &input_assembly_info;
 	pipeline_state_info.pTessellationState = nullptr;
@@ -2275,16 +2321,45 @@ PipelineStateID GPU_Vulkan::CreatePipelineState(const GPU::PipelineStateDesc& de
 	pipeline_state_info.basePipelineHandle = nullptr;
 	pipeline_state_info.basePipelineIndex = -1;
 
-	PipelineStateID id = m_pipeline_states.AddDefaulted();
-	PipelineState& pipeline = m_pipeline_states[id];
-	pipeline.m_desc = desc;
-	EnsureVK(vkCreateGraphicsPipelines(m_device, nullptr, 1, &pipeline_state_info, m_allocation_callbacks, &pipeline.m_pipeline));
+	EnsureVK(vkCreateGraphicsPipelines(m_device, nullptr, 1, &pipeline_state_info, m_allocation_callbacks, &out_ps));
+
+	return true;
+}
+
+PipelineStateID GPU_Vulkan::CreatePipelineState(const GPU::PipelineStateDesc& desc) {
+	VkPipeline vk_obj;
+	bool success = CreatePipelineStateInternal(desc, vk_obj);
+	Assert(success);
+	
+	PipelineStateID id = m_pipeline_states.Emplace(desc, vk_obj);
+
+	LinkedProgram& program = m_linked_programs[desc.Program];
+	m_registered_shaders[program.Desc.VertexShader].UsingPSOs.Add(id);
+	m_registered_shaders[program.Desc.PixelShader].UsingPSOs.Add(id);
+
 	return id;
 }
 
 void GPU_Vulkan::DestroyPipelineState(GPU::PipelineStateID id)
 {
 	Assert(false);
+}
+
+bool GPU_Vulkan::RecreatePipelineState(PipelineStateID id) {
+
+	PipelineState& pipeline = m_pipeline_states[id];
+
+	VkPipeline new_pipeline = nullptr;
+	if (!CreatePipelineStateInternal(pipeline.m_desc, new_pipeline)) {
+		return false;
+	}
+
+	Assert(new_pipeline != nullptr);
+
+	vkDestroyPipeline(m_device, pipeline.m_pipeline, m_allocation_callbacks);
+	pipeline.m_pipeline = new_pipeline;
+
+	return true;
 }
 
 ConstantBufferID GPU_Vulkan::CreateConstantBuffer(mu::PointerRange<const u8> data)
