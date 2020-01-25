@@ -4,6 +4,8 @@
 
 using mu::String;
 
+// TODO: Directory watcher
+
 ShaderManager::ShaderManager(GPUInterface* GPU)
 	: m_gpu(GPU)
 {
