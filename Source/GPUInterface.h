@@ -390,36 +390,33 @@ struct GPUInterface {
 	virtual Vector<u32, 2> GetSwapChainDimensions() = 0;
 
 	virtual GPUFrameInterface* BeginFrame(Vec4 scene_clear_color) = 0;
+	virtual void SubmitPass(const GPU::RenderPass& pass) = 0;
 	virtual void EndFrame(GPUFrameInterface*) = 0;
 
-	virtual void SubmitPass(const GPU::RenderPass& pass) = 0;
+	virtual GPU::ShaderID	CompileShader(GPU::ShaderType type, mu::PointerRange<const char> name) = 0;
+	virtual void			RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const char> name) = 0;
+	virtual GPU::ProgramID	LinkProgram(GPU::ProgramDesc desc) = 0;
 
-	//virtual GPU::StreamFormatID RegisterStreamFormat(const GPU::StreamFormatDesc& format) = 0;
-	//virtual GPU::InputAssemblerConfigID RegisterInputAssemblyConfig(GPU::StreamFormatID format, mu::PointerRange<const GPU::VertexBufferID> vertex_buffers, GPU::IndexBufferID index_buffer) = 0;
+	virtual GPU::PipelineStateID	CreatePipelineState(const GPU::PipelineStateDesc& desc) = 0;
+	virtual void					DestroyPipelineState(GPU::PipelineStateID id) = 0;
 
-	virtual GPU::ShaderID CompileShader(GPU::ShaderType type, mu::PointerRange<const char> name) = 0;
-	virtual void RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const char> name) = 0;
-	virtual GPU::ProgramID LinkProgram(GPU::ProgramDesc desc) = 0;
-
-	virtual GPU::PipelineStateID CreatePipelineState(const GPU::PipelineStateDesc& desc) = 0;
-	virtual void DestroyPipelineState(GPU::PipelineStateID id) = 0;
-
-	virtual GPU::ConstantBufferID CreateConstantBuffer(mu::PointerRange<const u8> data) = 0;
-	virtual void DestroyConstantBuffer(GPU::ConstantBufferID id) = 0;
+	virtual GPU::ConstantBufferID	CreateConstantBuffer(mu::PointerRange<const u8> data) = 0;
+	virtual void					DestroyConstantBuffer(GPU::ConstantBufferID id) = 0;
 
 	virtual GPU::VertexBufferID CreateVertexBuffer(mu::PointerRange<const u8> data) = 0;
-	virtual void DestroyVertexBuffer(GPU::VertexBufferID id) = 0;
-	virtual GPU::IndexBufferID CreateIndexBuffer(mu::PointerRange<const u8> data) = 0;
-	virtual void DestroyIndexBuffer(GPU::IndexBufferID id) = 0;
+	virtual void				DestroyVertexBuffer(GPU::VertexBufferID id) = 0;
+	virtual GPU::IndexBufferID	CreateIndexBuffer(mu::PointerRange<const u8> data) = 0;
+	virtual void				DestroyIndexBuffer(GPU::IndexBufferID id) = 0;
 
-	virtual GPU::TextureID CreateTexture2D(u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) = 0;
+	virtual GPU::TextureID		CreateTexture2D(u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) = 0;
 
-	virtual GPU::DepthTargetID CreateDepthTarget(u32 width, u32 height) = 0;
+	virtual GPU::DepthTargetID	CreateDepthTarget(u32 width, u32 height) = 0;
 
+	// TODO: Replace with descriptor set concept?
 	virtual GPU::ShaderResourceListID CreateShaderResourceList(const GPU::ShaderResourceListDesc& desc) = 0;
 
-	virtual GPU::FramebufferID CreateFramebuffer(const GPU::FramebufferDesc& desc) = 0;
-	virtual void DestroyFramebuffer(GPU::FramebufferID) = 0;
+	virtual GPU::FramebufferID	CreateFramebuffer(const GPU::FramebufferDesc& desc) = 0;
+	virtual void				DestroyFramebuffer(GPU::FramebufferID) = 0;
 
 	virtual const char* GetName() = 0;
 };
