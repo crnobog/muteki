@@ -6,6 +6,8 @@
 // TODO: Descriptor set design
 // TODO: FName equivalent
 // TODO: Investigate using HLSL for Vulkan backend
+// TODO: Visualizer for Pool<>
+// TODO: Rename Pool<> to SparseArray?
 // TODOLONGTERM: Render graph?
 // TODOLONGTERM: Runtime switching of backend
 
