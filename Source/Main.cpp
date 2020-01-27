@@ -5,7 +5,9 @@
 // TODO: Refactor GPU ID structs to split bits internally e.g. temporary vs persistent constant buffer
 // TODO: Descriptor set design
 // TODO: FName equivalent
-// TODOLONGTERM: Render graph
+// TODO: Investigate using HLSL for Vulkan backend
+// TODOLONGTERM: Render graph?
+// TODOLONGTERM: Runtime switching of backend
 
 #ifdef _MSC_VER
 #    pragma comment(linker, "/subsystem:windows /ENTRY:mainCRTStartup")
@@ -270,7 +272,7 @@ int main(int argc, char** argv) {
 			[](const char* arg) { return String(arg); }
 		)
 	);
-	dbg::Log("Running from: {}", paths::GetExecutableDirectory());
+	dbg::Log("Running from: {}", paths::GetExecutableDirectory().c_str());
 	dbg::Log("Command line arguments: {}", args.Num());
 	for (const String& s : args)
 	{

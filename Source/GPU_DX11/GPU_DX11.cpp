@@ -202,36 +202,35 @@ struct GPU_DX11 : public GPUInterface {
 	virtual Vector<u32, 2> GetSwapChainDimensions() override { return m_swap_chain_dimensions; }
 
 	virtual GPUFrameInterface* BeginFrame(Vec4 scene_clear_color) override;
-	virtual void EndFrame(GPUFrameInterface* frame) override;
+	virtual void SubmitPass(const GPU::RenderPass& pass) override;
+	virtual void EndFrame(GPUFrameInterface*) override;
 
-	virtual void SubmitPass(const RenderPass& pass) override;
+	virtual mu::PointerRange<const char>	GetShaderSubdirectory() override;
+	virtual mu::PointerRange<const char>	GetShaderFileExtension(GPU::ShaderType type) override;
+	virtual GPU::ShaderID					CompileShader(GPU::ShaderType type, mu::PointerRange<const u8> source) override;
+	virtual void							RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const u8> source) override;
+	virtual GPU::ProgramID					LinkProgram(GPU::ProgramDesc desc) override;
 
-	//virtual StreamFormatID RegisterStreamFormat(const GPU::StreamFormatDesc& format) override;
-	//virtual InputAssemblerConfigID RegisterInputAssemblyConfig(StreamFormatID format, mu::PointerRange<const VertexBufferID> vertex_buffers, IndexBufferID index_buffer) override;
+	virtual GPU::PipelineStateID	CreatePipelineState(const GPU::PipelineStateDesc& desc) override;
+	virtual void					DestroyPipelineState(GPU::PipelineStateID id) override;
 
-	virtual ShaderID CompileShader(GPU::ShaderType type, mu::PointerRange<const char> name) override;
-	virtual void RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const char> name) override;
-	virtual ProgramID LinkProgram(ProgramDesc desc) override;
+	virtual GPU::ConstantBufferID	CreateConstantBuffer(mu::PointerRange<const u8> data) override;
+	virtual void					DestroyConstantBuffer(GPU::ConstantBufferID id) override;
 
-	virtual GPU::PipelineStateID CreatePipelineState(const GPU::PipelineStateDesc& desc) override;
-	virtual void DestroyPipelineState(GPU::PipelineStateID id) override;
+	virtual GPU::VertexBufferID CreateVertexBuffer(mu::PointerRange<const u8> data) override;
+	virtual void				DestroyVertexBuffer(GPU::VertexBufferID id) override;
+	virtual GPU::IndexBufferID	CreateIndexBuffer(mu::PointerRange<const u8> data) override;
+	virtual void				DestroyIndexBuffer(GPU::IndexBufferID id) override;
 
-	virtual ConstantBufferID CreateConstantBuffer(mu::PointerRange<const u8> data) override;
-	virtual void DestroyConstantBuffer(GPU::ConstantBufferID id) override;
+	virtual GPU::TextureID		CreateTexture2D(u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) override;
 
-	virtual VertexBufferID CreateVertexBuffer(mu::PointerRange<const u8> data) override;
-	virtual void DestroyVertexBuffer(GPU::VertexBufferID id) override;
-	virtual IndexBufferID CreateIndexBuffer(mu::PointerRange<const u8> data) override;
-	virtual void DestroyIndexBuffer(GPU::IndexBufferID id) override;
+	virtual GPU::DepthTargetID	CreateDepthTarget(u32 width, u32 height) override;
 
-	virtual TextureID CreateTexture2D(u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) override;
+	// TODO: Replace with descriptor set concept?
+	virtual GPU::ShaderResourceListID CreateShaderResourceList(const GPU::ShaderResourceListDesc& desc) override;
 
-	virtual DepthTargetID CreateDepthTarget(u32 width, u32 height) override;
-
-	virtual ShaderResourceListID CreateShaderResourceList(const GPU::ShaderResourceListDesc& desc) override;
-
-	virtual GPU::FramebufferID CreateFramebuffer(const GPU::FramebufferDesc& desc) override;
-	virtual void DestroyFramebuffer(GPU::FramebufferID id) override;
+	virtual GPU::FramebufferID	CreateFramebuffer(const GPU::FramebufferDesc& desc) override;
+	virtual void				DestroyFramebuffer(GPU::FramebufferID) override;
 
 	virtual const char* GetName() override
 	{
@@ -240,7 +239,7 @@ struct GPU_DX11 : public GPUInterface {
 	// END GPUInterface functions
 
 	void OnSwapChainUpdated();
-	bool CompileShaderInternal(GPU::ShaderType type, mu::PointerRange<const char> name, Shader& out_shader) const;
+	bool CompileShaderInternal(GPU::ShaderType type, mu::PointerRange<const u8> name, Shader& out_shader) const;
 
 	ID3D11RenderTargetView* GetRenderTargetView(RenderTargetID id) {
 		Assert(id == RenderTargetID{});
@@ -440,24 +439,7 @@ void GPU_DX11::SubmitPass(const RenderPass& pass) {
 	}
 }
 
-static PointerRange<const char> GetShaderDirectory() {
-	struct Initializer {
-		String path;
-		Initializer() {
-			auto exe_dir = mu::paths::GetExecutableDirectory();
-			path = String::FromRanges(exe_dir, mu::Range("../Shaders/DX/"));
-		}
-	};
-	static Initializer init;
-	return Range(init.path);
-}
-
-static String GetShaderFilename(mu::PointerRange<const char> name)
-{
-	return String::FromRanges(GetShaderDirectory(), name, ".hlsl");
-}
-
-bool GPU_DX11::CompileShaderInternal(GPU::ShaderType type, mu::PointerRange<const char> name, Shader& out_shader) const {
+bool GPU_DX11::CompileShaderInternal(GPU::ShaderType type, mu::PointerRange<const u8> source, Shader& out_shader) const {
 	COMPtr<ID3DBlob> compiled_shader;
 	{
 		const char* shader_model = nullptr;
@@ -475,10 +457,10 @@ bool GPU_DX11::CompileShaderInternal(GPU::ShaderType type, mu::PointerRange<cons
 			Assert(false);
 		}
 
-		String shader_filename = GetShaderFilename(name);
-		String shader_txt_code = LoadFileToString(shader_filename.GetRaw());
+		//String shader_filename = GetShaderFilename(name);
+		//String shader_txt_code = LoadFileToString(shader_filename.GetRaw());
 
-		DX::CompileShaderHLSL(compiled_shader.Replace(), shader_model, entry_point, shader_txt_code.Bytes());
+		DX::CompileShaderHLSL(compiled_shader.Replace(), shader_model, entry_point, source.Bytes());
 		Assert(compiled_shader.Get());
 	}
 
@@ -528,16 +510,23 @@ bool GPU_DX11::CompileShaderInternal(GPU::ShaderType type, mu::PointerRange<cons
 	return true;
 }
 
-GPU::ShaderID GPU_DX11::CompileShader(GPU::ShaderType type, mu::PointerRange<const char> name) {
+mu::PointerRange<const char> GPU_DX11::GetShaderSubdirectory() {
+	return "DX";
+}
+mu::PointerRange<const char> GPU_DX11::GetShaderFileExtension(GPU::ShaderType type) {
+	return "hlsl";
+}
+
+GPU::ShaderID GPU_DX11::CompileShader(GPU::ShaderType type, mu::PointerRange<const u8> source) {
 	ShaderID id = m_shaders.Emplace(type);
 	Shader& shader = m_shaders[id];
-	CompileShaderInternal(type, name, shader);
+	CompileShaderInternal(type, source, shader);
 	return id;
 }
 
-void GPU_DX11::RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const char> name) {
+void GPU_DX11::RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const u8> source) {
 	Shader new_shader{type};
-	if (!CompileShaderInternal(type, name, new_shader)) {
+	if (!CompileShaderInternal(type, source, new_shader)) {
 		return;
 	}
 

@@ -568,33 +568,35 @@ struct GPU_Vulkan : public GPUInterface {
 	virtual Vector<u32, 2> GetSwapChainDimensions() override;
 
 	virtual GPUFrameInterface* BeginFrame(Vec4 scene_clear_color) override;
-	virtual void EndFrame(GPUFrameInterface* frame) override;
+	virtual void SubmitPass(const GPU::RenderPass& pass) override;
+	virtual void EndFrame(GPUFrameInterface*) override;
 
-	virtual void SubmitPass(const RenderPass& pass) override;
+	virtual mu::PointerRange<const char>	GetShaderSubdirectory() override;
+	virtual mu::PointerRange<const char>	GetShaderFileExtension(GPU::ShaderType type) override;
+	virtual GPU::ShaderID					CompileShader(GPU::ShaderType type, mu::PointerRange<const u8> source) override;
+	virtual void							RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const u8> source) override;
+	virtual GPU::ProgramID					LinkProgram(GPU::ProgramDesc desc) override;
 
-	virtual ShaderID CompileShader(ShaderType type, PointerRange<const char> name) override;
-	virtual void RecompileShader(ShaderID id, ShaderType type, PointerRange<const char> name) override;
-	virtual ProgramID LinkProgram(ProgramDesc desc) override;
+	virtual GPU::PipelineStateID	CreatePipelineState(const GPU::PipelineStateDesc& desc) override;
+	virtual void					DestroyPipelineState(GPU::PipelineStateID id) override;
 
-	virtual GPU::PipelineStateID CreatePipelineState(const GPU::PipelineStateDesc& desc) override;
-	virtual void DestroyPipelineState(GPU::PipelineStateID id) override;
+	virtual GPU::ConstantBufferID	CreateConstantBuffer(mu::PointerRange<const u8> data) override;
+	virtual void					DestroyConstantBuffer(GPU::ConstantBufferID id) override;
 
-	virtual ConstantBufferID CreateConstantBuffer(mu::PointerRange<const u8> data) override;
-	virtual void DestroyConstantBuffer(ConstantBufferID id) override;
+	virtual GPU::VertexBufferID CreateVertexBuffer(mu::PointerRange<const u8> data) override;
+	virtual void				DestroyVertexBuffer(GPU::VertexBufferID id) override;
+	virtual GPU::IndexBufferID	CreateIndexBuffer(mu::PointerRange<const u8> data) override;
+	virtual void				DestroyIndexBuffer(GPU::IndexBufferID id) override;
 
-	virtual VertexBufferID CreateVertexBuffer(mu::PointerRange<const u8> data) override;
-	virtual void DestroyVertexBuffer(GPU::VertexBufferID id) override;
-	virtual IndexBufferID CreateIndexBuffer(mu::PointerRange<const u8> data) override;
-	virtual void DestroyIndexBuffer(GPU::IndexBufferID id) override;
+	virtual GPU::TextureID		CreateTexture2D(u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) override;
 
-	virtual TextureID CreateTexture2D(u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) override;
+	virtual GPU::DepthTargetID	CreateDepthTarget(u32 width, u32 height) override;
 
-	virtual GPU::DepthTargetID CreateDepthTarget(u32 width, u32 height) override;
+	// TODO: Replace with descriptor set concept?
+	virtual GPU::ShaderResourceListID CreateShaderResourceList(const GPU::ShaderResourceListDesc& desc) override;
 
-	virtual ShaderResourceListID CreateShaderResourceList(const GPU::ShaderResourceListDesc& desc) override;
-
-	virtual FramebufferID CreateFramebuffer(const GPU::FramebufferDesc& desc) override;
-	virtual void DestroyFramebuffer(FramebufferID) override;
+	virtual GPU::FramebufferID	CreateFramebuffer(const GPU::FramebufferDesc& desc) override;
+	virtual void				DestroyFramebuffer(GPU::FramebufferID) override;
 
 	virtual const char* GetName() override
 	{
@@ -757,7 +759,7 @@ struct GPU_Vulkan : public GPUInterface {
 	}
 
 	// Internal functions
-	VkShaderModule CompileShaderInternal(ShaderType type, PointerRange<const char> name);
+	VkShaderModule CompileShaderInternal(ShaderType type, PointerRange<const u8> source);
 	bool RecreatePipelineState(PipelineStateID id);
 	bool CreatePipelineStateInternal(const GPU::PipelineStateDesc& desc, VkPipeline& out_ps);
 };
@@ -2054,34 +2056,8 @@ void GPU_Vulkan::SubmitPass(const RenderPass& pass)
 	vkQueueSubmit(m_graphics_queue, 1, &submit_info, false);
 }
 
-
-static PointerRange<const char> GetShaderDirectory() {
-	struct Initializer {
-		String path;
-		Initializer() {
-			auto exe_dir = mu::paths::GetExecutableDirectory();
-			path = String::FromRanges(exe_dir, mu::Range("../Shaders/Vulkan/"));
-		}
-	};
-	static Initializer init;
-	return Range(init.path);
-}
-
-static String GetShaderFilename(mu::PointerRange<const char> name, GPU::ShaderType type)
-{
-	PointerRange<const char> suffix;
-	switch (type)
-	{
-	case GPU::ShaderType::Pixel: suffix = ".frag"; break;
-	case GPU::ShaderType::Vertex: suffix = ".vert"; break;
-	}
-	return String::FromRanges(GetShaderDirectory(), name, suffix);
-}
-
-VkShaderModule GPU_Vulkan::CompileShaderInternal(ShaderType type, PointerRange<const char> name) {
-	String shader_filename = GetShaderFilename(name, type);
-	String shader_txt_code = LoadFileToString(shader_filename.GetRaw());
-	PointerRange<const u8> code = shader_txt_code.Bytes();
+VkShaderModule GPU_Vulkan::CompileShaderInternal(ShaderType type, PointerRange<const u8> source) {
+	PointerRange<const u8> code = source.Bytes();
 	Assert(code.Size() > 0);
 
 	shaderc_shader_kind shader_c_kind = shaderc_glsl_infer_from_source;
@@ -2143,8 +2119,23 @@ VkShaderModule GPU_Vulkan::CompileShaderInternal(ShaderType type, PointerRange<c
 	return shader_module;
 }
 
-GPU::ShaderID GPU_Vulkan::CompileShader(ShaderType type, PointerRange<const char> name) {
-	VkShaderModule shader_module = CompileShaderInternal(type, name);
+mu::PointerRange<const char> GPU_Vulkan::GetShaderSubdirectory() {
+	return "Vulkan";
+}
+mu::PointerRange<const char> GPU_Vulkan::GetShaderFileExtension(GPU::ShaderType type) {
+	switch (type) {
+	case GPU::ShaderType::Vertex:
+		return "vert";
+	case GPU::ShaderType::Pixel:
+		return "frag";
+	default:
+		Assert(false);
+		return "";
+	}
+}
+
+GPU::ShaderID GPU_Vulkan::CompileShader(ShaderType type, PointerRange<const u8> source) {
+	VkShaderModule shader_module = CompileShaderInternal(type, source);
 	Assert(shader_module);
 
 	ShaderID id = m_registered_shaders.Emplace(type, shader_module);
@@ -2152,8 +2143,8 @@ GPU::ShaderID GPU_Vulkan::CompileShader(ShaderType type, PointerRange<const char
 	return id;
 }
 
-void GPU_Vulkan::RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const char> name) {
-	VkShaderModule shader_module = CompileShaderInternal(type, name);
+void GPU_Vulkan::RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const u8> source) {
+	VkShaderModule shader_module = CompileShaderInternal(type, source);
 	if (!shader_module) {
 		return;
 	}

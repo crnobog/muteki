@@ -290,38 +290,38 @@ struct GPU_DX12 : public GPUInterface {
 	virtual void Shutdown() override;
 	virtual void CreateSwapChain(u32 width, u32 height) override;
 	virtual void ResizeSwapChain(u32 width, u32 height) override;
-	virtual Vector<u32, 2> GetSwapChainDimensions() override {
-		return m_swap_chain_dimensions;
-	}
+	virtual Vector<u32, 2> GetSwapChainDimensions() override { return m_swap_chain_dimensions; }
 
 	virtual GPUFrameInterface* BeginFrame(Vec4 scene_clear_color) override;
-	virtual void EndFrame(GPUFrameInterface* frame) override;
+	virtual void SubmitPass(const GPU::RenderPass& pass) override;
+	virtual void EndFrame(GPUFrameInterface*) override;
 
-	virtual void SubmitPass(const RenderPass& pass) override;
+	virtual mu::PointerRange<const char>	GetShaderSubdirectory() override;
+	virtual mu::PointerRange<const char>	GetShaderFileExtension(GPU::ShaderType type) override;
+	virtual GPU::ShaderID					CompileShader(GPU::ShaderType type, mu::PointerRange<const u8> source) override;
+	virtual void							RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const u8> source) override;
+	virtual GPU::ProgramID					LinkProgram(GPU::ProgramDesc desc) override;
 
-	virtual ShaderID CompileShader(ShaderType type, mu::PointerRange<const char>) override;
-	virtual void RecompileShader(ShaderID id, ShaderType type, mu::PointerRange<const char>) override;
-	virtual ProgramID LinkProgram(ProgramDesc desc) override;
+	virtual GPU::PipelineStateID	CreatePipelineState(const GPU::PipelineStateDesc& desc) override;
+	virtual void					DestroyPipelineState(GPU::PipelineStateID id) override;
 
-	virtual GPU::PipelineStateID CreatePipelineState(const GPU::PipelineStateDesc& desc) override;
-	virtual void DestroyPipelineState(GPU::PipelineStateID id) override;
+	virtual GPU::ConstantBufferID	CreateConstantBuffer(mu::PointerRange<const u8> data) override;
+	virtual void					DestroyConstantBuffer(GPU::ConstantBufferID id) override;
 
-	virtual ConstantBufferID CreateConstantBuffer(mu::PointerRange<const u8> data) override;
-	virtual void DestroyConstantBuffer(ConstantBufferID id) override;
+	virtual GPU::VertexBufferID CreateVertexBuffer(mu::PointerRange<const u8> data) override;
+	virtual void				DestroyVertexBuffer(GPU::VertexBufferID id) override;
+	virtual GPU::IndexBufferID	CreateIndexBuffer(mu::PointerRange<const u8> data) override;
+	virtual void				DestroyIndexBuffer(GPU::IndexBufferID id) override;
 
-	virtual VertexBufferID CreateVertexBuffer(mu::PointerRange<const u8> data) override;
-	virtual void DestroyVertexBuffer(GPU::VertexBufferID id) override;
-	virtual IndexBufferID CreateIndexBuffer(mu::PointerRange<const u8> data) override;
-	virtual void DestroyIndexBuffer(GPU::IndexBufferID id) override;
+	virtual GPU::TextureID		CreateTexture2D(u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) override;
 
-	virtual TextureID CreateTexture2D(u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) override;
+	virtual GPU::DepthTargetID	CreateDepthTarget(u32 width, u32 height) override;
 
-	virtual GPU::DepthTargetID CreateDepthTarget(u32 width, u32 height) override;
+	// TODO: Replace with descriptor set concept?
+	virtual GPU::ShaderResourceListID CreateShaderResourceList(const GPU::ShaderResourceListDesc& desc) override;
 
-	virtual ShaderResourceListID CreateShaderResourceList(const GPU::ShaderResourceListDesc& desc) override;
-
-	virtual GPU::FramebufferID CreateFramebuffer(const GPU::FramebufferDesc& desc) override;
-	virtual void DestroyFramebuffer(GPU::FramebufferID id) override;
+	virtual GPU::FramebufferID	CreateFramebuffer(const GPU::FramebufferDesc& desc) override;
+	virtual void				DestroyFramebuffer(GPU::FramebufferID) override;
 
 	virtual const char* GetName() override
 	{
@@ -611,25 +611,7 @@ void GPU_DX12::EndFrame(GPUFrameInterface* frame_interface) {
 
 
 
-
-static PointerRange<const char> GetShaderDirectory() {
-	struct Initializer {
-		String path;
-		Initializer() {
-			auto exe_dir = mu::paths::GetExecutableDirectory();
-			path = String::FromRanges(exe_dir, mu::Range("../Shaders/DX/"));
-		}
-	};
-	static Initializer init;
-	return Range(init.path);
-}
-
-static String GetShaderFilename(mu::PointerRange<const char> name)
-{
-	return String::FromRanges(GetShaderDirectory(), name, ".hlsl");
-}
-
-static COMPtr<ID3DBlob> CompileShaderInternal(ShaderType type, PointerRange<const char> name) {
+static COMPtr<ID3DBlob> CompileShaderInternal(ShaderType type, PointerRange<const u8> source) {
 	COMPtr<ID3DBlob> compiled_shader;
 	const char* shader_model = nullptr;
 	const char* entry_point = nullptr;
@@ -646,10 +628,7 @@ static COMPtr<ID3DBlob> CompileShaderInternal(ShaderType type, PointerRange<cons
 		Assert(false);
 	}
 
-	String shader_filename = GetShaderFilename(name);
-	String shader_txt_code = LoadFileToString(shader_filename.GetRaw());
-
-	DX::CompileShaderHLSL(compiled_shader.Replace(), shader_model, entry_point, shader_txt_code.Bytes());
+	DX::CompileShaderHLSL(compiled_shader.Replace(), shader_model, entry_point, source.Bytes());
 	return std::move(compiled_shader);
 }
 
@@ -686,8 +665,18 @@ void GPU_DX12::PostCompileShader(Shader& shader) {
 	}
 }
 
-GPU::ShaderID GPU_DX12::CompileShader(ShaderType type, PointerRange<const char> name) {
-	COMPtr<ID3DBlob> compiled_shader = CompileShaderInternal(type, name);
+PointerRange<const char> GPU_DX12::GetShaderSubdirectory()
+{
+	return {"DX"};
+}
+
+PointerRange<const char> GPU_DX12::GetShaderFileExtension(GPU::ShaderType)
+{
+	return { "hlsl" };
+}
+
+GPU::ShaderID GPU_DX12::CompileShader(ShaderType type, PointerRange<const u8> source) {
+	COMPtr<ID3DBlob> compiled_shader = CompileShaderInternal(type, source);
 	if (!compiled_shader) {
 		return {}; //Failure
 	}
@@ -700,12 +689,12 @@ GPU::ShaderID GPU_DX12::CompileShader(ShaderType type, PointerRange<const char> 
 	return id;
 }
 
-void GPU_DX12::RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const char> name) {
+void GPU_DX12::RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const u8> source) {
 	Shader& shader = m_registered_shaders[id];
 	Assert(shader.Type == type); // TODO: is type argument necessary?
 
 	{
-		COMPtr<ID3DBlob> compiled_shader = CompileShaderInternal(type, name);
+		COMPtr<ID3DBlob> compiled_shader = CompileShaderInternal(type, source);
 		if (!compiled_shader) {
 			// TODO: Logging
 			return; // Failure
