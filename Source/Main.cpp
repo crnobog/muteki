@@ -450,6 +450,8 @@ int main(int argc, char** argv) {
 			}
 		}
 
+		shader_manager.PushChangesToGPU();
+
 		imgui.BeginFrame(mouse_pos, mouse_buttons);
 
 		const float aspect_ratio = (float)fb_width / (float)fb_height;
