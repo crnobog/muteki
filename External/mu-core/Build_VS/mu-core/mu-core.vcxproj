@@ -20,6 +20,7 @@
     <ClInclude Include="..\..\Include\mu-core\Array.h" />
     <ClInclude Include="..\..\Include\mu-core\BitArray.h" />
     <ClInclude Include="..\..\Include\mu-core\Debug.h" />
+    <ClInclude Include="..\..\Include\mu-core\DirectoryWatcher.h" />
     <ClInclude Include="..\..\Include\mu-core\FileReader.h" />
     <ClInclude Include="..\..\Include\mu-core\FixedArray.h" />
     <ClInclude Include="..\..\Include\mu-core\Functors.h" />
@@ -48,6 +49,7 @@
     <ClInclude Include="..\..\Include\mu-core\Timer.h" />
     <ClInclude Include="..\..\Include\mu-core\TransformRange.h" />
     <ClInclude Include="..\..\Include\mu-core\Utils.h" />
+    <ClInclude Include="..\..\Include\mu-core\WindowsWrapped.h" />
     <ClInclude Include="..\..\Include\mu-core\ZipRange.h" />
     <ClInclude Include="..\..\Source\SpookyV2.h" />
   </ItemGroup>
@@ -72,6 +74,7 @@
     <None Include="..\..\Include\mu-core\Tests\ZipRange_Tests.inl" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\Source\DirectoryWatcher.cpp" />
     <ClCompile Include="..\..\Source\mu-core.cpp" />
     <ClCompile Include="..\..\Source\SpookyV2.cpp" />
     <ClCompile Include="..\..\Source\StringFormat.cpp" />

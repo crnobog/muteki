@@ -104,6 +104,12 @@
     <ClInclude Include="..\..\Include\mu-core\MemberDetection.h">
       <Filter>Include</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\DirectoryWatcher.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Include\mu-core\WindowsWrapped.h">
+      <Filter>Include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Include\mu-core\Tests\Array_Tests.inl">
@@ -168,6 +174,7 @@
     </ClCompile>
     <ClCompile Include="..\..\Source\StringFormat.cpp" />
     <ClCompile Include="..\..\Source\Timer.cpp" />
+    <ClCompile Include="..\..\Source\DirectoryWatcher.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Tests">

@@ -1,6 +1,7 @@
 ﻿#define MU_CORE_IMPL
 #include "mu-core/mu-core.h"
 #include "mu-core/String.h"
+#include "mu-core/WindowsWrapped.h"
 
 #include <codecvt>
 #include <filesystem>
