@@ -10,6 +10,7 @@
 enum class StringFormatArgType {
 	None,
 	C_Str,
+	Wide_C_Str,
 	Unsigned,
 	Signed,
 	Double,
@@ -21,7 +22,8 @@ namespace mu {
 	struct StringFormatArg {
 		StringFormatArgType m_type = StringFormatArgType::None;
 		union {
-			std::tuple<const char*, i64> m_c_str;
+			std::tuple<const char*, size_t> m_c_str;
+			std::tuple<const wchar_t*, size_t> m_w_c_str;
 			u64 m_uint;
 			i64 m_int;
 			double m_double;
@@ -32,6 +34,7 @@ namespace mu {
 
 		// Single argument, can be inferred from a single template parameter
 		StringFormatArg(const char* c_str);
+		StringFormatArg(const wchar_t* c_str);
 		StringFormatArg(const String_T<char>& str);
 		StringFormatArg(i32 i);
 		StringFormatArg(i64 i);

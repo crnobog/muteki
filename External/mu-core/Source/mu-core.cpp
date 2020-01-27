@@ -204,6 +204,15 @@ namespace mu {
 				}
 			}
 			break;
+			case StringFormatArgType::Wide_C_Str:
+			{
+				// TODO: Currently assumes string is 0 terminated, check this and copy to temp storage if necessary
+				auto [s, len] = arg.m_w_c_str;
+				Assert(s[len] == '\0');
+
+				OutputDebugStringW(s);
+			}
+			break;
 			case StringFormatArgType::Unsigned:
 			{
 				if (RemainingSpace() <= 20) {

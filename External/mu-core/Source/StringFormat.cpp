@@ -9,6 +9,9 @@ namespace mu {
 		case StringFormatArgType::C_Str:
 			m_c_str = other.m_c_str;
 			return;
+		case StringFormatArgType::Wide_C_Str:
+			m_w_c_str = other.m_w_c_str;
+			return;
 		case StringFormatArgType::Unsigned:
 			m_uint = other.m_uint;
 			return;
@@ -26,6 +29,9 @@ namespace mu {
 		case StringFormatArgType::C_Str:
 			m_c_str = other.m_c_str;
 			return;
+		case StringFormatArgType::Wide_C_Str:
+			m_w_c_str = other.m_w_c_str;
+			return;
 		case StringFormatArgType::Unsigned:
 			m_uint = other.m_uint;
 			return;
@@ -42,6 +48,11 @@ namespace mu {
 		: m_type(StringFormatArgType::C_Str)
 		, m_c_str(c_str, strlen(c_str)) {
 	}
+	StringFormatArg::StringFormatArg(const wchar_t* w_c_str)
+		: m_type(StringFormatArgType::Wide_C_Str)
+		, m_w_c_str(w_c_str, wcslen(w_c_str)) {
+	}
+
 
 	StringFormatArg::StringFormatArg(const char* c_str, i64 len)
 		: m_type(StringFormatArgType::C_Str)
