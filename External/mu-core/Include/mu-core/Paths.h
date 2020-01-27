@@ -1,16 +1,11 @@
 #pragma once
 
-#include "mu-core/Ranges.h"
-#include "mu-core/Algorithms.h"
+#include <filesystem>
 
 namespace mu {
 	namespace paths {
-		PointerRange<const char> GetExecutablePath();
-		PointerRange<const char> GetExecutableDirectory();
-
-		PointerRange<const char> GetDirectory(PointerRange<const char> path);
-		PointerRange<const char> GetFilename(PointerRange<const char> path);
-		PointerRange<const char> GetExtension(PointerRange<const char> path);
+		std::filesystem::path GetExecutablePath();
+		std::filesystem::path GetExecutableDirectory();
 	}
 }
 

@@ -3,8 +3,11 @@
 #include "mu-core/String.h"
 
 #include <codecvt>
+#include <filesystem>
 
 namespace mu {
+	namespace fs = std::filesystem;
+
 	template String_T<char>;
 
 	template PointerRange<char>;
@@ -274,10 +277,8 @@ namespace mu {
 		CloseHandle(m_handle);
 	}
 
-	FileReader FileReader::Open(const char* path) {
-		auto wide_path = mu::UTF8StringToWide(mu::Range(path, path + strlen(path) + 1));
-
-		HANDLE handle = CreateFile(wide_path.GetRaw(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
+	FileReader FileReader::Open(const fs::path& path) {
+		HANDLE handle = CreateFile(path.native().c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
 		if (handle == INVALID_HANDLE_VALUE)
 		{
 			return FileReader(nullptr);
@@ -321,7 +322,7 @@ namespace mu {
 		return size - pos;
 	}
 
-	mu::Array<u8> LoadFileToArray(const char* path) {
+	mu::Array<u8> LoadFileToArray(const fs::path& path) {
 		FileReader reader = FileReader::Open(path);
 		if (!reader.IsValidFile()) {
 			return {};
@@ -333,7 +334,7 @@ namespace mu {
 		return arr;
 	}
 
-	String LoadFileToString(const char* path) {
+	String LoadFileToString(const fs::path& path) {
 		FileReader reader = FileReader::Open(path);
 		if (!reader.IsValidFile()) {
 			return {};
@@ -394,7 +395,7 @@ namespace mu {
 			return dot;
 		}
 
-		PointerRange<const char> GetExecutablePath() {
+		std::filesystem::path GetExecutablePath() {
 			struct Initializer {
 				String path;
 				Initializer() {
@@ -406,10 +407,13 @@ namespace mu {
 				}
 			};
 			static Initializer init;
-			return Range(init.path);
+			return std::filesystem::path(init.path.GetRaw());
 		}
-		PointerRange<const char> GetExecutableDirectory() {
-			return GetDirectory(GetExecutablePath());
+
+		std::filesystem::path GetExecutableDirectory() {
+			auto path = GetExecutablePath();
+			path.remove_filename();
+			return path;
 		}
 
 	}
