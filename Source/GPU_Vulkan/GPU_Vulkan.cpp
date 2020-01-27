@@ -1448,7 +1448,6 @@ void GPU_Vulkan::Shutdown()
 {
 	vkDeviceWaitIdle(m_device);
 
-	m_debug_utils.VkDestroyDebugUtilsMessengerEXT(m_vkinst, m_debug_utils.m_messenger, m_allocation_callbacks);
 
 	for (i32 i = 0; i < 1; ++i)	{
 		auto& frame = *m_frame_data;
@@ -1460,20 +1459,37 @@ void GPU_Vulkan::Shutdown()
 		vkDestroyImage(m_device, texture.m_image, m_allocation_callbacks);
 		vkFreeMemory(m_device, texture.m_device_memory, m_allocation_callbacks);
 	}
+	m_textures.Empty();
+
+	for (auto [i, dt] : m_depth_targets.Range()) {
+		vkDestroyImageView(m_device, dt.m_image_view, m_allocation_callbacks);
+		vkDestroyImage(m_device, dt.m_image, m_allocation_callbacks);
+		vkFreeMemory(m_device, dt.m_device_memory, m_allocation_callbacks);
+	}
+	m_depth_targets.Empty();
 
 	for (auto[i, vb] : m_vertex_buffers.Range()) {
 		vkDestroyBuffer(m_device, vb.m_buffer, m_allocation_callbacks);
 		vkFreeMemory(m_device, vb.m_device_memory, m_allocation_callbacks);
 	}
+	m_vertex_buffers.Empty();
 
 	for (auto[i, ib] : m_index_buffers.Range()) {
 		vkDestroyBuffer(m_device, ib.m_buffer, m_allocation_callbacks);
 		vkFreeMemory(m_device, ib.m_device_memory, m_allocation_callbacks);
 	}
+	m_index_buffers.Empty();
+
+	for (auto [i, cb] : m_constant_buffers.Range()) {
+		vkDestroyBuffer(m_device, cb.m_buffer, m_allocation_callbacks);
+		vkFreeMemory(m_device, cb.m_device_memory, m_allocation_callbacks);
+	}
+	m_constant_buffers.Empty();
 
 	for (auto[i, pipeline] : m_pipeline_states.Range()) {
 		vkDestroyPipeline(m_device, pipeline.m_pipeline, m_allocation_callbacks);
 	}
+	m_pipeline_states.Empty();
 
 	for (auto [i, shader] : m_registered_shaders.Range()) {
 		vkDestroyShaderModule(m_device, shader.ShaderModule, m_allocation_callbacks);
@@ -1481,8 +1497,15 @@ void GPU_Vulkan::Shutdown()
 	m_registered_shaders.Empty();
 
 	for (auto[i, framebuffer] : m_framebuffers.Range()) {
-	//	vkDestroyFramebuffer(m_device, framebuffer, m_allocation_callbacks);
+		if (framebuffer.m_framebuffer) {
+			vkDestroyFramebuffer(m_device, framebuffer.m_framebuffer, m_allocation_callbacks);
+		}
+
+		for (VkFramebuffer obj : framebuffer.m_frame_framebuffers) {
+			vkDestroyFramebuffer(m_device, obj, m_allocation_callbacks);
+		}
 	}
+	m_framebuffers.Empty();
 
 	for (VkImageView view : m_swap_chain_image_views)
 	{
@@ -1502,11 +1525,14 @@ void GPU_Vulkan::Shutdown()
 
 	vkDestroyPipelineLayout(m_device, m_pipeline_layout, m_allocation_callbacks);
 	vkDestroyRenderPass(m_device, m_render_pass, m_allocation_callbacks);
+	vkDestroyRenderPass(m_device, m_render_pass_depth, m_allocation_callbacks);
 
 	vkDestroySwapchainKHR(m_device, m_swap_chain, m_allocation_callbacks);
 	vkDestroySurfaceKHR(m_vkinst, m_surface, m_allocation_callbacks);
 
 	vkDestroyDevice(m_device, m_allocation_callbacks);
+
+	m_debug_utils.VkDestroyDebugUtilsMessengerEXT(m_vkinst, m_debug_utils.m_messenger, m_allocation_callbacks);
 	vkDestroyInstance(m_vkinst, m_allocation_callbacks);
 }
 
