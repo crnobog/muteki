@@ -299,7 +299,7 @@ struct GPU_DX12 : public GPUInterface {
 	virtual mu::PointerRange<const char>	GetShaderSubdirectory() override;
 	virtual mu::PointerRange<const char>	GetShaderFileExtension(GPU::ShaderType type) override;
 	virtual GPU::ShaderID					CompileShader(GPU::ShaderType type, mu::PointerRange<const u8> source) override;
-	virtual void							RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const u8> source) override;
+	virtual bool							RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const u8> source) override;
 	virtual GPU::ProgramID					LinkProgram(GPU::ProgramDesc desc) override;
 
 	virtual GPU::PipelineStateID	CreatePipelineState(const GPU::PipelineStateDesc& desc) override;
@@ -689,7 +689,7 @@ GPU::ShaderID GPU_DX12::CompileShader(ShaderType type, PointerRange<const u8> so
 	return id;
 }
 
-void GPU_DX12::RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const u8> source) {
+bool GPU_DX12::RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const u8> source) {
 	Shader& shader = m_registered_shaders[id];
 	Assert(shader.Type == type); // TODO: is type argument necessary?
 
@@ -697,7 +697,7 @@ void GPU_DX12::RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::Point
 		COMPtr<ID3DBlob> compiled_shader = CompileShaderInternal(type, source);
 		if (!compiled_shader) {
 			// TODO: Logging
-			return; // Failure
+			return false; // Failure
 		}
 
 		// TODO: Is any synchronization needed here?
@@ -709,6 +709,7 @@ void GPU_DX12::RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::Point
 	PostCompileShader(shader);
 
 	m_dirty_pipeline_states.Append(shader.UsingPSOs.Range());
+	return true;
 }
 
 ProgramID GPU_DX12::LinkProgram(ProgramDesc desc) {

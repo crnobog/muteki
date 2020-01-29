@@ -396,7 +396,7 @@ struct GPUInterface {
 	virtual mu::PointerRange<const char>	GetShaderSubdirectory() = 0;
 	virtual mu::PointerRange<const char>	GetShaderFileExtension(GPU::ShaderType type) = 0;
 	virtual GPU::ShaderID					CompileShader(GPU::ShaderType type, mu::PointerRange<const u8> source) = 0;
-	virtual void							RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const u8> source) = 0;
+	virtual bool							RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const u8> source) = 0;
 	virtual GPU::ProgramID					LinkProgram(GPU::ProgramDesc desc) = 0;
 
 	virtual GPU::PipelineStateID	CreatePipelineState(const GPU::PipelineStateDesc& desc) = 0;

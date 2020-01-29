@@ -574,7 +574,7 @@ struct GPU_Vulkan : public GPUInterface {
 	virtual mu::PointerRange<const char>	GetShaderSubdirectory() override;
 	virtual mu::PointerRange<const char>	GetShaderFileExtension(GPU::ShaderType type) override;
 	virtual GPU::ShaderID					CompileShader(GPU::ShaderType type, mu::PointerRange<const u8> source) override;
-	virtual void							RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const u8> source) override;
+	virtual bool							RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const u8> source) override;
 	virtual GPU::ProgramID					LinkProgram(GPU::ProgramDesc desc) override;
 
 	virtual GPU::PipelineStateID	CreatePipelineState(const GPU::PipelineStateDesc& desc) override;
@@ -2109,19 +2109,16 @@ VkShaderModule GPU_Vulkan::CompileShaderInternal(ShaderType type, PointerRange<c
 	);
 	Assert(result);
 	shaderc_compilation_status status = shaderc_result_get_compilation_status(result);
-	if (status != shaderc_compilation_status_success)
-	{
-
+	if (status != shaderc_compilation_status_success) {
 		if (size_t num_errors = shaderc_result_get_num_errors(result); num_errors != 0)
 		{
 			const char* err = shaderc_result_get_error_message(result);
-			Assertf(false, "{} errors:\n {}", num_errors, err);
+			dbg::Err("{} errors:\n {}", num_errors, err);
 		}
 		return nullptr;
 	}
 
-	if (size_t num_warnings = shaderc_result_get_num_warnings(result); num_warnings != 0)
-	{
+	if (size_t num_warnings = shaderc_result_get_num_warnings(result); num_warnings != 0) {
 		const char* warnings = shaderc_result_get_error_message(result); // ?
 		dbg::Log("{} warnings:\n {}", num_warnings, warnings);
 	}
@@ -2169,10 +2166,10 @@ GPU::ShaderID GPU_Vulkan::CompileShader(ShaderType type, PointerRange<const u8> 
 	return id;
 }
 
-void GPU_Vulkan::RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const u8> source) {
+bool GPU_Vulkan::RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const u8> source) {
 	VkShaderModule shader_module = CompileShaderInternal(type, source);
 	if (!shader_module) {
-		return;
+		return false;
 	}
 	
 	// TODO: Smart pointers would make this easier, or at least easier to catch leaks
@@ -2187,6 +2184,7 @@ void GPU_Vulkan::RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::Poi
 	for (PipelineStateID pso_id : shader.UsingPSOs) {
 		m_dirty_psos.Add(pso_id);
 	}
+	return true;
 }
 
 ProgramID GPU_Vulkan::LinkProgram(ProgramDesc desc)

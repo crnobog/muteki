@@ -30,14 +30,18 @@ namespace ShaderManagerInternal {
 	String LoadShaderSourceCode(const fs::path& shader_dir, GPUInterface* GPU, GPU::ShaderType type, mu::PointerRange<const char> name) {
 		return mu::LoadFileToString(GetShaderPath(shader_dir, GPU, type, name));
 	}
+
+	fs::path ComputeShaderDirectory(GPUInterface* GPU) {
+		fs::path exe_dir = mu::paths::GetExecutableDirectory();
+		const auto sub_dir = GPU->GetShaderSubdirectory();
+		return (exe_dir / "../Shaders" / sub_dir.m_start).lexically_normal();
+	}
 }
 
 ShaderManager::ShaderManager(GPUInterface* GPU)
 	: m_gpu(GPU)
+	, m_shader_dir(ShaderManagerInternal::ComputeShaderDirectory(GPU))
 {
-	fs::path exe_dir = mu::paths::GetExecutableDirectory();
-	const auto sub_dir = GPU->GetShaderSubdirectory();
-	m_shader_dir = (exe_dir / "../Shaders" / sub_dir.m_start).lexically_normal();
 	
 	m_dir_watcher.StartWatching(m_shader_dir);
 }
@@ -50,13 +54,18 @@ void ShaderManager::DrawUI() {
 	}
 
 	GPU::ShaderID recompile = {};
-	ImVec2 size = { 400, 300 };
+	ImVec2 size = { 350, 200 };
+	ImGui::SetNextWindowPos({ 400, 60 }, ImGuiSetCond_FirstUseEver);
 	if (ImGui::Begin("ShaderManager", &m_show_window, size, -1.0f, 0)) {
+		ImGui::Checkbox("Auto-recompile", &m_auto_recompile);
+
+		ImGui::Separator();
 		ImGui::Columns(3);
 
 		ImGui::Text("Name"); ImGui::NextColumn();
 		ImGui::Text("Type"); ImGui::NextColumn();
 		ImGui::Text("Tools"); ImGui::NextColumn();
+		ImGui::Separator();
 
 		for (auto [id, shader] : m_shaders.Range()) {
 			ImGui::PushID((void*)(size_t)id);
@@ -100,36 +109,54 @@ GPU::ShaderID ShaderManager::CompileShader(GPU::ShaderType type, mu::PointerRang
 	return id;
 }	
 
-bool ShaderManager::RecompileShader(GPU::ShaderID id) {
+ShaderCompileResult ShaderManager::RecompileShader(GPU::ShaderID id) {
 	if (!m_shaders.Contains(id)) {
-		return false;
+		return ShaderCompileResult::Failed;
 	}
 
 	Shader& shader = m_shaders[id];
-	auto path = ShaderManagerInternal::GetShaderPath(m_shader_dir, m_gpu, shader.Type, shader.Name.Range());
-	if (auto file_reader = mu::FileReader::Open(path); file_reader.IsValidFile()) {
-		auto shader_source = mu::LoadFileToString(file_reader);
-		m_gpu->RecompileShader(id, shader.Type, shader_source.Bytes());
-		// TODO: Handle compilation failure
-
-		// Only update write time if we succeeded
-		shader.LastWriteTime = fs::last_write_time(path);
-		return true;
-	}
-	else {
+	const auto path = ShaderManagerInternal::GetShaderPath(m_shader_dir, m_gpu, shader.Type, shader.Name.Range());
+	auto file_reader = mu::FileReader::Open(path);
+	if (!file_reader.IsValidFile()) {
 		dbg::Log("Failed to open shader file {}, will retry later", path.c_str());
+		return ShaderCompileResult::FileLocked;
 	}
-	return false;
+
+	const auto shader_source = mu::LoadFileToString(file_reader);
+	if (!m_gpu->RecompileShader(id, shader.Type, shader_source.Bytes())) {
+		dbg::Log("Recompile failed for shader file {}, will retry when file is next modified", path.c_str());
+		return ShaderCompileResult::Failed;
+	}
+
+	// Only update write time if we succeeded
+	shader.LastWriteTime = fs::last_write_time(path);
+	return ShaderCompileResult::Success;
 }
 
 void ShaderManager::PushChangesToGPU() {
-	Array<GPU::ShaderID> new_shaders_to_recompile;
+	if (!m_auto_recompile) {
+		return;
+	}
+
+	Array<ShaderRecompileRequest> new_shaders_to_recompile;
 	// TODO: Add timeouts here so we don't recompile too frequently
-	for (GPU::ShaderID id : m_shaders_to_recompile) {
+	for (ShaderRecompileRequest request : m_shaders_to_recompile) {
+		if (request.Timer.GetElapsedTimeSeconds() < 0.5f) {
+			// We do insertions in order so there can't be any older requests than this
+			new_shaders_to_recompile.Add(request);
+			continue;
+		}
+
+		GPU::ShaderID id = request.ID;
 		Shader& shader = m_shaders[id];
 		dbg::Log("Retrying recompile of shader {}", shader.Name);
-		if (!RecompileShader(id)) {
-			new_shaders_to_recompile.Add(id);
+		switch (RecompileShader(id)) {
+		case ShaderCompileResult::FileLocked:
+			new_shaders_to_recompile.Emplace(id, mu::Timer{});
+			break;
+		case ShaderCompileResult::Success:
+		case ShaderCompileResult::Failed:
+			break;
 		}
 	}
 
@@ -137,12 +164,19 @@ void ShaderManager::PushChangesToGPU() {
 		for (auto [id, shader] : m_shaders.Range()) {
 			auto path = ShaderManagerInternal::GetShaderPath(m_shader_dir, m_gpu, shader.Type, shader.Name.Range());
 			auto write_time = fs::last_write_time(path);
-			if (write_time > shader.LastWriteTime) {
-				dbg::Log("Shader {} has changed, recompiling", shader.Name);
-				if (RecompileShader(id)) {
-					new_shaders_to_recompile.Add(id);
-				}
-			}		
+			if (write_time <= shader.LastWriteTime) {
+				continue;
+			}
+
+			dbg::Log("Shader {} has changed, recompiling", shader.Name);
+			switch (RecompileShader(id)) {
+			case ShaderCompileResult::FileLocked:
+				new_shaders_to_recompile.Emplace(id, mu::Timer{});
+				break;
+			case ShaderCompileResult::Success:
+			case ShaderCompileResult::Failed:
+				break;
+			}
 		}
 	}
 	

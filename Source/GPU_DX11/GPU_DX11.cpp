@@ -208,7 +208,7 @@ struct GPU_DX11 : public GPUInterface {
 	virtual mu::PointerRange<const char>	GetShaderSubdirectory() override;
 	virtual mu::PointerRange<const char>	GetShaderFileExtension(GPU::ShaderType type) override;
 	virtual GPU::ShaderID					CompileShader(GPU::ShaderType type, mu::PointerRange<const u8> source) override;
-	virtual void							RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const u8> source) override;
+	virtual bool							RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const u8> source) override;
 	virtual GPU::ProgramID					LinkProgram(GPU::ProgramDesc desc) override;
 
 	virtual GPU::PipelineStateID	CreatePipelineState(const GPU::PipelineStateDesc& desc) override;
@@ -524,13 +524,14 @@ GPU::ShaderID GPU_DX11::CompileShader(GPU::ShaderType type, mu::PointerRange<con
 	return id;
 }
 
-void GPU_DX11::RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const u8> source) {
+bool GPU_DX11::RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::PointerRange<const u8> source) {
 	Shader new_shader{type};
 	if (!CompileShaderInternal(type, source, new_shader)) {
-		return;
+		return false;
 	}
 
 	m_shaders[id] = std::move(new_shader);
+	return true;
 }
 
 ProgramID GPU_DX11::LinkProgram(ProgramDesc desc) {
