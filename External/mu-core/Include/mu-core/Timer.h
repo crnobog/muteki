@@ -2,14 +2,16 @@
 
 #include "PrimitiveTypes.h"
 
-class Timer {
-	i64 m_start = 0, m_end = 0;
+namespace mu {
+	class Timer {
+		i64 m_start = 0, m_end = 0;
 
-public:
-	Timer();
+	public:
+		Timer();
 
-	void Reset();
-	void Stop();
-	double GetElapsedTimeSeconds() const;
-	double GetElapsedTimeMilliseconds() const;
+		void Reset();
+		void Stop();
+		double GetElapsedTimeSeconds() const;
+		double GetElapsedTimeMilliseconds() const;
+	};
 };
