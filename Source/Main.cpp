@@ -10,6 +10,7 @@
 // TODO: Rename Pool<> to SparseArray?
 // TODOLONGTERM: Render graph?
 // TODOLONGTERM: Runtime switching of backend
+// TODOLONGTERM: Tunable variables registration & UI
 
 #ifdef _MSC_VER
 #    pragma comment(linker, "/subsystem:windows /ENTRY:mainCRTStartup")
