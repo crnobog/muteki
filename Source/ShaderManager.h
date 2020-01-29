@@ -30,13 +30,16 @@ class ShaderManager
 	std::filesystem::path m_shader_dir; 
 	mu::DirectoryWatcher m_dir_watcher;
 
+	// Shaders that have previously failed recompilation
+	mu::Array<GPU::ShaderID> m_shaders_to_recompile;
+
 public:
 	ShaderManager(GPUInterface* GPU);
 	void ShowWindow() { m_show_window = true; }
 	void DrawUI();
 
 	GPU::ShaderID CompileShader(GPU::ShaderType type, mu::PointerRange<const char> name);
-	void RecompileShader(GPU::ShaderID id);
+	bool RecompileShader(GPU::ShaderID id);
 
 	// TODO: Configure auto-watching shader files for changes
 	void PushChangesToGPU();

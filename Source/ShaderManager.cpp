@@ -15,8 +15,6 @@ using mu::String;
 namespace fs = std::filesystem;
 namespace dbg = mu::dbg;
 
-// TODO: Directory watcher
-
 namespace ShaderManagerInternal {
 	fs::path GetShaderPath(const fs::path& shader_dir, GPUInterface* GPU, GPU::ShaderType type, mu::PointerRange<const char> name) {
 		const auto sub_dir = GPU->GetShaderSubdirectory();
@@ -87,7 +85,7 @@ void ShaderManager::DrawUI() {
 GPU::ShaderID ShaderManager::CompileShader(GPU::ShaderType type, mu::PointerRange<const char> name) {
 	auto path = ShaderManagerInternal::GetShaderPath(m_shader_dir, m_gpu, type, name);
 	auto write_time = fs::last_write_time(path);
-	auto shader_source = mu::LoadFileToString(path);
+	auto shader_source = mu::LoadFileToString(path); // TODO: Handle failure
 	GPU::ShaderID id = m_gpu->CompileShader(type, shader_source.Bytes());
 	if (id == GPU::ShaderID{}) {
 		return id; // Compile failure
@@ -102,30 +100,51 @@ GPU::ShaderID ShaderManager::CompileShader(GPU::ShaderType type, mu::PointerRang
 	return id;
 }	
 
-void ShaderManager::RecompileShader(GPU::ShaderID id) {
+bool ShaderManager::RecompileShader(GPU::ShaderID id) {
 	if (!m_shaders.Contains(id)) {
-		return;
+		return false;
 	}
 
 	Shader& shader = m_shaders[id];
 	auto path = ShaderManagerInternal::GetShaderPath(m_shader_dir, m_gpu, shader.Type, shader.Name.Range());
-	shader.LastWriteTime = fs::last_write_time(path);
-	auto shader_source = mu::LoadFileToString(path);
-	m_gpu->RecompileShader(id, shader.Type, shader_source.Bytes());
+	if (auto file_reader = mu::FileReader::Open(path); file_reader.IsValidFile()) {
+		auto shader_source = mu::LoadFileToString(file_reader);
+		m_gpu->RecompileShader(id, shader.Type, shader_source.Bytes());
+		// TODO: Handle compilation failure
+
+		// Only update write time if we succeeded
+		shader.LastWriteTime = fs::last_write_time(path);
+		return true;
+	}
+	else {
+		dbg::Log("Failed to open shader file {}, will retry later", path.c_str());
+	}
+	return false;
 }
 
 void ShaderManager::PushChangesToGPU() {
-	static i32 i = 0;
-	if (m_dir_watcher.HasChanges()) {
-		dbg::Log("Change {} noticed in shader directory", i++);
+	Array<GPU::ShaderID> new_shaders_to_recompile;
+	// TODO: Add timeouts here so we don't recompile too frequently
+	for (GPU::ShaderID id : m_shaders_to_recompile) {
+		Shader& shader = m_shaders[id];
+		dbg::Log("Retrying recompile of shader {}", shader.Name);
+		if (!RecompileShader(id)) {
+			new_shaders_to_recompile.Add(id);
+		}
+	}
 
+	if (m_dir_watcher.HasChanges()) {
 		for (auto [id, shader] : m_shaders.Range()) {
 			auto path = ShaderManagerInternal::GetShaderPath(m_shader_dir, m_gpu, shader.Type, shader.Name.Range());
 			auto write_time = fs::last_write_time(path);
 			if (write_time > shader.LastWriteTime) {
 				dbg::Log("Shader {} has changed, recompiling", shader.Name);
-				RecompileShader(id);
+				if (RecompileShader(id)) {
+					new_shaders_to_recompile.Add(id);
+				}
 			}		
 		}
 	}
+	
+	m_shaders_to_recompile = std::move(new_shaders_to_recompile);
 }
