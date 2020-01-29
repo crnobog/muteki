@@ -34,7 +34,7 @@ class ShaderManager
 	mu::HashTable<GPU::ShaderID, Shader> m_shaders;
 
 	bool m_show_window = false;
-	bool m_auto_recompile = false;
+	bool m_auto_recompile = true;
 
 	std::filesystem::path m_shader_dir;
 	mu::DirectoryWatcher m_dir_watcher;
