@@ -34,6 +34,7 @@
     </ClCompile>
     <ClCompile Include="..\..\Source\ShaderManager.cpp" />
     <ClCompile Include="..\..\External\imgui\imgui_demo.cpp" />
+    <ClCompile Include="..\..\Source\ImguiImpl.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="imgui">
@@ -115,6 +116,7 @@
       <Filter>GPU\Vulkan</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\ShaderManager.h" />
+    <ClInclude Include="..\..\Source\ImguiImpl.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Shaders\DX\basic_shader.hlsl">

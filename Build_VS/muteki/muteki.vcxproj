@@ -135,6 +135,7 @@
     <ClCompile Include="..\..\Source\GPU_DX12\DX12Utils.cpp" />
     <ClCompile Include="..\..\Source\GPU_DXShared\DXSharedUtils.cpp" />
     <ClCompile Include="..\..\Source\GPU_Vulkan\GPU_Vulkan.cpp" />
+    <ClCompile Include="..\..\Source\ImguiImpl.cpp" />
     <ClCompile Include="..\..\Source\Main.cpp" />
     <ClCompile Include="..\..\Source\MathImpl.cpp" />
     <ClCompile Include="..\..\Source\ShaderManager.cpp" />
@@ -156,6 +157,7 @@
     <ClInclude Include="..\..\Source\GPU_DX12\DX12Utils.h" />
     <ClInclude Include="..\..\Source\GPU_DXShared\DXSharedUtils.h" />
     <ClInclude Include="..\..\Source\GPU_Vulkan\GPU_Vulkan.h" />
+    <ClInclude Include="..\..\Source\ImguiImpl.h" />
     <ClInclude Include="..\..\Source\Quaternion.h" />
     <ClInclude Include="..\..\Source\Rect.h" />
     <ClInclude Include="..\..\Source\ShaderManager.h" />
