@@ -8,9 +8,6 @@
 namespace mu {
 	namespace fs = std::filesystem;
 
-	mu::Array<uint8_t> LoadFileToArray(const fs::path& path);
-	mu::String LoadFileToString(const fs::path& path);
-
 	class FileReader {
 		void* m_handle = nullptr;
 
@@ -20,7 +17,10 @@ namespace mu {
 		static FileReader Open(const fs::path& path);
 		~FileReader();
 
-		mu::PointerRange<u8> Read(mu::PointerRange<u8> dest_range);
+		FileReader(FileReader&& other);
+		FileReader& operator=(FileReader&& other);
+
+		PointerRange<u8> Read(PointerRange<u8> dest_range);
 
 		bool IsValidFile() const { return m_handle != nullptr; }
 		i64 GetFileSize() const;
@@ -28,4 +28,7 @@ namespace mu {
 		i64 Remaining() const;
 	};
 
+	Array<uint8_t> LoadFileToArray(const fs::path& path);
+	String LoadFileToString(const fs::path& path);
+	String LoadFileToString(FileReader& reader);
 }

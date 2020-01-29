@@ -275,7 +275,22 @@ namespace mu {
 	FileReader::FileReader(void* handle) : m_handle(handle) {}
 
 	FileReader::~FileReader() {
-		CloseHandle(m_handle);
+		if (m_handle) {
+			CloseHandle(m_handle);
+		}
+	}
+
+	FileReader::FileReader(FileReader&& other)
+		: m_handle(other.m_handle)
+	{
+		other.m_handle = nullptr;
+	}
+
+	FileReader& FileReader::operator=(FileReader&& other)
+	{
+		this->~FileReader();
+		new(this) FileReader(std::move(other));
+		return *this;
 	}
 
 	FileReader FileReader::Open(const fs::path& path) {
@@ -335,11 +350,7 @@ namespace mu {
 		return arr;
 	}
 
-	String LoadFileToString(const fs::path& path) {
-		FileReader reader = FileReader::Open(path);
-		if (!reader.IsValidFile()) {
-			return {};
-		}
+	String LoadFileToString(FileReader& reader) {
 		if (reader.GetFileSize() < 3) {
 			u8 b[3] = { 0, };
 			reader.Read(Range(b));
@@ -359,6 +370,15 @@ namespace mu {
 		PointerRange<u8> r = c.Bytes();
 		reader.Read(r);
 		return s;
+	}
+
+	String LoadFileToString(const fs::path& path) {
+		FileReader reader = FileReader::Open(path);
+		if (!reader.IsValidFile()) {
+			return {};
+		}
+
+		return LoadFileToString(reader);
 	}
 }
 
