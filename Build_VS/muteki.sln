@@ -1,11 +1,12 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.26730.12
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29709.97
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "muteki", "muteki\muteki.vcxproj", "{2AA74EF1-943E-4574-9E69-4F75DBACF3AD}"
 	ProjectSection(ProjectDependencies) = postProject
 		{C034248A-5C76-4FEE-B1B7-8FAEF0DCF217} = {C034248A-5C76-4FEE-B1B7-8FAEF0DCF217}
+		{2A0C7CE6-3091-4480-8D1A-8DA7C1C20172} = {2A0C7CE6-3091-4480-8D1A-8DA7C1C20172}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mu-core", "..\External\mu-core\Build_VS\mu-core\mu-core.vcxproj", "{C034248A-5C76-4FEE-B1B7-8FAEF0DCF217}"
@@ -19,6 +20,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "muteki-benchmark", "muteki-
 	ProjectSection(ProjectDependencies) = postProject
 		{C034248A-5C76-4FEE-B1B7-8FAEF0DCF217} = {C034248A-5C76-4FEE-B1B7-8FAEF0DCF217}
 	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "imgui", "imgui\imgui.vcxproj", "{2A0C7CE6-3091-4480-8D1A-8DA7C1C20172}"
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
@@ -54,6 +57,12 @@ Global
 		{5E5B2F36-CB1F-4085-AB6E-C8171B8D8C0A}.Dev|x64.Build.0 = Dev|x64
 		{5E5B2F36-CB1F-4085-AB6E-C8171B8D8C0A}.Release|x64.ActiveCfg = Release|x64
 		{5E5B2F36-CB1F-4085-AB6E-C8171B8D8C0A}.Release|x64.Build.0 = Release|x64
+		{2A0C7CE6-3091-4480-8D1A-8DA7C1C20172}.Debug|x64.ActiveCfg = Debug|x64
+		{2A0C7CE6-3091-4480-8D1A-8DA7C1C20172}.Debug|x64.Build.0 = Debug|x64
+		{2A0C7CE6-3091-4480-8D1A-8DA7C1C20172}.Dev|x64.ActiveCfg = Dev|x64
+		{2A0C7CE6-3091-4480-8D1A-8DA7C1C20172}.Dev|x64.Build.0 = Dev|x64
+		{2A0C7CE6-3091-4480-8D1A-8DA7C1C20172}.Release|x64.ActiveCfg = Release|x64
+		{2A0C7CE6-3091-4480-8D1A-8DA7C1C20172}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

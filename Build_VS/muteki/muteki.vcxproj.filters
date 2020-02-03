@@ -20,8 +20,6 @@
     <ClCompile Include="..\..\Source\GPU_DXShared\DXSharedUtils.cpp">
       <Filter>GPU\DXShared</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\External\imgui\imgui.cpp" />
-    <ClCompile Include="..\..\External\imgui\imgui_draw.cpp" />
     <ClCompile Include="..\..\Source\MathImpl.cpp">
       <Filter>Math</Filter>
     </ClCompile>
@@ -33,13 +31,9 @@
       <Filter>GPU\Vulkan</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\ShaderManager.cpp" />
-    <ClCompile Include="..\..\External\imgui\imgui_demo.cpp" />
     <ClCompile Include="..\..\Source\ImguiImpl.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <Filter Include="imgui">
-      <UniqueIdentifier>{a2695f27-2b7c-4aac-a0f7-4ebdd64fa611}</UniqueIdentifier>
-    </Filter>
     <Filter Include="GPU">
       <UniqueIdentifier>{15dd3108-11f7-4a5d-b77c-7e04b47ac0fc}</UniqueIdentifier>
     </Filter>
@@ -90,12 +84,6 @@
     <ClInclude Include="..\..\Source\GPU_DX11\DX11Utils.h">
       <Filter>GPU\DX11</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\External\imgui\imconfig.h" />
-    <ClInclude Include="..\..\External\imgui\imgui.h" />
-    <ClInclude Include="..\..\External\imgui\imgui_internal.h" />
-    <ClInclude Include="..\..\External\imgui\stb_rect_pack.h" />
-    <ClInclude Include="..\..\External\imgui\stb_textedit.h" />
-    <ClInclude Include="..\..\External\imgui\stb_truetype.h" />
     <ClInclude Include="..\..\Source\Vectors.h">
       <Filter>Math</Filter>
     </ClInclude>

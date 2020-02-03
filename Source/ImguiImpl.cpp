@@ -13,7 +13,8 @@
 using namespace mu;
 
 struct ImGuiImpl : public ImguiImplInterface {
-	void* m_hwnd;
+	ImGuiContext* m_context = nullptr;
+	void* m_hwnd = nullptr;
 	GPUInterface* m_gpu = nullptr;
 	ShaderManager* m_shader_manager = nullptr;
 	GPU::PipelineStateID m_pipeline_state = {};
@@ -22,6 +23,8 @@ struct ImGuiImpl : public ImguiImplInterface {
 	GPU::FramebufferID m_framebuffer = {};
 
 	void Init(void* hwnd, GPUInterface* gpu, ShaderManager* shader_manager) {
+		m_context = ImGui::CreateContext(nullptr);
+		ImGui::SetCurrentContext(m_context);
 		m_hwnd = hwnd;
 		m_gpu = gpu;
 		m_shader_manager = shader_manager;
@@ -95,7 +98,7 @@ struct ImGuiImpl : public ImguiImplInterface {
 	}
 
 	void Shutdown() {
-		ImGui::Shutdown();
+		ImGui::DestroyContext();
 	}
 
 	void BeginFrame(Vector<double, 2> mouse_pos, Vector<bool, 3> mouse_buttons) {
@@ -145,10 +148,11 @@ struct ImGuiImpl : public ImguiImplInterface {
 			u32 index_offset = 0;
 			for (const ImDrawCmd& draw_cmd : draw_list->CmdBuffer) {
 				Assert(!draw_cmd.UserCallback);
-				if (!current_pass || Vec4(draw_cmd.ClipRect) != last_clip_rect) {
+				Vec4 clip_rect = { draw_cmd.ClipRect.x, draw_cmd.ClipRect.y, draw_cmd.ClipRect.z, draw_cmd.ClipRect.w };
+				if (!current_pass || clip_rect != last_clip_rect) {
 					// Start new pass to change clip rect
 					// TODO: Reconsider where clip rect fits into api
-					last_clip_rect = draw_cmd.ClipRect;
+					last_clip_rect = clip_rect;
 					current_pass = &passes.AddDefaulted(1).Front();
 					// left top right bottom
 					current_pass->ClipRect = { (u32)last_clip_rect.X, (u32)last_clip_rect.Y, (u32)last_clip_rect.Z, (u32)last_clip_rect.W };

@@ -81,7 +81,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>mu-core-$(Platform)-$(Configuration).lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>mu-core-$(Platform)-$(Configuration).lib;imgui-$(Platform)-$(Configuration).lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -123,9 +123,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\External\imgui\imgui.cpp" />
-    <ClCompile Include="..\..\External\imgui\imgui_demo.cpp" />
-    <ClCompile Include="..\..\External\imgui\imgui_draw.cpp" />
     <ClCompile Include="..\..\Source\CoreMath.cpp" />
     <ClCompile Include="..\..\Source\CubePrimitive.cpp" />
     <ClCompile Include="..\..\Source\GPUInterface.cpp" />
@@ -141,12 +138,6 @@
     <ClCompile Include="..\..\Source\ShaderManager.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\External\imgui\imconfig.h" />
-    <ClInclude Include="..\..\External\imgui\imgui.h" />
-    <ClInclude Include="..\..\External\imgui\imgui_internal.h" />
-    <ClInclude Include="..\..\External\imgui\stb_rect_pack.h" />
-    <ClInclude Include="..\..\External\imgui\stb_textedit.h" />
-    <ClInclude Include="..\..\External\imgui\stb_truetype.h" />
     <ClInclude Include="..\..\Source\CoreMath.h" />
     <ClInclude Include="..\..\Source\CubePrimitive.h" />
     <ClInclude Include="..\..\Source\GPUInterface.h" />

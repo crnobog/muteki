@@ -55,8 +55,9 @@ void ShaderManager::DrawUI() {
 
 	GPU::ShaderID recompile = {};
 	ImVec2 size = { 350, 200 };
-	ImGui::SetNextWindowPos({ 400, 60 }, ImGuiSetCond_FirstUseEver);
-	if (ImGui::Begin("ShaderManager", &m_show_window, size, -1.0f, 0)) {
+	ImGui::SetNextWindowPos({ 400, 60 }, ImGuiCond_Appearing);
+	ImGui::SetNextWindowSize(size, ImGuiCond_Appearing);
+	if (ImGui::Begin("ShaderManager", &m_show_window)) {
 		ImGui::Checkbox("Auto-recompile", &m_auto_recompile);
 
 		ImGui::Separator();

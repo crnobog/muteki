@@ -335,7 +335,8 @@ int main(int argc, char** argv) {
 			| ImGuiWindowFlags_NoInputs
 			;
 		float overlay_alpha = 0.3f;
-		if (ImGui::Begin("#Overlay", &show_overlay, { 0,0 }, overlay_alpha, overlay_flags))
+		ImGui::SetNextWindowBgAlpha(overlay_alpha);
+		if (ImGui::Begin("#Overlay", &show_overlay, overlay_flags))
 		{
 			if (win_user_data.m_input_to_imgui) {
 				ImGui::Text("ESC to release");
@@ -359,8 +360,8 @@ int main(int argc, char** argv) {
 			ImGui::EndMainMenuBar();
 		}
 
-		ImGui::SetNextWindowPos({50, 50}, ImGuiSetCond_FirstUseEver);
-		ImGui::SetNextWindowSize({ 250, 300 }, ImGuiSetCond_FirstUseEver);
+		ImGui::SetNextWindowPos({50, 50}, ImGuiCond_Appearing);
+		ImGui::SetNextWindowSize({ 250, 300 }, ImGuiCond_Appearing);
 		if (show_tweaks_window) {
 			if (ImGui::Begin("Tweaks", &show_tweaks_window, 0/*ImGuiWindowFlags_AlwaysAutoResize*/)) {
 				ImGui::Checkbox("Pause", &pause_anim);
@@ -388,7 +389,7 @@ int main(int argc, char** argv) {
 		}
 		
 		if (show_imgui_test_window) {
-			ImGui::ShowTestWindow(&show_imgui_test_window);
+			ImGui::ShowDemoWindow(&show_imgui_test_window);
 		}
 		shader_manager.DrawUI();
 
