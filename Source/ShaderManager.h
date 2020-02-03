@@ -49,7 +49,7 @@ class ShaderManager
 
 public:
 	ShaderManager(GPUInterface* GPU);
-	void ShowWindow() { m_show_window = true; }
+	bool* GetShowFlag() { return &m_show_window; }
 	void DrawUI();
 
 	GPU::ShaderID CompileShader(GPU::ShaderType type, mu::PointerRange<const char> name);

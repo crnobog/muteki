@@ -1,6 +1,7 @@
-﻿// TODO: Overlay for FPS/Input State/ETC
-// TODO: Update IMGUI
+﻿// TODO: Update IMGUI
 // TODO: Integrate mouse wheel controls into IMGUI
+// TODO: Map something different to every face of default cube
+// TODO: Render rotation axis visibly for rotation tweak mode
 // TODO: Refactor GPU ID structs to split bits internally e.g. temporary vs persistent constant buffer
 // TODO: Descriptor set design
 // TODO: FName equivalent
@@ -225,7 +226,9 @@ int main(int argc, char** argv) {
 
 	i64 frame_num = 0;
 	bool pause_anim = false;
+	bool show_overlay = true;
 	bool show_imgui_test_window = false;
+	bool show_tweaks_window = false;
 	float vfov = 0.5f;
 	float near_plane = 0.1f;
 	float far_plane = 20.0f;
@@ -321,47 +324,68 @@ int main(int argc, char** argv) {
 			view_pitch = -f32(delta_cursor.Y * rot_speed_deg * dt);
 		}
 
-		if (ImGui::Begin(win_title.GetRaw(), nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+		ImGui::SetNextWindowPos({ 10, 16 });
+		constexpr ImGuiWindowFlags overlay_flags 
+			= ImGuiWindowFlags_NoTitleBar 
+			| ImGuiWindowFlags_NoResize 
+			| ImGuiWindowFlags_NoMove 
+			| ImGuiWindowFlags_NoSavedSettings 
+			| ImGuiWindowFlags_AlwaysAutoResize 
+			| ImGuiWindowFlags_NoScrollbar 
+			| ImGuiWindowFlags_NoInputs
+			;
+		float overlay_alpha = 0.3f;
+		if (ImGui::Begin("#Overlay", &show_overlay, { 0,0 }, overlay_alpha, overlay_flags))
+		{
 			if (win_user_data.m_input_to_imgui) {
-				ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "ImGUI Input Captured - Press Esc to release");
+				ImGui::Text("ESC to release");
 			}
 			else {
-				ImGui::TextColored(ImVec4(0.3f, 0.3f, 0.3f, 1.0f), "ImGUI Input Not Captured - Press Space to capture");
+				ImGui::Text("SPACE to capture");
 			}
 			ImGui::Separator();
-			
-			if (ImGui::Button("Show ImGui Test Window")) {
-				show_imgui_test_window = true;
-			}
-
-			if (ImGui::Button("Shader Manager")) {
-				shader_manager.ShowWindow();
-			}
-			ImGui::Separator();
-
-			ImGui::LabelText("dt (ms)", "%.1f", dt_avg * 1000.0);
-			ImGui::Checkbox("Pause", &pause_anim);
-			ImGui::Checkbox("Use Quat", &bUseQuat);
-			ImGui::Separator();
-
-			ImGui::InputFloat3("Location", location.Data);
-			if (bUseQuat) {
-				ImGui::InputFloat3("Rot Axis", rot_axis.Data);
-				ImGui::DragFloat("Rot Angle", &rot_deg, 1.0f, 0, 360);
-			}
-			else {
-				ImGui::InputFloat("Angle X", &rot_deg_x);
-				ImGui::InputFloat("Angle Y", &rot_deg_y);
-				ImGui::InputFloat("Angle Z", &rot_deg_z);
-			}
-			ImGui::Separator();
-			ImGui::LabelText("View Pos", "%.2f, %.2f, %.2f", view_pos.X, view_pos.Y, view_pos.Z);
-			ImGui::LabelText("View Quat", "%.2f, %.2f, %.2f, %.2f", view_quat.X, view_quat.Y, view_quat.Z, view_quat.W);
-			ImGui::SliderFloat("VFOV", &vfov, 0.0f, 3.0f);
-			ImGui::SliderFloat("Near Plane", &near_plane, 0.001f, 1.0f);
-			ImGui::SliderFloat("Far Plane", &far_plane, near_plane, 100.0f);
+			ImGui::Text("%.1f fps", 1.0 / dt_avg);
+			ImGui::Text("%.1f ms", dt_avg * 1000.0);
 		}
 		ImGui::End();
+
+		if (win_user_data.m_input_to_imgui && ImGui::BeginMainMenuBar()) {
+			if (ImGui::BeginMenu("Windows")) {
+				ImGui::MenuItem("ImGui Test Window", nullptr, &show_imgui_test_window);
+				ImGui::MenuItem("Shader Manager", nullptr, shader_manager.GetShowFlag());
+				ImGui::MenuItem("Tweaks Window", nullptr, &show_tweaks_window);
+				ImGui::EndMenu();
+			}
+			ImGui::EndMainMenuBar();
+		}
+
+		ImGui::SetNextWindowPos({50, 50}, ImGuiSetCond_FirstUseEver);
+		ImGui::SetNextWindowSize({ 250, 300 }, ImGuiSetCond_FirstUseEver);
+		if (show_tweaks_window) {
+			if (ImGui::Begin("Tweaks", &show_tweaks_window, 0/*ImGuiWindowFlags_AlwaysAutoResize*/)) {
+				ImGui::Checkbox("Pause", &pause_anim);
+				ImGui::Checkbox("Use Quat", &bUseQuat);
+				ImGui::Separator();
+
+				ImGui::InputFloat3("Location", location.Data);
+				if (bUseQuat) {
+					ImGui::InputFloat3("Rot Axis", rot_axis.Data);
+					ImGui::DragFloat("Rot Angle", &rot_deg, 1.0f, -360, 360);
+				}
+				else {
+					ImGui::InputFloat("Angle X", &rot_deg_x);
+					ImGui::InputFloat("Angle Y", &rot_deg_y);
+					ImGui::InputFloat("Angle Z", &rot_deg_z);
+				}
+				ImGui::Separator();
+				ImGui::LabelText("View Pos", "%.2f, %.2f, %.2f", view_pos.X, view_pos.Y, view_pos.Z);
+				ImGui::LabelText("View Quat", "%.2f, %.2f, %.2f, %.2f", view_quat.X, view_quat.Y, view_quat.Z, view_quat.W);
+				ImGui::SliderFloat("VFOV", &vfov, 0.0f, 3.0f);
+				ImGui::SliderFloat("Near Plane", &near_plane, 0.001f, 1.0f);
+				ImGui::SliderFloat("Far Plane", &far_plane, near_plane, 100.0f);
+			}
+			ImGui::End();
+		}
 		
 		if (show_imgui_test_window) {
 			ImGui::ShowTestWindow(&show_imgui_test_window);
