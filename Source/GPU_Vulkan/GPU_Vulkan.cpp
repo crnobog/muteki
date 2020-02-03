@@ -1617,6 +1617,7 @@ void GPU_Vulkan::CreateSwapChain(u32 width, u32 height)
 
 void GPU_Vulkan::ResizeSwapChain(u32 width, u32 height)
 {
+	// TODO: Implement swap chain resize for Vulkan backend
 	Assert(false);
 }
 
