@@ -1,6 +1,5 @@
-﻿// TODO: Anything needed in imconfig?
-// TODO: Enable conformance mode?
-// TODO: Map something different to every face of default cube
+﻿// TODO: Enable conformance mode?
+// TODO: Load texture from file
 // TODO: Render rotation axis visibly for rotation tweak mode
 // TODO: Chaining transforms
 // TODO: Refactor GPU ID structs to split bits internally e.g. temporary vs persistent constant buffer
@@ -229,10 +228,10 @@ int main(int argc, char** argv) {
 	GPU::IndexBufferID cube_ibuffer_id = gpu->CreateIndexBuffer(ByteRange(cube_indices));
 
 	Color4 pixels[] = {
-		{ 128, 128, 128, 255 }, { 255, 255, 255, 255 },
-		{ 255, 255, 255, 255 }, { 128, 128, 128, 255 },
+		{ 000, 255, 000, 255 }, { 000, 000, 255, 255 }, { 255, 000, 000, 255 },
+		{ 000, 128, 000, 255 }, { 000, 000, 128, 255 }, { 128, 000, 000, 255 },
 	};
-	GPU::TextureID texture_id = gpu->CreateTexture2D(2, 2, GPU::TextureFormat::RGBA8, ByteRange(pixels));
+	GPU::TextureID texture_id = gpu->CreateTexture2D(3, 2, GPU::TextureFormat::RGBA8, ByteRange(pixels));
 	GPU::ShaderResourceListDesc resource_list_desc = {};
 	resource_list_desc.StartSlot = 0;
 	resource_list_desc.Textures.Add(texture_id);
