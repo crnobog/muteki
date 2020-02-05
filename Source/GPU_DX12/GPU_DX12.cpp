@@ -16,7 +16,7 @@
 
 #include "Fence.h"
 #include "DX12Utils.h"
-#include "../Vectors.h"
+#include "Vectors.h"
 
 #include <d3d12.h>
 #include <d3d12sdklayers.h>
