@@ -48,4 +48,7 @@
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="..\..\External\imgui\misc\natvis\imgui.natvis" />
+  </ItemGroup>
 </Project>

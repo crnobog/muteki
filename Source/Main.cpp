@@ -1,4 +1,5 @@
 ﻿// TODO: Anything needed in imconfig?
+// TODO: Enable conformance mode?
 // TODO: Map something different to every face of default cube
 // TODO: Render rotation axis visibly for rotation tweak mode
 // TODO: Chaining transforms

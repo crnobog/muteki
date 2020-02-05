@@ -4,7 +4,7 @@
 #include "GPU_DX11.h"
 #include "DX11Utils.h"
 #include "../GPU_DXShared/DXSharedUtils.h"
-#include "../Vectors.h"
+#include "Vectors.h"
 
 #include "mu-core/FileReader.h"
 #include "mu-core/FixedArray.h"

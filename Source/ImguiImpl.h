@@ -5,6 +5,8 @@
 
 #include <memory>
 
+#include "imgui.h"
+
 struct ImguiImplInterface {
 	virtual void Init(void* window_handle, GPUInterface* gpu, ShaderManager* shader_manager) = 0;
 	virtual void Shutdown() = 0;

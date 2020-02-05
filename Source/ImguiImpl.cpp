@@ -150,7 +150,7 @@ struct ImGuiImpl : public ImguiImplInterface {
 			u32 index_offset = 0;
 			for (const ImDrawCmd& draw_cmd : draw_list->CmdBuffer) {
 				Assert(!draw_cmd.UserCallback);
-				Vec4 clip_rect = { draw_cmd.ClipRect.x, draw_cmd.ClipRect.y, draw_cmd.ClipRect.z, draw_cmd.ClipRect.w };
+				Vec4 clip_rect = draw_cmd.ClipRect;
 				if (!current_pass || clip_rect != last_clip_rect) {
 					// Start new pass to change clip rect
 					// TODO: Reconsider where clip rect fits into api
