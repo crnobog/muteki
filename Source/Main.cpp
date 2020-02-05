@@ -1,15 +1,18 @@
-﻿// TODO: Integrate mouse wheel controls into IMGUI
+﻿// TODO: Anything needed in imconfig?
 // TODO: Map something different to every face of default cube
 // TODO: Render rotation axis visibly for rotation tweak mode
+// TODO: Chaining transforms
 // TODO: Refactor GPU ID structs to split bits internally e.g. temporary vs persistent constant buffer
 // TODO: Descriptor set design
-// TODO: FName equivalent
 // TODO: Investigate using HLSL for Vulkan backend
 // TODO: Visualizer for Pool<>
 // TODO: Rename Pool<> to SparseArray?
 // TODOLONGTERM: Render graph?
 // TODOLONGTERM: Runtime switching of backend
 // TODOLONGTERM: Tunable variables registration & UI
+// TODOLONGTERM: Switch to imgui docking branch
+// TODOLONGTERM: FName equivalent
+
 
 #ifdef _MSC_VER
 #    pragma comment(linker, "/subsystem:windows /ENTRY:mainCRTStartup")
@@ -50,6 +53,7 @@ struct WindowUserData
 {
 	bool m_input_to_imgui = false;
 	bool m_mouse_pressed[3] = { false, false, false };
+	Vec2 m_scroll= { 0, 0 };
 };
 
 void OnMouseButton(GLFWwindow* window, i32 button, i32 action, i32) {
@@ -58,6 +62,12 @@ void OnMouseButton(GLFWwindow* window, i32 button, i32 action, i32) {
 	if (action == GLFW_PRESS && button >= 0 && button < 3) {
 		user_data.m_mouse_pressed[button] = true;
 	}
+}
+
+void OnScroll(GLFWwindow* window, double x, double y) {
+	WindowUserData& user_data = *(WindowUserData*)glfwGetWindowUserPointer(window);
+	user_data.m_scroll.X += (float)x;
+	user_data.m_scroll.Y += (float)y;
 }
 
 void OnChar(GLFWwindow* window, u32 c) {
@@ -71,11 +81,13 @@ void OnChar(GLFWwindow* window, u32 c) {
 void OnKey(GLFWwindow* window, i32 key, i32, i32 action, i32) {
 	WindowUserData& user_data = *(WindowUserData*)glfwGetWindowUserPointer(window);
 	if (user_data.m_input_to_imgui == false) { return; }
-	ImGuiIO& io = ImGui::GetIO();
-	if (action == GLFW_PRESS)
+	ImGuiIO& io = ImGui::GetIO(); // TODO: Decouple from imgui?
+	if (action == GLFW_PRESS) {
 		io.KeysDown[key] = true;
-	if (action == GLFW_RELEASE)
+	}
+	if (action == GLFW_RELEASE) {
 		io.KeysDown[key] = false;
+	}
 
 	io.KeyCtrl = io.KeysDown[GLFW_KEY_LEFT_CONTROL] || io.KeysDown[GLFW_KEY_RIGHT_CONTROL];
 	io.KeyShift = io.KeysDown[GLFW_KEY_LEFT_SHIFT] || io.KeysDown[GLFW_KEY_RIGHT_SHIFT];
@@ -158,6 +170,8 @@ int main(int argc, char** argv) {
 	glfwSetInputMode(win, GLFW_CURSOR, win_user_data.m_input_to_imgui ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED);
 
 	glfwSetMouseButtonCallback(win, OnMouseButton);
+	glfwSetScrollCallback(win, OnScroll);
+	
 	glfwSetCharCallback(win, OnChar);
 	glfwSetKeyCallback(win, OnKey);
 
@@ -267,12 +281,18 @@ int main(int argc, char** argv) {
 		auto* gpu_frame = gpu->BeginFrame(clear_color);
 		Vector<double, 2> mouse_pos;
 		Vector<bool, 3> mouse_buttons;
+		Vec2 scroll = { 0, 0 };
 		glfwGetCursorPos(win, &mouse_pos[0], &mouse_pos[1]);
 		if (win_user_data.m_input_to_imgui) {
 			for (i32 i = 0; i < 3; ++i) {
 				mouse_buttons[i] = win_user_data.m_mouse_pressed[i] || glfwGetMouseButton(win, i) != 0;
 				win_user_data.m_mouse_pressed[i] = false;
 			}
+
+			scroll = win_user_data.m_scroll;
+
+			win_user_data.m_scroll[0] = 0.0f;
+			win_user_data.m_scroll[1] = 0.0f;
 
 			if (glfwGetKey(win, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
 				win_user_data.m_input_to_imgui = false;
@@ -289,7 +309,7 @@ int main(int argc, char** argv) {
 
 		shader_manager.PushChangesToGPU();
 
-		imgui->BeginFrame(mouse_pos, mouse_buttons);
+		imgui->BeginFrame(mouse_pos, mouse_buttons, scroll);
 
 		const float aspect_ratio = (float)fb_width / (float)fb_height;
 

@@ -101,13 +101,15 @@ struct ImGuiImpl : public ImguiImplInterface {
 		ImGui::DestroyContext();
 	}
 
-	void BeginFrame(Vector<double, 2> mouse_pos, Vector<bool, 3> mouse_buttons) {
+	void BeginFrame(Vector<double, 2> mouse_pos, Vector<bool, 3> mouse_buttons, Vec2 scroll) {
 		ImGuiIO& io = ImGui::GetIO();
 
 		Vector<u32, 2> current = m_gpu->GetSwapChainDimensions();
 		io.DisplaySize = ImVec2((float)current[0], (float)current[1]);
 
 		io.MousePos = ImVec2{ (float)mouse_pos.X, (float)mouse_pos.Y };
+		io.MouseWheelH = scroll.X;
+		io.MouseWheel = scroll.Y;
 		io.MouseDown[0] = mouse_buttons[0];
 		io.MouseDown[1] = mouse_buttons[1];
 		io.MouseDown[2] = mouse_buttons[2];
