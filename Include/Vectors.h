@@ -34,11 +34,11 @@ struct Vector {
 	}
 	Vector(std::initializer_list<T> list) {
 		size_t i = 0;
-		for (auto it = list.begin(); i < ArraySize(vec.Data) && it != list.end(); ++i, ++it) {
-			vec.Data[i] = *it;
+		for (auto it = list.begin(); i < ArraySize(Data) && it != list.end(); ++i, ++it) {
+			Data[i] = *it;
 		}
-		for (; i < ArraySize(vec.Data); ++i) {
-			vec.Data[i] = T{};
+		for (; i < ArraySize(Data); ++i) {
+			Data[i] = T{};
 		}
 	}
 
