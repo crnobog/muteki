@@ -1,5 +1,4 @@
-﻿// TODO: Update IMGUI
-// TODO: Integrate mouse wheel controls into IMGUI
+﻿// TODO: Integrate mouse wheel controls into IMGUI
 // TODO: Map something different to every face of default cube
 // TODO: Render rotation axis visibly for rotation tweak mode
 // TODO: Refactor GPU ID structs to split bits internally e.g. temporary vs persistent constant buffer
