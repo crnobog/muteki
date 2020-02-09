@@ -529,6 +529,15 @@ struct GPU_Vulkan : public GPUInterface {
 		VkImage			m_image = nullptr;
 		VkImageView		m_image_view = nullptr;
 		VkDeviceMemory	m_device_memory = nullptr;
+
+		void DestroyObjects(VkDevice device, VkAllocationCallbacks* callbacks) {
+			vkDestroyImageView(device, m_image_view, callbacks);
+			m_image_view = nullptr;
+			vkDestroyImage(device, m_image, callbacks);
+			m_image = nullptr;
+			vkFreeMemory(device, m_device_memory, callbacks);
+			m_device_memory = nullptr;
+		}
 	};
 
 	struct ShaderResourceList {
@@ -766,6 +775,8 @@ struct GPU_Vulkan : public GPUInterface {
 	VkShaderModule CompileShaderInternal(ShaderType type, PointerRange<const u8> source);
 	bool RecreatePipelineState(PipelineStateID id);
 	bool CreatePipelineStateInternal(const GPU::PipelineStateDesc& desc, VkPipeline& out_ps);
+
+	void CreateTexture2D_Internal(Texture2D& texture, u32 width, u32 height, GPU::TextureFormat format_common, mu::PointerRange<const u8> data);
 };
 
 GPU_Vulkan::GPU_Vulkan() {
@@ -2481,10 +2492,7 @@ void GPU_Vulkan::DestroyIndexBuffer(GPU::IndexBufferID id)
 	Assert(false);
 }
 
-TextureID GPU_Vulkan::CreateTexture2D(u32 width, u32 height, GPU::TextureFormat format_common, mu::PointerRange<const u8> data)
-{
-	TextureID id = m_textures.AddDefaulted();
-	Texture2D& texture = m_textures[id];
+void GPU_Vulkan::CreateTexture2D_Internal(Texture2D& texture, u32 width, u32 height, GPU::TextureFormat format_common, mu::PointerRange<const u8> data) {
 
 	VkFormat format = CommonToVK(format_common);
 	//VkFormatProperties format_props;
@@ -2648,7 +2656,7 @@ TextureID GPU_Vulkan::CreateTexture2D(u32 width, u32 height, GPU::TextureFormat 
 	EnsureVK(vkQueueSubmit(m_graphics_queue, 1, &submit_info, m_transfer_complete_fence));
 
 	// Wait for command completion
-	for(VkResult res = VK_TIMEOUT; res == VK_TIMEOUT; )
+	for (VkResult res = VK_TIMEOUT; res == VK_TIMEOUT; )
 	{
 		res = vkWaitForFences(m_device, 1, &m_transfer_complete_fence, VK_TRUE, u64_max);
 		Assert(res == VK_TIMEOUT || res == VK_SUCCESS);
@@ -2657,12 +2665,25 @@ TextureID GPU_Vulkan::CreateTexture2D(u32 width, u32 height, GPU::TextureFormat 
 	// Release temp resources
 	vkDestroyBuffer(m_device, tmp_buffer, m_allocation_callbacks);
 	vkFreeMemory(m_device, tmp_memory, m_allocation_callbacks);
+}
+
+TextureID GPU_Vulkan::CreateTexture2D(u32 width, u32 height, GPU::TextureFormat format_common, mu::PointerRange<const u8> data) {
+	TextureID id = m_textures.AddDefaulted();
+	Texture2D& texture = m_textures[id];
+
+	CreateTexture2D_Internal(texture, width, height, format_common, data);
 
 	return id;
 }
 
-void GPU_Vulkan::RecreateTexture2D(GPU::TextureID id, u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) {
-	Assert(false); // TODO
+void GPU_Vulkan::RecreateTexture2D(GPU::TextureID id, u32 width, u32 height, GPU::TextureFormat format_common, mu::PointerRange<const u8> data) {
+	vkDeviceWaitIdle(m_device); // TODO: remove wait
+
+	Texture2D& texture = m_textures[id];
+
+	texture.DestroyObjects(m_device, m_allocation_callbacks);
+	
+	CreateTexture2D_Internal(texture, width, height, format_common, data);
 }
 
 DepthTargetID GPU_Vulkan::CreateDepthTarget(u32 width, u32 height)
