@@ -164,7 +164,6 @@ void TextureManager::PushChangesToGPU() {
 	}
 
 	Array<TextureReloadRequest> new_textures_to_reload;
-	// TODO: Add timeouts here so we don't recompile too frequently
 	for (TextureReloadRequest request : m_textures_to_reload) {
 		if (request.Timer.GetElapsedTimeSeconds() < 0.5f) {
 			// We do insertions in order so there can't be any older requests than this
@@ -174,7 +173,7 @@ void TextureManager::PushChangesToGPU() {
 
 		GPU::TextureID id = request.ID;
 		Texture& texture = m_textures[id];
-		dbg::Log("Retrying recompile of texture {}", texture.Name);
+		dbg::Log("Retrying reload of texture {}", texture.Name);
 		switch (ReloadTexture(id)) {
 		case mu::IOResult::FileLocked:
 			new_textures_to_reload.Emplace(id, mu::Timer{});
@@ -192,7 +191,7 @@ void TextureManager::PushChangesToGPU() {
 				continue;
 			}
 
-			dbg::Log("Shader {} has changed, recompiling", texture.Name);
+			dbg::Log("Texture {} has changed, reloading", texture.Name);
 			switch (ReloadTexture(id)) {
 			case mu::IOResult::FileLocked:
 				dbg::Log("Texture file {} locked, will retry later", texture.Name);
