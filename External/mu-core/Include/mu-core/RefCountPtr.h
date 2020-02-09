@@ -19,6 +19,8 @@ public:
 
 	RefCountPtr() : m_ptr(nullptr) {
 	}
+	RefCountPtr(nullptr_t) : m_ptr(nullptr) {
+	}
 
 	RefCountPtr(const RefCountPtr& other) : m_ptr(other.Get()) {
 		IncRef();
@@ -32,6 +34,11 @@ public:
 			DecRef();
 			m_ptr = nullptr;
 		}
+	}
+
+	RefCountPtr& operator=(nullptr_t) {
+		Clear();
+		return *this;
 	}
 
 	RefCountPtr& operator=(const RefCountPtr& other) {
