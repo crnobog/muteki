@@ -149,6 +149,7 @@ struct GPU_DX11 : public GPUInterface {
 		FixedArray<u32, GPU::MaxStreamSlots> StreamStrides;
 		COMPtr<ID3D11BlendState> BlendState;
 		COMPtr<ID3D11RasterizerState> RasterState;
+		COMPtr<ID3D11DepthStencilState> DepthStencilState;
 	};
 	struct Framebuffer {
 		GPU::FramebufferDesc Desc;
@@ -156,6 +157,10 @@ struct GPU_DX11 : public GPUInterface {
 			: Desc(desc) 
 		{
 		}
+	};
+	struct DepthTarget {
+		COMPtr<ID3D11Texture2D> Texture;
+		COMPtr<ID3D11DepthStencilView> View;
 	};
 
 	GPU_DX11() : m_frame_data(this) {}
@@ -192,6 +197,7 @@ struct GPU_DX11 : public GPUInterface {
 	Pool<LinkedProgram, ProgramID>						m_linked_programs{ 128 };
 	Pool<PipelineState, PipelineStateID>				m_pipeline_states{ 128 };
 	Pool<Framebuffer, FramebufferID>					m_framebuffers{ 128 };
+	Pool<DepthTarget, DepthTargetID>					m_depth_targets{ 128 };
 
 	GPU_DX11_Frame m_frame_data;
 
@@ -242,6 +248,8 @@ struct GPU_DX11 : public GPUInterface {
 
 	void OnSwapChainUpdated();
 	bool CompileShaderInternal(GPU::ShaderType type, mu::PointerRange<const u8> name, Shader& out_shader) const;
+
+	void CreateTexture2D_Internal(Texture& texture, u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data);
 
 	ID3D11RenderTargetView* GetRenderTargetView(RenderTargetID id) {
 		Assert(id == RenderTargetID{});
@@ -366,7 +374,15 @@ void GPU_DX11::SubmitPass(const RenderPass& pass) {
 	for (auto[rtv, rt] : Zip(Range(rtvs), framebuffer.Desc.RenderTargets.Range())) {
 		rtv = GetRenderTargetView(rt);
 	}
-	context->OMSetRenderTargets((u32)framebuffer.Desc.RenderTargets.Num(), rtvs, nullptr);
+	ID3D11DepthStencilView* dsv = nullptr;
+	if (framebuffer.Desc.DepthBuffer != GPU::DepthTargetID{}) {
+		dsv = m_depth_targets[framebuffer.Desc.DepthBuffer].View.Get();
+	}
+	context->OMSetRenderTargets((u32)framebuffer.Desc.RenderTargets.Num(), rtvs, dsv);
+
+	if (pass.DepthClearValue && dsv) {
+		context->ClearDepthStencilView(dsv, D3D11_CLEAR_DEPTH, *pass.DepthClearValue, 0);
+	}
 
 	// TODO: Make part of render pass
 	context->RSSetViewports(1, &m_viewport);
@@ -381,6 +397,8 @@ void GPU_DX11::SubmitPass(const RenderPass& pass) {
 		float blend_factor[] = { 0, 0, 0, 0 };
 		u32 sample_mask = 0xFFFFFFFF;
 		context->OMSetBlendState(pso.BlendState.Get(), blend_factor, sample_mask);
+
+		context->OMSetDepthStencilState(pso.DepthStencilState.Get(), 0);
 
 		context->RSSetState(pso.RasterState.Get());
 
@@ -618,6 +636,17 @@ GPU::PipelineStateID GPU_DX11::CreatePipelineState(const GPU::PipelineStateDesc&
 	raster_desc.AntialiasedLineEnable = desc.RasterState.AntiAliasedLineEnable;
 	EnsureHR(m_device->CreateRasterizerState(&raster_desc, pso.RasterState.Replace()));
 
+	D3D11_DEPTH_STENCIL_DESC ds_desc = {};
+	ds_desc.DepthEnable = desc.DepthStencilState.DepthEnable;
+	ds_desc.DepthWriteMask = desc.DepthStencilState.DepthWriteEnable ? D3D11_DEPTH_WRITE_MASK_ALL : D3D11_DEPTH_WRITE_MASK_ZERO;
+	ds_desc.DepthFunc = CommonToDX11(desc.DepthStencilState.DepthComparisonFunc);
+	ds_desc.StencilEnable = desc.DepthStencilState.StencilEnable;
+	ds_desc.StencilReadMask = desc.DepthStencilState.StencilReadMask;
+	ds_desc.StencilWriteMask = desc.DepthStencilState.StencilWriteMask;
+	ds_desc.FrontFace = CommonToDX11(desc.DepthStencilState.StencilFrontFace);
+	ds_desc.BackFace = CommonToDX11(desc.DepthStencilState.StencilBackFace);
+	EnsureHR(m_device->CreateDepthStencilState(&ds_desc, pso.DepthStencilState.Replace()));
+
 	return id;
 }
 
@@ -675,10 +704,7 @@ void GPU_DX11::DestroyIndexBuffer(GPU::IndexBufferID id) {
 	m_index_buffers.Return(id);
 }
 
-TextureID GPU_DX11::CreateTexture2D(u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) {
-	TextureID id = m_textures.AddDefaulted();
-	Texture& texture = m_textures[id];
-
+void GPU_DX11::CreateTexture2D_Internal(Texture& texture, u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) {
 	D3D11_TEXTURE2D_DESC desc = {};
 	desc.Width = width;
 	desc.Height = height;
@@ -699,6 +725,13 @@ TextureID GPU_DX11::CreateTexture2D(u32 width, u32 height, GPU::TextureFormat fo
 	srv_desc.Texture2D.MipLevels = 1;
 	srv_desc.Texture2D.MostDetailedMip = 0;
 	EnsureHR(m_device->CreateShaderResourceView(texture.Resource, &srv_desc, texture.SRV.Replace()));
+}
+
+TextureID GPU_DX11::CreateTexture2D(u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) {
+	TextureID id = m_textures.AddDefaulted();
+	Texture& texture = m_textures[id];
+	CreateTexture2D_Internal(texture, width, height, format, data);
+
 	return id;
 }
 
@@ -706,9 +739,34 @@ void GPU_DX11::RecreateTexture2D(GPU::TextureID /*id*/, u32 /*width*/, u32 /*hei
 	Assert(false);
 }
 
-DepthTargetID GPU_DX11::CreateDepthTarget(u32, u32) {
-	Assert(false); // TODO
-	return {};
+DepthTargetID GPU_DX11::CreateDepthTarget(u32 width, u32 height) {
+	DepthTargetID id = m_depth_targets.AddDefaulted();
+	DepthTarget& dt = m_depth_targets[id];
+
+	D3D11_TEXTURE2D_DESC tex_desc = {};
+	tex_desc.Width = width;
+	tex_desc.Height = height;
+	tex_desc.MipLevels = 1;
+	tex_desc.ArraySize = 1;
+	tex_desc.Format = DXGI_FORMAT_D32_FLOAT;
+	tex_desc.SampleDesc.Count = 1;
+	tex_desc.SampleDesc.Quality = 0;
+	tex_desc.Usage = D3D11_USAGE_DEFAULT;
+	tex_desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	tex_desc.CPUAccessFlags = 0;
+	tex_desc.MiscFlags = 0;
+
+	EnsureHR(m_device->CreateTexture2D(&tex_desc, nullptr, dt.Texture.Replace()));
+
+	D3D11_DEPTH_STENCIL_VIEW_DESC dsv_desc = {};
+	dsv_desc.Format = tex_desc.Format;
+	dsv_desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	dsv_desc.Flags = 0;
+	dsv_desc.Texture2D.MipSlice = 0;
+
+	EnsureHR(m_device->CreateDepthStencilView(dt.Texture.Get(), &dsv_desc, dt.View.Replace()));
+
+	return id;
 }
 
 ShaderResourceListID GPU_DX11::CreateShaderResourceList(const GPU::ShaderResourceListDesc& desc) {

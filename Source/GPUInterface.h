@@ -205,7 +205,9 @@ namespace GPU {
 		Greater,
 		NotEqual,
 		GreaterThanOrEqual,
-		Always
+		Always,
+
+		MAX,
 	};
 
 	enum class StencilOp {
@@ -217,6 +219,8 @@ namespace GPU {
 		Invert,
 		Increment,
 		Decrement,
+
+		MAX,
 	};
 
 	struct StencilOpDesc {

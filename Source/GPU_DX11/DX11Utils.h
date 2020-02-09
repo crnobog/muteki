@@ -57,4 +57,47 @@ namespace DX11Util {
 		Assert(false);
 		return D3D11_CULL_NONE;
 	}
+
+	inline D3D11_COMPARISON_FUNC CommonToDX11(GPU::ComparisonFunc func) {
+		i32 index = (i32)func;
+		D3D11_COMPARISON_FUNC lookup[] = {
+			D3D11_COMPARISON_NEVER,
+			D3D11_COMPARISON_LESS,
+			D3D11_COMPARISON_EQUAL,
+			D3D11_COMPARISON_LESS_EQUAL,
+			D3D11_COMPARISON_GREATER,
+			D3D11_COMPARISON_NOT_EQUAL,
+			D3D11_COMPARISON_GREATER_EQUAL,
+			D3D11_COMPARISON_ALWAYS,
+		};
+		static_assert(ArraySize(lookup) == (size_t)GPU::ComparisonFunc::MAX);
+		Assert(index >= 0 && index < ArraySize(lookup));
+		return lookup[index];
+	}
+
+	inline D3D11_STENCIL_OP CommonToDX11(GPU::StencilOp op) {
+		i32 index = (i32)op;
+		D3D11_STENCIL_OP lookup[] = {
+			D3D11_STENCIL_OP_KEEP,
+			D3D11_STENCIL_OP_ZERO,
+			D3D11_STENCIL_OP_REPLACE,
+			D3D11_STENCIL_OP_INCR_SAT,
+			D3D11_STENCIL_OP_DECR_SAT,
+			D3D11_STENCIL_OP_INVERT,
+			D3D11_STENCIL_OP_INCR,
+			D3D11_STENCIL_OP_DECR,
+		};
+		static_assert(ArraySize(lookup) == (size_t)GPU::StencilOp::MAX);
+		Assert(index >= 0 && index < ArraySize(lookup));
+		return lookup[index];
+	}
+
+	inline D3D11_DEPTH_STENCILOP_DESC CommonToDX11(GPU::StencilOpDesc desc) {
+		return {
+			CommonToDX11(desc.StencilFailOp),
+			CommonToDX11(desc.StencilDepthFailOp),
+			CommonToDX11(desc.StencilPassOp),
+			CommonToDX11(desc.StencilFunc),
+		};
+	}
 };
