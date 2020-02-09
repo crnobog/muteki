@@ -335,6 +335,8 @@ struct GPU_DX12 : public GPUInterface {
 	bool CreatePipelineStateInternal(const GPU::PipelineStateDesc& desc, PipelineState& out_ps);
 	bool RecreatePipelineState(PipelineStateID id);
 
+	void CreateTexture2D_Internal(Texture& texture, u32 width, u32 height, GPU::TextureFormat format, PointerRange<const u8> data);
+
 	D3D12_CPU_DESCRIPTOR_HANDLE GetRenderTargetView(D3D12_CPU_DESCRIPTOR_HANDLE backbuffer, RenderTargetID id);
 	D3D12_CONSTANT_BUFFER_VIEW_DESC GetConstantBufferViewDesc(GPU_DX12_Frame* frame, ConstantBufferID id);
 	D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView(GPU_DX12_Frame* frame, VertexBufferID vb_id, u32 stride);
@@ -911,10 +913,7 @@ void GPU_DX12::DestroyIndexBuffer(GPU::IndexBufferID) {
 	Assertf(false, "Not yet implemented");
 }
 
-TextureID GPU_DX12::CreateTexture2D(u32 width, u32 height, GPU::TextureFormat format, PointerRange<const u8> data) {
-	TextureID id = m_textures.AddDefaulted();
-	Texture& texture = m_textures[id];
-
+void GPU_DX12::CreateTexture2D_Internal(Texture& texture, u32 width, u32 height, GPU::TextureFormat format, PointerRange<const u8> data) {
 	TextureDesc2D desc{ width, height, CommonToDX12(format) };
 	EnsureHR(m_device->CreateCommittedResource(
 		&default_heap_properties,
@@ -966,11 +965,30 @@ TextureID GPU_DX12::CreateTexture2D(u32 width, u32 height, GPU::TextureFormat fo
 	u64 fence_value = m_copy_fence.SubmitFence(m_copy_command_queue.Get());
 	m_copy_fence.WaitForFence(fence_value, m_copy_fence_event);
 
+}
+
+TextureID GPU_DX12::CreateTexture2D(u32 width, u32 height, GPU::TextureFormat format, PointerRange<const u8> data) {
+	TextureID id = m_textures.AddDefaulted();
+	Texture& texture = m_textures[id];
+
+	CreateTexture2D_Internal(texture, width, height, format, data);
+
 	return id;
 }
 
-void GPU_DX12::RecreateTexture2D(GPU::TextureID /*id*/, u32 /*width*/, u32 /*height*/, GPU::TextureFormat /*format*/, mu::PointerRange<const u8> /*data*/) {
-	Assert(false);
+void GPU_DX12::RecreateTexture2D(GPU::TextureID id, u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) {
+	// TODO: Don't wait for GPU idle here
+	for (i32 i = 0; i < frame_count; ++i) {
+		auto& frame = m_frame_data[i];
+
+		m_frame_fence.WaitForFence(frame->m_fence_value, m_frame_fence_event);
+	}
+
+	Texture& texture = m_textures[id];
+	texture.Resource = nullptr;
+	texture.UploadResource = nullptr;
+	
+	CreateTexture2D_Internal(texture, width, height, format, data);
 }
 
 ShaderResourceListID GPU_DX12::CreateShaderResourceList(const GPU::ShaderResourceListDesc& desc) {
@@ -991,7 +1009,7 @@ GPU::FramebufferID GPU_DX12::CreateFramebuffer(const GPU::FramebufferDesc& desc)
 }
 
 void GPU_DX12::DestroyFramebuffer(GPU::FramebufferID) {
-	Assert(false);
+	Assert(false); // TODO
 }
 
 
