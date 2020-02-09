@@ -273,6 +273,9 @@ namespace mu {
 
 
 	FileReader::FileReader(void* handle) : m_handle(handle) {}
+	FileReader::FileReader(IOResult error) : m_handle(nullptr), m_error(error) {
+		Assert(error != IOResult::Success);
+	}
 
 	FileReader::~FileReader() {
 		if (m_handle) {
@@ -282,6 +285,7 @@ namespace mu {
 
 	FileReader::FileReader(FileReader&& other)
 		: m_handle(other.m_handle)
+		, m_error(other.m_error)
 	{
 		other.m_handle = nullptr;
 	}
@@ -297,7 +301,22 @@ namespace mu {
 		HANDLE handle = CreateFile(path.native().c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
 		if (handle == INVALID_HANDLE_VALUE)
 		{
-			return FileReader(nullptr);
+			u32 plat_err = GetLastError();
+			IOResult err = IOResult::MiscError;
+			switch(plat_err)
+			{ 
+			case ERROR_FILE_NOT_FOUND:
+			case ERROR_PATH_NOT_FOUND:
+				err = IOResult::FileNotFound;
+				break;
+			case ERROR_ACCESS_DENIED:
+				err = IOResult::FileLocked;
+				break;
+			default:
+				Assertf(false, "Unknown CreateFile error {}", plat_err); // TOOD: Hex formatting
+			}
+
+			return FileReader(err);
 		}
 		return FileReader(handle);
 	}
@@ -316,6 +335,10 @@ namespace mu {
 			}
 		}
 		return dest_range;
+	}
+
+	IOResult FileReader::GetError() const {
+		return m_error;
 	}
 
 	i64 FileReader::GetFileSize() const {
@@ -340,9 +363,13 @@ namespace mu {
 
 	mu::Array<u8> LoadFileToArray(const fs::path& path) {
 		FileReader reader = FileReader::Open(path);
-		if (!reader.IsValidFile()) {
+		if (reader.GetError() != IOResult::Success) {
 			return {};
 		}
+		return LoadFileToArray(reader);
+	}
+
+	mu::Array<u8> LoadFileToArray(FileReader& reader) {
 		mu::Array<u8> arr;
 		size_t size = reader.GetFileSize();
 		arr.Reserve(size);
@@ -374,7 +401,7 @@ namespace mu {
 
 	String LoadFileToString(const fs::path& path) {
 		FileReader reader = FileReader::Open(path);
-		if (!reader.IsValidFile()) {
+		if (reader.GetError() != IOResult::Success) {
 			return {};
 		}
 
