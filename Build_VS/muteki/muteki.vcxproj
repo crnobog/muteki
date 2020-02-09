@@ -59,7 +59,7 @@
     <IntDir>$(SolutionDir)..\Intermediate\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <TargetName>$(ProjectName)-$(Platform)-$(Configuration)</TargetName>
     <LibraryPath>$(SolutionDir)..\Lib\;$(VULKAN_SDK)\Lib;$(LibraryPath)</LibraryPath>
-    <IncludePath>$(SolutionDir)..\External\imgui\;$(SolutionDir)..\External\mu-core\Include;$(VULKAN_SDK)\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)..\External\imgui\;$(SolutionDir)..\External\mu-core\Include;$(SolutionDir)..\External\stb\;$(VULKAN_SDK)\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -138,8 +138,10 @@
     <ClCompile Include="..\..\Source\Main.cpp" />
     <ClCompile Include="..\..\Source\MathImpl.cpp" />
     <ClCompile Include="..\..\Source\ShaderManager.cpp" />
+    <ClCompile Include="..\..\Source\TextureManager.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\External\stb\stb_image.h" />
     <ClInclude Include="..\..\Include\MutekiImguiConfig.h" />
     <ClInclude Include="..\..\Include\Vectors.h" />
     <ClInclude Include="..\..\Source\CoreMath.h" />
@@ -156,6 +158,7 @@
     <ClInclude Include="..\..\Source\Quaternion.h" />
     <ClInclude Include="..\..\Source\Rect.h" />
     <ClInclude Include="..\..\Source\ShaderManager.h" />
+    <ClInclude Include="..\..\Source\TextureManager.h" />
     <ClInclude Include="..\..\Source\TransformMatrices.h" />
   </ItemGroup>
   <ItemGroup>

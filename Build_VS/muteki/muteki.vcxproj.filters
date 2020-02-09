@@ -32,6 +32,7 @@
     </ClCompile>
     <ClCompile Include="..\..\Source\ShaderManager.cpp" />
     <ClCompile Include="..\..\Source\ImguiImpl.cpp" />
+    <ClCompile Include="..\..\Source\TextureManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="GPU">
@@ -60,6 +61,9 @@
     </Filter>
     <Filter Include="Shaders\DX">
       <UniqueIdentifier>{608186c7-272f-45df-8c05-7a8363bd5d69}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="stb">
+      <UniqueIdentifier>{30d98a62-966b-4fc1-8a33-91e8c845cfaf}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -105,6 +109,10 @@
     <ClInclude Include="..\..\Include\MutekiImguiConfig.h" />
     <ClInclude Include="..\..\Include\Vectors.h">
       <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\TextureManager.h" />
+    <ClInclude Include="..\..\External\stb\stb_image.h">
+      <Filter>stb</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

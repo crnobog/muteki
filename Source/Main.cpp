@@ -12,7 +12,7 @@
 // TODOLONGTERM: Tunable variables registration & UI
 // TODOLONGTERM: Switch to imgui docking branch
 // TODOLONGTERM: FName equivalent
-
+// TODOLONGTERM: Pix integration for CPU tracing
 
 #ifdef _MSC_VER
 #    pragma comment(linker, "/subsystem:windows /ENTRY:mainCRTStartup")
@@ -27,6 +27,7 @@
 #include "CoreMath.h"
 #include "CubePrimitive.h"
 #include "ShaderManager.h"
+#include "TextureManager.h"
 #include "ImguiImpl.h"
 
 #define GLFW_EXPOSE_NATIVE_WIN32
@@ -147,6 +148,7 @@ int main(int argc, char** argv) {
 	gpu->Init(hwnd);
 
 	ShaderManager shader_manager{ gpu.get() };
+	TextureManager texture_manager{ gpu.get() };
 
 	String win_title = String::Format("muteki {}", gpu->GetName());
 	glfwSetWindowTitle(win, win_title.GetRaw());
@@ -227,11 +229,7 @@ int main(int argc, char** argv) {
 
 	GPU::IndexBufferID cube_ibuffer_id = gpu->CreateIndexBuffer(ByteRange(cube_indices));
 
-	Color4 pixels[] = {
-		{ 000, 255, 000, 255 }, { 000, 000, 255, 255 }, { 255, 000, 000, 255 },
-		{ 000, 128, 000, 255 }, { 000, 000, 128, 255 }, { 128, 000, 000, 255 },
-	};
-	GPU::TextureID texture_id = gpu->CreateTexture2D(3, 2, GPU::TextureFormat::RGBA8, ByteRange(pixels));
+	GPU::TextureID texture_id = texture_manager.LoadTexture("cube_faces.png");
 	GPU::ShaderResourceListDesc resource_list_desc = {};
 	resource_list_desc.StartSlot = 0;
 	resource_list_desc.Textures.Add(texture_id);
@@ -308,6 +306,7 @@ int main(int argc, char** argv) {
 		}
 
 		shader_manager.PushChangesToGPU();
+		texture_manager.PushChangesToGPU();
 
 		imgui->BeginFrame(mouse_pos, mouse_buttons, scroll);
 
@@ -373,6 +372,7 @@ int main(int argc, char** argv) {
 			if (ImGui::BeginMenu("Windows")) {
 				ImGui::MenuItem("ImGui Test Window", nullptr, &show_imgui_test_window);
 				ImGui::MenuItem("Shader Manager", nullptr, shader_manager.GetShowFlag());
+				ImGui::MenuItem("Texture Manager", nullptr, texture_manager.GetShowFlag());
 				ImGui::MenuItem("Tweaks Window", nullptr, &show_tweaks_window);
 				ImGui::EndMenu();
 			}
@@ -411,6 +411,7 @@ int main(int argc, char** argv) {
 			ImGui::ShowDemoWindow(&show_imgui_test_window);
 		}
 		shader_manager.DrawUI();
+		texture_manager.DrawUI();
 
 		Quat q = Quat::FromAxisAngle(Normalize(rot_axis), DegreesToRadians(rot_deg));
 

@@ -24,6 +24,7 @@
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
 
+// TODO: Remove
 #pragma warning(push) 
 #pragma warning(disable : 4100)
 
@@ -223,6 +224,7 @@ struct GPU_DX11 : public GPUInterface {
 	virtual void				DestroyIndexBuffer(GPU::IndexBufferID id) override;
 
 	virtual GPU::TextureID		CreateTexture2D(u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) override;
+	virtual void				RecreateTexture2D(GPU::TextureID id, u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) override;
 
 	virtual GPU::DepthTargetID	CreateDepthTarget(u32 width, u32 height) override;
 
@@ -700,7 +702,12 @@ TextureID GPU_DX11::CreateTexture2D(u32 width, u32 height, GPU::TextureFormat fo
 	return id;
 }
 
+void GPU_DX11::RecreateTexture2D(GPU::TextureID /*id*/, u32 /*width*/, u32 /*height*/, GPU::TextureFormat /*format*/, mu::PointerRange<const u8> /*data*/) {
+	Assert(false);
+}
+
 DepthTargetID GPU_DX11::CreateDepthTarget(u32, u32) {
+	Assert(false); // TODO
 	return {};
 }
 

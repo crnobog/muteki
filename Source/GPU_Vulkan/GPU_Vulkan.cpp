@@ -20,7 +20,7 @@
 #include <vulkan/vulkan_win32.h>
 #include <shaderc/shaderc.h>
 
-#pragma warning(disable : 4100)
+#pragma warning(disable : 4100) // TODO: Remove
 #pragma comment(lib, "vulkan-1.lib")
 #pragma comment(lib, "shaderc_combined.lib")
 
@@ -430,9 +430,12 @@ VkFormat CommonToVK(GPU::TextureFormat format)
 	i32 i = (i32)format;
 
 	VkFormat formats[] = {
-		VK_FORMAT_R8G8B8_UNORM,
+		VK_FORMAT_UNDEFINED,
+		VK_FORMAT_R8_UNORM,
+		VK_FORMAT_R8G8_UNORM,
 		VK_FORMAT_R8G8B8A8_UNORM,
 	};
+	static_assert(size_t(GPU::TextureFormat::NumFormats) == ArraySize(formats));
 	Assert(i >= 0 && i < ArraySize(formats));
 	return formats[i];
 }
@@ -589,6 +592,7 @@ struct GPU_Vulkan : public GPUInterface {
 	virtual void				DestroyIndexBuffer(GPU::IndexBufferID id) override;
 
 	virtual GPU::TextureID		CreateTexture2D(u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) override;
+	virtual void				RecreateTexture2D(GPU::TextureID id, u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) override;
 
 	virtual GPU::DepthTargetID	CreateDepthTarget(u32 width, u32 height) override;
 
@@ -2655,6 +2659,10 @@ TextureID GPU_Vulkan::CreateTexture2D(u32 width, u32 height, GPU::TextureFormat 
 	vkFreeMemory(m_device, tmp_memory, m_allocation_callbacks);
 
 	return id;
+}
+
+void GPU_Vulkan::RecreateTexture2D(GPU::TextureID id, u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) {
+	Assert(false); // TODO
 }
 
 DepthTargetID GPU_Vulkan::CreateDepthTarget(u32 width, u32 height)

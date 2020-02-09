@@ -26,11 +26,7 @@ namespace ShaderManagerInternal {
 
 		return shader_path;
 	}
-
-	String LoadShaderSourceCode(const fs::path& shader_dir, GPUInterface* GPU, GPU::ShaderType type, mu::PointerRange<const char> name) {
-		return mu::LoadFileToString(GetShaderPath(shader_dir, GPU, type, name));
-	}
-
+	
 	fs::path ComputeShaderDirectory(GPUInterface* GPU) {
 		fs::path exe_dir = mu::paths::GetExecutableDirectory();
 		const auto sub_dir = GPU->GetShaderSubdirectory();
@@ -110,28 +106,28 @@ GPU::ShaderID ShaderManager::CompileShader(GPU::ShaderType type, mu::PointerRang
 	return id;
 }	
 
-ShaderCompileResult ShaderManager::RecompileShader(GPU::ShaderID id) {
+mu::IOResult ShaderManager::RecompileShader(GPU::ShaderID id) {
 	if (!m_shaders.Contains(id)) {
-		return ShaderCompileResult::Failed;
+		return mu::IOResult::FileNotFound;
 	}
 
 	Shader& shader = m_shaders[id];
 	const auto path = ShaderManagerInternal::GetShaderPath(m_shader_dir, m_gpu, shader.Type, shader.Name.Range());
 	auto file_reader = mu::FileReader::Open(path);
-	if (!file_reader.IsValidFile()) {
-		dbg::Log("Failed to open shader file {}, will retry later", path.c_str());
-		return ShaderCompileResult::FileLocked;
+	if (auto err = file_reader.GetError(); err != mu::IOResult::Success) {
+		if( err == mu::IOResult::FileLocked ) {
+		}
+		return err;
 	}
 
 	const auto shader_source = mu::LoadFileToString(file_reader);
 	if (!m_gpu->RecompileShader(id, shader.Type, shader_source.Bytes())) {
-		dbg::Log("Recompile failed for shader file {}, will retry when file is next modified", path.c_str());
-		return ShaderCompileResult::Failed;
+		return mu::IOResult::MiscError;
 	}
 
 	// Only update write time if we succeeded
 	shader.LastWriteTime = fs::last_write_time(path);
-	return ShaderCompileResult::Success;
+	return mu::IOResult::Success;
 }
 
 void ShaderManager::PushChangesToGPU() {
@@ -152,11 +148,10 @@ void ShaderManager::PushChangesToGPU() {
 		Shader& shader = m_shaders[id];
 		dbg::Log("Retrying recompile of shader {}", shader.Name);
 		switch (RecompileShader(id)) {
-		case ShaderCompileResult::FileLocked:
+		case mu::IOResult::FileLocked:
 			new_shaders_to_recompile.Emplace(id, mu::Timer{});
 			break;
-		case ShaderCompileResult::Success:
-		case ShaderCompileResult::Failed:
+		default:
 			break;
 		}
 	}
@@ -171,11 +166,14 @@ void ShaderManager::PushChangesToGPU() {
 
 			dbg::Log("Shader {} has changed, recompiling", shader.Name);
 			switch (RecompileShader(id)) {
-			case ShaderCompileResult::FileLocked:
+			case mu::IOResult::FileLocked:
+				dbg::Log("Failed to open shader file {}, will retry later", path.c_str());
 				new_shaders_to_recompile.Emplace(id, mu::Timer{});
 				break;
-			case ShaderCompileResult::Success:
-			case ShaderCompileResult::Failed:
+			case mu::IOResult::MiscError:
+				dbg::Log("Recompile failed for shader file {}, will retry on next modification", path.c_str());
+				break;
+			default:
 				break;
 			}
 		}

@@ -314,6 +314,7 @@ struct GPU_DX12 : public GPUInterface {
 	virtual void				DestroyIndexBuffer(GPU::IndexBufferID id) override;
 
 	virtual GPU::TextureID		CreateTexture2D(u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) override;
+	virtual void				RecreateTexture2D(GPU::TextureID id, u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) override;
 
 	virtual GPU::DepthTargetID	CreateDepthTarget(u32 width, u32 height) override;
 
@@ -966,6 +967,10 @@ TextureID GPU_DX12::CreateTexture2D(u32 width, u32 height, GPU::TextureFormat fo
 	m_copy_fence.WaitForFence(fence_value, m_copy_fence_event);
 
 	return id;
+}
+
+void GPU_DX12::RecreateTexture2D(GPU::TextureID /*id*/, u32 /*width*/, u32 /*height*/, GPU::TextureFormat /*format*/, mu::PointerRange<const u8> /*data*/) {
+	Assert(false);
 }
 
 ShaderResourceListID GPU_DX12::CreateShaderResourceList(const GPU::ShaderResourceListDesc& desc) {

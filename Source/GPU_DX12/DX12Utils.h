@@ -131,12 +131,17 @@ namespace DX12Util {
 	}
 
 	inline DXGI_FORMAT CommonToDX12(GPU::TextureFormat format) {
-		switch (format) {
-		case GPU::TextureFormat::RGBA8:
-			return DXGI_FORMAT_R8G8B8A8_UNORM;
-		}
-		Assert(false);
-		return DXGI_FORMAT_UNKNOWN;
+		i32 i = (i32)format;
+
+		DXGI_FORMAT formats[] = {
+			DXGI_FORMAT_UNKNOWN,
+			DXGI_FORMAT_R8_UNORM,
+			DXGI_FORMAT_R8G8_UNORM,
+			DXGI_FORMAT_R8G8B8A8_UNORM,
+		};
+		static_assert(size_t(GPU::TextureFormat::NumFormats) == ArraySize(formats));
+		Assert(i >= 0 && i < ArraySize(formats));
+		return formats[i];
 	}
 
 	inline D3D12_BLEND_OP CommonToDX12(GPU::BlendOp op) {

@@ -53,8 +53,12 @@ namespace GPU {
 	};
 
 	enum class TextureFormat {
-		RGB8,
+		Unknown,
+		R8, 
+		RG8,
 		RGBA8,
+
+		NumFormats,
 	};
 
 	static constexpr u8 MaxBoundShaderResources = 16;
@@ -411,6 +415,7 @@ struct GPUInterface {
 	virtual void				DestroyIndexBuffer(GPU::IndexBufferID id) = 0;
 
 	virtual GPU::TextureID		CreateTexture2D(u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) = 0;
+	virtual void				RecreateTexture2D(GPU::TextureID id, u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) = 0;
 
 	virtual GPU::DepthTargetID	CreateDepthTarget(u32 width, u32 height) = 0;
 
