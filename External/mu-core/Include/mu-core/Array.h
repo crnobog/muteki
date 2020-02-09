@@ -5,6 +5,7 @@
 #include "mu-core/PointerRange.h"
 #include "mu-core/Algorithms.h"
 #include "mu-core/PrimitiveTypes.h"
+#include "mu-core/Ranges.h"
 
 namespace mu {
 	template<typename T>

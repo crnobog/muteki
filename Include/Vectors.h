@@ -17,6 +17,8 @@
 #include "mu-core/PrimitiveTypes.h"
 #include "mu-core/Utils.h"
 
+#include "CoreMath.h"
+
 #include <initializer_list>
 
 #pragma warning (push)

@@ -85,7 +85,7 @@ namespace mu {
 	class FixedArray;
 
 	template<typename T>
-	FORCEINLINE auto Range(T* ptr, size_t num) { return Range(ptr, ptr + num); }
+	FORCEINLINE auto Range(T* ptr, size_t num) { return PointerRange<T>(ptr, ptr + num); }
 
 	template<typename T>
 	FORCEINLINE auto Range(T* start, T* end) { return PointerRange<T>(start, end); }

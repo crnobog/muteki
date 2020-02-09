@@ -19,6 +19,9 @@ namespace mu {
 	template<typename T, size_t MAX>
 	class FixedArrayDestructorMixin<T, MAX, false> : public FixedArrayBase<T, MAX> {
 	protected:
+		using FixedArrayBase<T, MAX>::m_data;
+		using FixedArrayBase<T, MAX>::m_num;
+
 		~FixedArrayDestructorMixin() {
 			T* start = (T*)m_data;
 			T* end = start + m_num;
@@ -28,7 +31,8 @@ namespace mu {
 
 	template<typename T, size_t MAX>
 	class FixedArray : protected FixedArrayDestructorMixin<T, MAX, std::is_trivially_destructible_v<T>> {
-
+		using FixedArrayDestructorMixin<T, MAX, std::is_trivially_destructible_v<T>>::m_data;
+		using FixedArrayDestructorMixin<T, MAX, std::is_trivially_destructible_v<T>>::m_num;
 	public:
 		FixedArray() {}
 		FixedArray(std::initializer_list<T> init) {

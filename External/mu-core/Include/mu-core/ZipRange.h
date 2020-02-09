@@ -4,6 +4,8 @@
 #include "mu-core/Metaprogramming.h"
 #include "mu-core/RangeConcept.h"
 
+#include <limits>
+
 namespace mu {
 	namespace details {
 		// Functor for folding over ranges of finite/infinite size and picking the minimum size

@@ -60,6 +60,15 @@ namespace mu {
 	void FormatRange(IStringFormatOutput&, const char* fmt, PointerRange<StringFormatArg> args);
 
 	template<typename... ARGS>
+	void ValidateFormatString(const char* fmt, ARGS... args) {
+		StringFormatArgType arg_types[] = { StringFormatArg(args).m_type... };
+		ValidateFormatString(fmt, Range(arg_types));
+	}
+
+	void ValidateFormatString(const char* fmt);
+	void ValidateFormatString(const char* fmt, PointerRange<StringFormatArgType> arg_types);
+
+	template<typename... ARGS>
 	void Format(IStringFormatOutput& output, const char* fmt, ARGS... args) {
 		ValidateFormatString(fmt, args...);
 		StringFormatArg wrapped_args[] = { StringFormatArg(args)... };
@@ -69,12 +78,4 @@ namespace mu {
 	template<typename T>
 	StringFormatArgType GetStringFormatArgType(T&& t) { return StringFormatArg(t).m_type; }
 
-	void ValidateFormatString(const char* fmt);
-	void ValidateFormatString(const char* fmt, PointerRange<StringFormatArgType> arg_types);
-
-	template<typename... ARGS>
-	void ValidateFormatString(const char* fmt, ARGS... args) {
-		StringFormatArgType arg_types[] = { StringFormatArg(args).m_type... };
-		ValidateFormatString(fmt, Range(arg_types));
-	}
 }

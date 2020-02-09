@@ -1184,7 +1184,9 @@ DX12LinearAllocator::DX12LinearAllocator(GPU_DX12* gpu) : m_gpu(gpu) {
 		nullptr,
 		IID_PPV_ARGS(m_data.Replace())
 	));
-	EnsureHR(m_data->Map(0, nullptr, &(void*)m_data_cpu_ptr));
+	void* mapped = nullptr;
+	EnsureHR(m_data->Map(0, nullptr, &mapped));
+	m_data_cpu_ptr = static_cast<u8*>(mapped);
 }
 
 GPUAllocation DX12LinearAllocator::Allocate(u32 size) {

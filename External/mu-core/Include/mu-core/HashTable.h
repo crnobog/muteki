@@ -111,7 +111,7 @@ namespace mu {
 			static constexpr bool HasSize = false;
 
 			bool IsEmpty() { return m_current_index >= m_size; }
-			HashPair<const KeyType&, const ValueType&> Front() { return { m_keys[current_index],m_values[m_current_index] }; }
+			HashPair<const KeyType&, const ValueType&> Front() { return { m_keys[m_current_index],m_values[m_current_index] }; }
 			void Advance() {
 				m_current_index = HashUtil::FirstFilled(m_current_index + 1, m_hash_state, m_size);
 			}

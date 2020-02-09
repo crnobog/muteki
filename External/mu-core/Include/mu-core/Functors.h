@@ -54,7 +54,7 @@ namespace mu {
 
 			template<template<typename...> class FUNCTOR, typename TUPLE, size_t... INDICES>
 			auto FMapVoidHelper(TUPLE&& t, std::index_sequence<INDICES...>) {
-				return FMapVoid<FUNCTOR>(std::get<INDICES>(t)...);
+				return details::FMapVoidRec<FUNCTOR>(std::get<INDICES>(t)...);
 			}
 
 			template<template<typename...> class FUNCTOR, typename... TS>
