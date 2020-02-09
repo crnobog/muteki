@@ -735,8 +735,9 @@ TextureID GPU_DX11::CreateTexture2D(u32 width, u32 height, GPU::TextureFormat fo
 	return id;
 }
 
-void GPU_DX11::RecreateTexture2D(GPU::TextureID /*id*/, u32 /*width*/, u32 /*height*/, GPU::TextureFormat /*format*/, mu::PointerRange<const u8> /*data*/) {
-	Assert(false);
+void GPU_DX11::RecreateTexture2D(GPU::TextureID id, u32 width, u32 height, GPU::TextureFormat format, mu::PointerRange<const u8> data) {
+	Texture& texture = m_textures[id];
+	CreateTexture2D_Internal(texture, width, height, format, data);
 }
 
 DepthTargetID GPU_DX11::CreateDepthTarget(u32 width, u32 height) {
