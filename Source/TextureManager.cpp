@@ -52,7 +52,7 @@ void TextureManager::DrawUI() {
 	ImGui::SetNextWindowPos({ 400, 60 }, ImGuiCond_Appearing);
 	ImGui::SetNextWindowSize(size, ImGuiCond_Appearing);
 	if (ImGui::Begin("TextureManager", &m_show_window)) {
-		ImGui::Checkbox("Auto-recompile", &m_auto_reload);
+		ImGui::Checkbox("Auto-reload", &m_auto_reload);
 
 		ImGui::Separator();
 		ImGui::Columns(3);
