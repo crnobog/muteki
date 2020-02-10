@@ -75,6 +75,7 @@
       <PreprocessorDefinitions>IMGUI_USER_CONFIG="MutekiImguiConfig.h";_GLFW_WIN32;_CRT_SECURE_NO_WARNINGS;STRICT;NOMINMAX;WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)..\Include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ConformanceMode>true</ConformanceMode>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
