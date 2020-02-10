@@ -62,7 +62,7 @@ namespace mu {
 		}
 		void AdvanceBy(size_t num) {
 			Assert(m_coro != nullptr);
-			for (size_t i = 0; i < num(); ++i) {
+			for (size_t i = 0; i < num; ++i) {
 				Advance();
 			}
 		}

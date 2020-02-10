@@ -153,7 +153,7 @@ namespace mu
 		void reset(R r)
 		{
 			reset();
-			resource = std::move(r);
+			m_resource = std::move(r);
 			m_do_delete = true;
 		}
 
