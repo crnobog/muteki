@@ -3,7 +3,10 @@
 #include "mu-core/Array.h"
 #include "mu-core/String.h"
 
-#include <filesystem>
+namespace std::filesystem
+{
+	class path;
+}
 
 namespace mu {
 	namespace fs = std::filesystem;

@@ -2,7 +2,10 @@
 
 #include "mu-core/PrimitiveTypes.h"
 
-#include <filesystem>
+namespace std::filesystem
+{
+	class path;
+}
 
 namespace mu {
 	namespace fs = std::filesystem;
@@ -22,11 +25,10 @@ namespace mu {
 
 	class DirectoryWatcher {
 		void* m_handle;
-		fs::path m_path;
 
 	public:
 		DirectoryWatcher();
-		void StartWatching(fs::path path, DirectoryWatchFlags flags = DirectoryWatchFlags::Write);
+		void StartWatching(const fs::path& path, DirectoryWatchFlags flags = DirectoryWatchFlags::Write);
 		bool HasChanges() const;
 	};
 }

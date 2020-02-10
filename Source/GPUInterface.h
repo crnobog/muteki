@@ -3,7 +3,6 @@
 #include "mu-core/FixedArray.h"
 #include "mu-core/PrimitiveTypes.h"
 #include "mu-core/PointerRange.h"
-#include "mu-core/String.h"
 #include "mu-core/ZipRange.h"
 
 #include "Rect.h"

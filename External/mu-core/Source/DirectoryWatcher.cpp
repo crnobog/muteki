@@ -2,6 +2,8 @@
 #include "mu-core/DirectoryWatcher.h"
 #include "mu-core/WindowsWrapped.h"
 
+#include <filesystem>
+
 namespace mu {
 
 	DirectoryWatcher::DirectoryWatcher()
@@ -9,13 +11,11 @@ namespace mu {
 	{
 	}
 
-	void DirectoryWatcher::StartWatching(fs::path path, DirectoryWatchFlags flags) {
+	void DirectoryWatcher::StartWatching(const fs::path& path, DirectoryWatchFlags flags) {
 		if (m_handle) {
 			FindCloseChangeNotification(m_handle);
 			m_handle = nullptr;
 		}
-
-		m_path = path;
 
 		DWORD filter = 0;
 		if ((flags & DirectoryWatchFlags::Write) != DirectoryWatchFlags::None) {
