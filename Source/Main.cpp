@@ -1,5 +1,4 @@
-﻿// TODO: Enable conformance mode?
-// TODO: Load texture from file
+﻿// TODO: Freecam
 // TODO: Render rotation axis visibly for rotation tweak mode
 // TODO: Chaining transforms
 // TODO: Refactor GPU ID structs to split bits internally e.g. temporary vs persistent constant buffer
@@ -7,12 +6,15 @@
 // TODO: Investigate using HLSL for Vulkan backend
 // TODO: Visualizer for Pool<>
 // TODO: Rename Pool<> to SparseArray?
+// TODO: Move unit tests away from inl files
+// TODO: Profile compile times
 // TODOLONGTERM: Render graph?
 // TODOLONGTERM: Runtime switching of backend
 // TODOLONGTERM: Tunable variables registration & UI
 // TODOLONGTERM: Switch to imgui docking branch
 // TODOLONGTERM: FName equivalent
 // TODOLONGTERM: Pix integration for CPU tracing
+// TODOLONGTERM: Functional test suite for GPU backend
 
 #ifdef _MSC_VER
 #    pragma comment(linker, "/subsystem:windows /ENTRY:mainCRTStartup")
