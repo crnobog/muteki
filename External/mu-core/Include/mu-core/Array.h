@@ -31,6 +31,11 @@ namespace mu {
 			}
 		}
 
+		Array(PointerRange<const T> source_range) {
+			InitEmpty(source_range.Size());
+			Append(source_range);
+		}
+
 		Array(Array&& other) {
 			*this = std::forward<Array>(other);
 		}
@@ -132,7 +137,9 @@ namespace mu {
 			}
 		}
 
+		// TODO: Optimize POD types
 		void AppendRaw(const T* items, size_t count) {
+			EnsureSpace(m_num + count);
 			Append(mu::Range(items, count));
 		}
 
