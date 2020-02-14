@@ -64,9 +64,9 @@ struct ImGuiImpl : public ImguiImplInterface {
 		pipeline_state_desc.Program = gpu->LinkProgram({ vshader_id, pshader_id });
 
 		pipeline_state_desc.StreamFormat.AddSlot({
-			{ GPU::ScalarType::Float,	2, GPU::InputSemantic::Position,	0 },
-			{ GPU::ScalarType::Float,	2, GPU::InputSemantic::Texcoord,	0 },
-			{ GPU::ScalarType::U8,		4, GPU::InputSemantic::Color,		0, true }
+			{ GPU::ScalarType::Float,	2, 0 },
+			{ GPU::ScalarType::Float,	2, 1 },
+			{ GPU::ScalarType::U8,		4, 2, true }
 			});
 
 		pipeline_state_desc.BlendState.BlendEnable = true;

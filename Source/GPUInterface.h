@@ -74,13 +74,6 @@ namespace GPU {
 		LineList,
 	};
 
-	enum class InputSemantic : u8 {
-		Position,
-		Color,
-		Texcoord,
-		Normal,
-	};
-
 	enum class ScalarType : u8 {
 		Float,
 		U8,
@@ -93,13 +86,12 @@ namespace GPU {
 	struct StreamElementDesc {
 		ScalarType Type;
 		u8 CountMinusOne;
-		InputSemantic Semantic;
-		u8 SemanticIndex;
+		u8 ElementIndex;
 		bool Normalized;
 
 		StreamElementDesc() {};
-		StreamElementDesc(ScalarType type, u8 count, InputSemantic semantic, u8 sem_index, bool normalized = false) {
-			Type = type; CountMinusOne = count - 1; Semantic = semantic; SemanticIndex = sem_index;
+		StreamElementDesc(ScalarType type, u8 count, u8 element_index, bool normalized = false) {
+			Type = type; CountMinusOne = count - 1; ElementIndex = element_index;
 			Normalized = normalized;
 		}
 	};
@@ -119,7 +111,7 @@ namespace GPU {
 
 	struct StreamFormatDesc {
 		mu::FixedArray<StreamSlotDesc, MaxStreamSlots> Slots;
-
+		
 		StreamFormatDesc& AddSlot(StreamElementDesc elem) {
 			Slots.Emplace(elem);
 			return *this;
@@ -295,8 +287,7 @@ namespace GPU {
 
 	inline bool operator==(const GPU::StreamElementDesc& a, const GPU::StreamElementDesc& b) {
 		return a.CountMinusOne == b.CountMinusOne
-			&& a.Semantic == b.Semantic
-			&& a.SemanticIndex == b.SemanticIndex
+			&& a.ElementIndex == b.ElementIndex
 			&& a.Type == b.Type;
 	}
 	inline bool operator!=(const GPU::StreamElementDesc& a, const GPU::StreamElementDesc& b) {
@@ -377,6 +368,8 @@ namespace GPU {
 			return PrimitiveType::Triangle;
 		}
 	}
+
+	void ValidateStreamFormat(StreamFormatDesc desc);
 }
 
 struct GPUFrameInterface {

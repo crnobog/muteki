@@ -16,9 +16,9 @@ struct vs_out {
 };
 
 struct vs_in {
-	float3 pos : POSITION0;
-	float3 normal : NORMAL0;
-	float2 diffuse_coord : TEXCOORD0;
+	float3 pos : INPUT_0;
+	float3 normal : INPUT_1;
+	float2 diffuse_coord : INPUT_2;
 };
 
 vs_out vs_main(vs_in vertex) {

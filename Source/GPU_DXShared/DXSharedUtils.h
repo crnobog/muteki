@@ -61,13 +61,13 @@ namespace DX {
 	struct VertexShaderInputElement {
 		GPU::ScalarType Type : 2;
 		u8 CountMinusOne : 2;
-		GPU::InputSemantic Semantic : 6;
-		u8 SemanticIndex : 6;
+		u8 ElementIndex;
 	};
 
 	void CompileShaderHLSL(ID3DBlob** compiled_shader, const char* shader_model, const char* entry_point, const mu::PointerRange<const u8>& code);
 
 	const char* GetHLSLTypeName(GPU::StreamElementDesc desc);
-	const char* GetSemanticName(GPU::InputSemantic semantic);
 	DXGI_FORMAT GetStreamElementFormat(GPU::StreamElementDesc desc);
+
+	constexpr const char* GenericInputSemanticName = "INPUT_";
 }

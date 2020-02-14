@@ -14,9 +14,6 @@
     <ClCompile Include="..\..\Source\GPU_DX12\DX12Utils.cpp">
       <Filter>GPU\DX12</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Source\GPU_DX11\DX11Utils.cpp">
-      <Filter>GPU\DX11</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Source\GPU_DXShared\DXSharedUtils.cpp">
       <Filter>GPU\DXShared</Filter>
     </ClCompile>

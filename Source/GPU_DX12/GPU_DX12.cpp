@@ -144,7 +144,7 @@ struct GPU_DX12 : public GPUInterface {
 
 	struct VertexShaderInputs {
 		static constexpr i32 MaxInputElements = 8;
-		FixedArray<DX::VertexShaderInputElement, MaxInputElements> InputElements;
+		//FixedArray<DX::VertexShaderInputElement, MaxInputElements> InputElements;
 	};
 	struct Shader {
 		ShaderType Type;
@@ -331,7 +331,6 @@ struct GPU_DX12 : public GPUInterface {
 	// END GPUInterface functions
 
 	void OnSwapChainUpdated();
-	void PostCompileShader(Shader& shader);
 	bool CreatePipelineStateInternal(const GPU::PipelineStateDesc& desc, PipelineState& out_ps);
 	bool RecreatePipelineState(PipelineStateID id);
 
@@ -635,39 +634,6 @@ static COMPtr<ID3DBlob> CompileShaderInternal(ShaderType type, PointerRange<cons
 	return std::move(compiled_shader);
 }
 
-void GPU_DX12::PostCompileShader(Shader& shader) {
-	if (shader.Type == GPU::ShaderType::Vertex) {
-		// TODO: Use for validation or remove
-		VertexShaderInputs& inputs = shader.Inputs;
-		inputs.InputElements.Empty();
-
-		COMPtr<ID3D12ShaderReflection> reflector;
-		EnsureHR(D3DReflect(
-			shader.CompiledShader->GetBufferPointer(),
-			shader.CompiledShader->GetBufferSize(),
-			IID_PPV_ARGS(reflector.Replace())
-		));
-		D3D12_SHADER_DESC desc;
-		EnsureHR(reflector->GetDesc(&desc));
-		Assert(desc.InputParameters < VertexShaderInputs::MaxInputElements);
-		FixedArray<D3D12_SIGNATURE_PARAMETER_DESC, VertexShaderInputs::MaxInputElements> input_params;
-		input_params.AddZeroed(desc.InputParameters);
-		for (u32 i = 0; i < desc.InputParameters; ++i) {
-			D3D12_SIGNATURE_PARAMETER_DESC& input_param = input_params[i];
-			reflector->GetInputParameterDesc(i, &input_param);
-		}
-
-		for (u32 i = 0; i < desc.InputParameters; ++i) {
-			const D3D12_SIGNATURE_PARAMETER_DESC& input_param = input_params[i];
-
-			DX::VertexShaderInputElement parsed_param;
-			if (ParseInputParameter(input_param, parsed_param)) {
-				inputs.InputElements.Add(parsed_param);
-			}
-		}
-	}
-}
-
 PointerRange<const char> GPU_DX12::GetShaderSubdirectory()
 {
 	return {"DX"};
@@ -685,10 +651,6 @@ GPU::ShaderID GPU_DX12::CompileShader(ShaderType type, PointerRange<const u8> so
 	}
 
 	ShaderID id = m_registered_shaders.Emplace(type, std::move(compiled_shader));
-	Shader& shader = m_registered_shaders[id];
-
-	PostCompileShader(shader);
-
 	return id;
 }
 
@@ -709,8 +671,6 @@ bool GPU_DX12::RecompileShader(GPU::ShaderID id, GPU::ShaderType type, mu::Point
 		// TODO: Invalidate PSOs
 	}
 	
-	PostCompileShader(shader);
-
 	m_dirty_pipeline_states.Append(shader.UsingPSOs.Range());
 	return true;
 }
@@ -730,8 +690,8 @@ bool GPU_DX12::CreatePipelineStateInternal(const GPU::PipelineStateDesc& desc, P
 		for (GPU::StreamElementDesc& elem : slot.Elements) {
 			stride += GPU::GetStreamElementSize(elem);
 			input_layout.Add(D3D12_INPUT_ELEMENT_DESC{
-				DX::GetSemanticName(elem.Semantic),
-				elem.SemanticIndex,
+				DX::GenericInputSemanticName,
+				elem.ElementIndex,
 				DX::GetStreamElementFormat(elem),
 				slot_idx,
 				D3D12_APPEND_ALIGNED_ELEMENT,

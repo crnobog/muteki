@@ -6,9 +6,9 @@ sampler sampler0 : register(s0);
 Texture2D texture0 : register(t0);
 
 struct vs_in {
-	float2 pos : POSITION;
-	float2 uv : TEXCOORD0;
-	float4 col : COLOR0;	
+	float2 pos : INPUT_0;
+	float2 uv : INPUT_1;
+	float4 col : INPUT_2;	
 };
 
 struct ps_in {

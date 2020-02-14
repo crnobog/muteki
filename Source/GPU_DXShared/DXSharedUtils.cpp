@@ -38,13 +38,6 @@ namespace DX {
 		Assert(false);
 		return "";
 	}
-	const char* GetSemanticName(GPU::InputSemantic semantic) {
-		const char* names[] = {
-			"POSITION", "COLOR", "TEXCOORD", "NORMAL"
-		};
-		Assert((u32)semantic < ArraySize(names));
-		return names[(u32)semantic];
-	}
 	DXGI_FORMAT GetStreamElementFormat(GPU::StreamElementDesc desc) {
 		switch (desc.Type) {
 		case GPU::ScalarType::Float:

@@ -125,7 +125,6 @@
     <ClCompile Include="..\..\Source\CubePrimitive.cpp" />
     <ClCompile Include="..\..\Source\GPUInterface.cpp" />
     <ClCompile Include="..\..\Source\GPU_DX11\GPU_DX11.cpp" />
-    <ClCompile Include="..\..\Source\GPU_DX11\DX11Utils.cpp" />
     <ClCompile Include="..\..\Source\GPU_DX12\GPU_DX12.cpp" />
     <ClCompile Include="..\..\Source\GPU_DX12\DX12Utils.cpp" />
     <ClCompile Include="..\..\Source\GPU_DXShared\DXSharedUtils.cpp" />

@@ -208,7 +208,4 @@ namespace DX12Util {
 			}
 		}
 	}
-
-
-	bool ParseInputParameter(const D3D12_SIGNATURE_PARAMETER_DESC& input_param, DX::VertexShaderInputElement& out_elem);
 }

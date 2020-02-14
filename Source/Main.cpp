@@ -1,4 +1,5 @@
-﻿// TODO: Freecam
+﻿// TODO: Initialize DX11 backend at first to show backend-selection GUI? OR show message box?
+// TODO: Freecam
 // TODO: Render rotation axis visibly for rotation tweak mode
 // TODO: Chaining transforms
 // TODO: Refactor GPU ID structs to split bits internally e.g. temporary vs persistent constant buffer
@@ -195,9 +196,9 @@ int main(int argc, char** argv) {
 		GPU::PipelineStateDesc pipeline_state_desc{};
 		pipeline_state_desc.Program = program_id;
 		pipeline_state_desc.StreamFormat
-			.AddSlot({ GPU::ScalarType::Float, 3, GPU::InputSemantic::Position, 0 })
-			.AddSlot({ GPU::ScalarType::Float, 3, GPU::InputSemantic::Normal, 0 })
-			.AddSlot({ GPU::ScalarType::Float, 2, GPU::InputSemantic::Texcoord, 0 })
+			.AddSlot({ GPU::ScalarType::Float, 3, 0 })
+			.AddSlot({ GPU::ScalarType::Float, 3, 1 })
+			.AddSlot({ GPU::ScalarType::Float, 2, 2 })
 			;
 		pipeline_state_desc.BlendState.BlendEnable = false;
 		pipeline_state_desc.DepthStencilState = depth_state;

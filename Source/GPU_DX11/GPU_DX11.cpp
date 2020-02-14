@@ -81,7 +81,7 @@ struct GPU_DX11 : public GPUInterface {
 	};
 	struct VertexShaderInputs {
 		static constexpr i32 MaxInputElements = 8;
-		FixedArray<DX::VertexShaderInputElement, MaxInputElements> InputElements;
+		//FixedArray<DX::VertexShaderInputElement, MaxInputElements> InputElements;
 	};
 	struct Shader {
 		GPU::ShaderType Type;
@@ -499,8 +499,6 @@ bool GPU_DX11::CompileShaderInternal(GPU::ShaderType type, mu::PointerRange<cons
 	}
 
 	if (type == GPU::ShaderType::Vertex) {
-		VertexShaderInputs& inputs = out_shader.Inputs;
-
 		COMPtr<ID3D11ShaderReflection> reflector;
 		EnsureHR(D3DReflect(
 			compiled_shader->GetBufferPointer(),
@@ -514,16 +512,6 @@ bool GPU_DX11::CompileShaderInternal(GPU::ShaderType type, mu::PointerRange<cons
 		input_params.AddZeroed(desc.InputParameters);
 		for (auto [index, input_param] : Zip(Iota<u32>(), input_params.Range())) {
 			reflector->GetInputParameterDesc(index, &input_param);
-		}
-
-		for (u32 i = 0; i < desc.InputParameters; ++i) {
-			D3D11_SIGNATURE_PARAMETER_DESC& input_param = input_params[i];
-
-			DX::VertexShaderInputElement parsed_elem;
-			if (DX11Util::ParseInputParameter(input_param, parsed_elem))
-			{
-				inputs.InputElements.Add(parsed_elem);
-			}
 		}
 	}
 	
@@ -575,8 +563,8 @@ GPU::PipelineStateID GPU_DX11::CreatePipelineState(const GPU::PipelineStateDesc&
 		for (const GPU::StreamElementDesc& elem : slot.Elements) {
 			stride += GPU::GetStreamElementSize(elem);
 			elems.Add(D3D11_INPUT_ELEMENT_DESC{
-				DX::GetSemanticName(elem.Semantic),
-				elem.SemanticIndex,
+				DX::GenericInputSemanticName,
+				elem.ElementIndex,
 				DX::GetStreamElementFormat(elem),
 				slot_idx,
 				D3D11_APPEND_ALIGNED_ELEMENT,
@@ -599,8 +587,8 @@ GPU::PipelineStateID GPU_DX11::CreatePipelineState(const GPU::PipelineStateDesc&
 		for (const GPU::StreamSlotDesc& slot : desc.StreamFormat.Slots) {
 			for (const GPU::StreamElementDesc& elem : slot.Elements) {
 				const char* type = DX::GetHLSLTypeName(elem);
-				const char* semantic = DX::GetSemanticName(elem.Semantic);
-				String elem_s = String::Format("{} elem{} : {}{};\n", type, idx, semantic, elem.SemanticIndex);
+				const char* semantic = DX::GenericInputSemanticName;
+				String elem_s = String::Format("{} elem{} : {}{};\n", type, idx, semantic, (u32)elem.ElementIndex);
 				shader.Append(elem_s);
 				++idx;
 			}
